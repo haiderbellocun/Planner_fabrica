@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import projectsRoutes from './routes/projects.js';
 import tasksRoutes, { projectTasksRouter } from './routes/tasks.js';
@@ -18,41 +17,42 @@ import materialAssigneesRoutes from './routes/materialAssignees.js';
 import tiemposRoutes from './routes/tiempos.js';
 import reportsRoutes from './routes/reports.js';
 import leadersRoutes from './routes/leaders.js';
+import healthRoutes from './routes/health.js';
 import pool from './config/database.js';
-
-// Load environment variables
-dotenv.config();
+import { env } from './config/env.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT;
+
+// Health checks first (no middleware): GET /healthz, GET /readyz — must exist before any catch-all
+app.use(healthRoutes);
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: env.CORS_ORIGIN,
   credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (avatars)
-app.use('/avatars', express.static(path.join(process.cwd(), '..', 'public', 'avatars')));
+// In Docker (production) WORKDIR=/app so avatars are at /app/public/avatars.
+// In local dev the process runs from server/ so we go one level up.
+const avatarsPath =
+  env.NODE_ENV === 'production'
+    ? path.join(process.cwd(), 'public', 'avatars')
+    : path.join(process.cwd(), '..', 'public', 'avatars');
+app.use('/avatars', express.static(avatarsPath));
 
-// Request logging middleware
+// Request logging middleware (dev only)
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, {
-    body: req.body,
-    query: req.query,
-  });
+  if (env.NODE_ENV !== 'production') {
+    console.log(`${req.method} ${req.path}`, {
+      body: req.body,
+      query: req.query,
+    });
+  }
   next();
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
 });
 
 // Routes
@@ -85,31 +85,39 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  if (env.NODE_ENV !== 'production') {
+    console.error('Error:', err);
+  }
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    message: env.NODE_ENV === 'development' ? err.message : undefined,
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`
+  if (env.NODE_ENV !== 'production') {
+    console.log(`
 ╔═══════════════════════════════════════╗
 ║   🚀 Planner Fabrica API Started     ║
 ╠═══════════════════════════════════════╣
 ║   PORT: ${PORT.toString().padEnd(28)} ║
-║   ENV:  ${(process.env.NODE_ENV || 'development').padEnd(28)} ║
-║   DB:   ${(process.env.PGDATABASE || '').padEnd(28)} ║
+║   ENV:  ${env.NODE_ENV.padEnd(28)} ║
+║   DB:   ${(env.PGDATABASE || env.DATABASE_URL || '').padEnd(28)} ║
 ╚═══════════════════════════════════════╝
-  `);
+    `);
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  if (env.NODE_ENV !== 'production') {
+    console.log('SIGTERM signal received: closing HTTP server');
+  }
   pool.end(() => {
-    console.log('Database pool closed');
+    if (env.NODE_ENV !== 'production') {
+      console.log('Database pool closed');
+    }
     process.exit(0);
   });
 });

@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
+import { env } from '../config/env.js';
 
 /**
  * GET /api/projects/:projectId/tasks
@@ -18,11 +19,13 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       [projectId, profileId]
     )).rows[0]?.is_leader;
 
-    console.log('=== LIST TASKS DEBUG ===');
-    console.log('User email:', req.user?.email);
-    console.log('Profile ID:', profileId);
-    console.log('User role:', userRole);
-    console.log('Is leader:', isLeader);
+    if (env.NODE_ENV !== 'production') {
+      console.log('=== LIST TASKS DEBUG ===');
+      console.log('User email:', req.user?.email);
+      console.log('Profile ID:', profileId);
+      console.log('User role:', userRole);
+      console.log('Is leader:', isLeader);
+    }
 
     // Build WHERE clause based on user role
     let whereClause = 't.project_id = $1';
@@ -43,9 +46,11 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         (t.parent_task_id IS NOT NULL AND t.reporter_id = $2 AND t.assignee_id IS NOT NULL)
       )`;
       params.push(profileId);
-      console.log('Visibility filter applied for leader');
-      console.log('WHERE clause:', whereClause);
-      console.log('Params:', params);
+      if (env.NODE_ENV !== 'production') {
+        console.log('Visibility filter applied for leader');
+        console.log('WHERE clause:', whereClause);
+        console.log('Params:', params);
+      }
     } else if (userRole !== 'admin') {
       // Normal users see:
       // 1. Original tasks (parent_task_id IS NULL)
@@ -57,9 +62,13 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
       )`;
       params.push(profileId);
-      console.log('Visibility filter applied for normal user');
+      if (env.NODE_ENV !== 'production') {
+        console.log('Visibility filter applied for normal user');
+      }
     } else {
-      console.log('No visibility filter (admin sees all)');
+      if (env.NODE_ENV !== 'production') {
+        console.log('No visibility filter (admin sees all)');
+      }
     }
     // Admins see all tasks in the project (no additional filter)
 
@@ -91,14 +100,16 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       params
     );
 
-    console.log('Raw query results:', result.rows.length, 'rows');
-    if (result.rows.length > 0) {
-      console.log('Sample task data:', {
-        id: result.rows[0].id,
-        title: result.rows[0].title,
-        reporter_id: result.rows[0].reporter_id,
-        parent_task_id: result.rows[0].parent_task_id,
-      });
+    if (env.NODE_ENV !== 'production') {
+      console.log('Raw query results:', result.rows.length, 'rows');
+      if (result.rows.length > 0) {
+        console.log('Sample task data:', {
+          id: result.rows[0].id,
+          title: result.rows[0].title,
+          reporter_id: result.rows[0].reporter_id,
+          parent_task_id: result.rows[0].parent_task_id,
+        });
+      }
     }
 
     // Transform to match Supabase structure
@@ -179,8 +190,12 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         : null,
     }));
 
-    console.log('Returning', tasks.length, 'tasks');
-    console.log('=== END DEBUG ===\n');
+    if (process.env.NODE_ENV !== 'production') {
+    if (env.NODE_ENV !== 'production') {
+      console.log('Returning', tasks.length, 'tasks');
+      console.log('=== END DEBUG ===\n');
+    }
+    }
 
     res.json(tasks);
   } catch (error) {

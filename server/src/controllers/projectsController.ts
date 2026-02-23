@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
+import { env } from '../config/env.js';
 
 /**
  * GET /api/projects
@@ -116,7 +117,9 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
 export const getProject = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    console.log('🔍 getProject called for ID:', id);
+    if (env.NODE_ENV !== 'production') {
+      console.log('🔍 getProject called for ID:', id);
+    }
 
     const result = await query(
       `SELECT
@@ -131,15 +134,21 @@ export const getProject = async (req: AuthRequest, res: Response) => {
       [id]
     );
 
-    console.log('📊 Query result rows:', result.rows.length);
+    if (env.NODE_ENV !== 'production') {
+      console.log('📊 Query result rows:', result.rows.length);
+    }
 
     if (result.rows.length === 0) {
-      console.log('❌ Project not found in database');
+      if (env.NODE_ENV !== 'production') {
+        console.log('❌ Project not found in database');
+      }
       return res.status(404).json({ error: 'Project not found' });
     }
 
     const project = result.rows[0];
-    console.log('✅ Project found:', project.name);
+    if (env.NODE_ENV !== 'production') {
+      console.log('✅ Project found:', project.name);
+    }
 
     // Get members
     const membersResult = await query(

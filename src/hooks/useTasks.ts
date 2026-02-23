@@ -25,11 +25,13 @@ export function useTasks(projectId: string | undefined) {
     queryFn: async (): Promise<TaskWithDetails[]> => {
       if (!projectId) return [];
       const tasks = await api.get<TaskWithDetails[]>(`/api/projects/${projectId}/tasks`);
-      console.log('🔍 useTasks received from API:', {
-        projectId,
-        tasksCount: tasks.length,
-        tasks: tasks.map(t => ({ id: t.id, title: t.title, reporter_id: t.reporter_id }))
-      });
+      if (import.meta.env.DEV) {
+        console.log('🔍 useTasks received from API:', {
+          projectId,
+          tasksCount: tasks.length,
+          tasks: tasks.map(t => ({ id: t.id, title: t.title, reporter_id: t.reporter_id })),
+        });
+      }
       return tasks;
     },
     enabled: !!projectId,
@@ -139,13 +141,17 @@ export function useUpdateTaskStatus() {
   });
 }
 
+export type MyTaskWithProject = TaskWithDetails & { project: { id: string; name: string; key: string } };
+
 export function useMyTasks() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['my-tasks'],
-    queryFn: async (): Promise<(TaskWithDetails & { project: { id: string; name: string; key: string } })[]> => {
+    queryFn: async (): Promise<MyTaskWithProject[]> => {
       return await api.get('/api/my-tasks');
     },
   });
+  const tasks: MyTaskWithProject[] = query.data ?? [];
+  return { ...query, tasks };
 }
 
 export interface LeadersFocusTask {

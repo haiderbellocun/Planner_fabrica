@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
+import { env } from '../config/env.js';
 
 // Schema: user_roles.user_id REFERENCES profiles(id). JWT profileId = profiles.id.
 // Roles (in user_roles): Nathaly, Deyvis, German = project_leader; Haider = admin.
@@ -78,7 +79,7 @@ export const getLeadersFocus = async (req: AuthRequest, res: Response) => {
       const validProfileId =
         typeof profileId === 'string' && profileId.trim() !== '' ? profileId.trim() : undefined;
       if (!validProfileId) {
-        if (process.env.NODE_ENV === 'development') {
+        if (env.NODE_ENV === 'development') {
           console.warn('[leaders/focus] project_leader without profileId', { userEmail, userRole });
         }
         return res.status(200).json([]);

@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-// Local API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { apiBaseUrl } from '@/lib/api';
 
 // Local User type (replacing Supabase types)
 export interface LocalUser {
@@ -59,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const response = await authenticatedFetch(`${API_URL}/api/auth/me`);
+      const response = await authenticatedFetch(`${apiBaseUrl}/api/auth/me`);
 
       if (!response.ok) {
         // Token invalid or expired
@@ -97,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await authenticatedFetch(`${API_URL}/api/auth/logout`, {
+      await authenticatedFetch(`${apiBaseUrl}/api/auth/logout`, {
         method: 'POST',
       });
     } catch (error) {
@@ -203,11 +201,10 @@ export function useAuth() {
 // Export authenticated fetch helper for use in other hooks
 export const useAuthenticatedFetch = () => {
   const token = localStorage.getItem('taskflow_token');
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   return {
     fetch: async (url: string, options: RequestInit = {}) => {
-      return fetch(`${API_BASE_URL}${url}`, {
+      return fetch(`${apiBaseUrl}${url}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',

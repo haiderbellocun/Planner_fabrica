@@ -2,11 +2,14 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import type { Secret, SignOptions } from 'jsonwebtoken';
 import { query } from '../config/database.js';
+import { env } from '../config/env.js';
 
-// Read JWT config dynamically to ensure .env is loaded first
-const getJWTSecret = () => process.env.JWT_SECRET || 'default-secret';
-const getJWTExpiresIn = () => process.env.JWT_EXPIRES_IN || '7d';
+const secret: Secret = env.JWT_SECRET;
+const signOptions: SignOptions = {
+  expiresIn: (env.JWT_EXPIRES_IN ?? '7d') as SignOptions['expiresIn'],
+};
 
 export const login = async (req: AuthRequest, res: Response) => {
   try {
@@ -70,8 +73,8 @@ export const login = async (req: AuthRequest, res: Response) => {
         email: user.email,
         role,
       },
-      getJWTSecret(),
-      { expiresIn: getJWTExpiresIn() }
+      secret,
+      signOptions
     );
 
     res.json({
@@ -142,8 +145,8 @@ export const register = async (req: AuthRequest, res: Response) => {
         email: user.email,
         role: 'user',
       },
-      getJWTSecret(),
-      { expiresIn: getJWTExpiresIn() }
+      secret,
+      signOptions
     );
 
     res.status(201).json({

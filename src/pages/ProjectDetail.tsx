@@ -49,13 +49,15 @@ export default function ProjectDetailPage() {
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId);
   const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
 
-  console.log('📊 ProjectDetail render:', {
-    projectId,
-    tasksCount: tasks.length,
-    tasksLoading,
-    userEmail: user?.email,
-    tasks: tasks.map(t => ({ title: t.title, status: t.status.name }))
-  });
+  if (import.meta.env.DEV) {
+    console.log('📊 ProjectDetail render:', {
+      projectId,
+      tasksCount: tasks.length,
+      tasksLoading,
+      userEmail: user?.email,
+      tasks: tasks.map(t => ({ title: t.title, status: t.status.name })),
+    });
+  }
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);

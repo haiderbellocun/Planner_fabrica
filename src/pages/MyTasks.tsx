@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMyTasks, TaskWithDetails, useTaskStatuses } from '@/hooks/useTasks';
+import { useMyTasks, useTaskStatuses, type MyTaskWithProject } from '@/hooks/useTasks';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,10 @@ const priorityConfig = {
   urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
-type MyTask = TaskWithDetails & { project: { id: string; name: string; key: string } };
-
 export default function MyTasksPage() {
-  const { data: tasks = [], isLoading } = useMyTasks();
+  const { tasks, isLoading } = useMyTasks();
   const { data: statuses = [] } = useTaskStatuses();
-  const [selectedTask, setSelectedTask] = useState<MyTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<MyTaskWithProject | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const pendingTasks = tasks.filter((t) => !t.status.is_completed);
@@ -34,7 +32,7 @@ export default function MyTasksPage() {
     (t) => t.due_date && isAfter(new Date(t.due_date), new Date()) && isBefore(new Date(t.due_date), addDays(new Date(), 7))
   );
 
-  const handleTaskClick = (task: MyTask) => {
+  const handleTaskClick = (task: MyTaskWithProject) => {
     setSelectedTask(task);
     setDetailOpen(true);
   };
@@ -47,7 +45,7 @@ export default function MyTasksPage() {
     );
   }
 
-  const TaskCard = ({ task }: { task: MyTask }) => {
+  const TaskCard = ({ task }: { task: MyTaskWithProject }) => {
     const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
     const isOverdue = task.due_date && isBefore(new Date(task.due_date), new Date()) && !task.status.is_completed;
 

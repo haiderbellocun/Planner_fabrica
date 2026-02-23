@@ -1,0 +1,59 @@
+# Local development environment for TaskFlow Planner
+#
+# Starts:
+#   db  — PostgreSQL 15 on host port 5433
+#   api — compiled backend on host port 3001
+#
+# The React frontend is NOT included here; run it separately:
+#   npm run dev   (port 8080, with hot-reload)
+#
+# Usage:
+#   docker compose up -d          # start in background
+#   docker compose logs -f api    # tail API logs
+#   docker compose down -v        # stop and remove volumes
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pruebas_haider
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pruebas_haider"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .                  # project root — same as cloud build
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: pruebas_haider
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      JWT_SECRET: local-dev-secret-please-change-in-production
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:8080
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount avatars so uploads persist across container restarts
+      - ./public/avatars:/app/public/avatars
+
+volumes:
+  postgres_data:

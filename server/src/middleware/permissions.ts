@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthRequest } from './auth.js';
 import { query } from '../config/database.js';
+import { env } from '../config/env.js';
 
 /**
  * Middleware to check if user is a member of the project
@@ -120,21 +121,31 @@ export const canCreateProjectMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  console.log('🔍 canCreateProject check - req.user:', req.user);
+  if (env.NODE_ENV !== 'production') {
+    console.log('🔍 canCreateProject check - req.user:', req.user);
+  }
 
   if (!req.user) {
-    console.log('❌ No user in request');
+    if (env.NODE_ENV !== 'production') {
+      console.log('❌ No user in request');
+    }
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const role = req.user.role;
-  console.log('👤 User role:', role);
+  if (env.NODE_ENV !== 'production') {
+    console.log('👤 User role:', role);
+  }
 
   if (role !== 'admin' && role !== 'project_leader') {
-    console.log('❌ Permission denied - role is not admin or project_leader');
+    if (env.NODE_ENV !== 'production') {
+      console.log('❌ Permission denied - role is not admin or project_leader');
+    }
     return res.status(403).json({ error: 'Only admins and project leaders can create projects' });
   }
 
-  console.log('✅ Permission granted');
+  if (env.NODE_ENV !== 'production') {
+    console.log('✅ Permission granted');
+  }
   next();
 };

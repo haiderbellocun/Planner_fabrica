@@ -5,6 +5,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Rutas relativas para GCS: ./assets/... se resuelven desde la URL del bucket.
+  base: "./",
   server: {
     host: "::",
     port: 8080,

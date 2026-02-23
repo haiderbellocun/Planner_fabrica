@@ -1,6 +1,7 @@
 // Centralized API client for making authenticated requests to the backend
+// Base URL must be set via VITE_API_URL (e.g. in .env.production or .env)
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '';
 const TOKEN_KEY = 'taskflow_token';
 
 interface ApiError {
@@ -34,7 +35,7 @@ class ApiClient {
   }
 
   async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -42,7 +43,7 @@ class ApiClient {
   }
 
   async post<T>(path: string, data?: any): Promise<T> {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -51,7 +52,7 @@ class ApiClient {
   }
 
   async patch<T>(path: string, data?: any): Promise<T> {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
       method: 'PATCH',
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -60,7 +61,7 @@ class ApiClient {
   }
 
   async put<T>(path: string, data?: any): Promise<T> {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -69,7 +70,7 @@ class ApiClient {
   }
 
   async delete<T>(path: string): Promise<T> {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });

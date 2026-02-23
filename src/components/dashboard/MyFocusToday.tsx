@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMyTasks, useLeadersFocus, type LeadersFocusTask } from '@/hooks/useTasks';
+import { useMyTasks, useLeadersFocus, type LeadersFocusTask, type MyTaskWithProject } from '@/hooks/useTasks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { format, isBefore, endOfWeek, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import type { TaskWithDetails } from '@/hooks/useTasks';
 
-type MyTask = TaskWithDetails & { project: { id: string; name: string; key: string } };
+type MyTask = MyTaskWithProject;
 
 const today = startOfDay(new Date());
 const todayStr = format(today, 'yyyy-MM-dd');
@@ -25,22 +26,6 @@ function parseDue(due: unknown): Date | null {
   } catch {
     return null;
   }
-}
-
-function CardsSkeleton() {
-  const cardClass = 'rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-4';
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {[1, 2, 3, 4].map((i) => (
-        <Card key={i} className={cardClass}>
-          <CardContent className="p-4">
-            <div className="h-8 w-10 bg-[#0DD9D0]/20 rounded animate-pulse" />
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-2 h-3 w-16 bg-black/5 rounded" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
 }
 
 type FocusTab = 'mine' | 'team';
@@ -61,8 +46,7 @@ export function MyFocusToday() {
   const [focusTab, setFocusTab] = useState<FocusTab>('mine');
   const [showAllRanking, setShowAllRanking] = useState(false);
 
-  const { data, isLoading, error } = useMyTasks();
-  const tasksArray = Array.isArray(data) ? data.filter(Boolean) : [];
+  const { tasks, data: myTasksData, isLoading, isError, error } = useMyTasks();
 
   const showTeamTab = !!isProjectLeader;
   const {
@@ -71,12 +55,13 @@ export function MyFocusToday() {
     error: teamError,
   } = useLeadersFocus(showTeamTab && focusTab === 'team');
 
-  if (import.meta.env.DEV) {
-    console.log('[MyFocusToday] data from useMyTasks', data);
-    console.log('[MyFocusToday] tasksArray', tasksArray);
-  }
+  useEffect(() => {
+    if (import.meta.env.DEV && myTasksData !== undefined) {
+      console.log('[MyFocusToday] my-tasks data', myTasksData.length, myTasksData);
+    }
+  }, [myTasksData]);
 
-  const pending = tasksArray.filter((t) => !t.status?.is_completed);
+  const pending = tasks.filter((t) => !t.status?.is_completed);
 
   const vencenHoy = pending.filter((t) => {
     if (!t.due_date || typeof t.due_date !== 'string') return false;
@@ -140,12 +125,16 @@ export function MyFocusToday() {
             </button>
           </div>
         )}
-        <CardsSkeleton />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[88px] rounded-2xl" />
+          ))}
+        </div>
       </section>
     );
   }
 
-  if (error && focusTab === 'mine') {
+  if (isError && focusTab === 'mine') {
     return (
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-[#0F172A]">👋 Tu foco hoy</h2>
@@ -173,7 +162,13 @@ export function MyFocusToday() {
             </button>
           </div>
         )}
-        <p className="text-sm text-[#64748B]">No se pudo cargar tu foco hoy.</p>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error al cargar tu foco</AlertTitle>
+          <AlertDescription>
+            No se pudieron cargar tus tareas. {error instanceof Error ? error.message : 'Intenta de nuevo más tarde.'}
+          </AlertDescription>
+        </Alert>
       </section>
     );
   }
@@ -456,7 +451,7 @@ export function MyFocusToday() {
         </Card>
       </div>
 
-      {tasksArray.length === 0 ? (
+      {tasks.length === 0 ? (
         <p className="text-sm text-[#64748B]">No tienes tareas asignadas.</p>
       ) : priorityList.length > 0 ? (
         <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">

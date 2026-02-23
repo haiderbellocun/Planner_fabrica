@@ -1,0 +1,44 @@
+# Paths are relative to the BUILD CONTEXT (project root).
+# Used when: docker build -f server/Dockerfile .
+
+# Server build artifacts
+dist/
+node_modules/
+
+# Secrets — never ship .env files
+.env
+.env.*
+!.env.production.example
+
+# Frontend source and deps (not needed in backend image)
+../src/
+../node_modules/
+
+# Editor / OS
+.vscode/
+.idea/
+*.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Tests / coverage
+**/*.test.ts
+**/*.spec.ts
+coverage/
+.nyc_output/
+
+# Dev scripts (only needed locally)
+check*.js
+run-migration.js
+add-leaders-to-projects.js
+verify-token.js
+test-jwt.js
+test-role.js
