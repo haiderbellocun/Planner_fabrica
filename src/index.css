@@ -1,0 +1,340 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Planner Fabrica - Fábrica de Contenido Design System
+   Executive style inspired by Content Factory
+   All colors in HSL format
+*/
+
+@layer base {
+  :root {
+    /* Ice-Blue Dashboard — teal/indigo/yellow palette
+       Reference: rounded cards, teal sidebar, generous spacing */
+
+    /* Core backgrounds — #F7FCFC limpio */
+    --background: 180 25% 98%;
+    --foreground: 222 47% 11%;
+
+    /* Cards — pure white, big radius */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Popovers / dropdowns */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary — teal #0DD9D0, hover #0BBFB7, active #0AA8A1 */
+    --primary: 177 88% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary — teal soft */
+    --secondary: 177 60% 94%;
+    --secondary-foreground: 177 89% 45%;
+
+    /* Muted */
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — teal highlight */
+    --accent: 177 50% 92%;
+    --accent-foreground: 177 89% 40%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Form elements — ring teal (no blue) */
+    --border: 214 32% 91%;
+    --input: 214 32% 95%;
+    --ring: 177 88% 45%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar — solid teal #0DD9D0 */
+    --sidebar-background: 177 88% 45%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 177 88% 45%;
+    --sidebar-accent: 177 89% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 177 88% 38%;
+    --sidebar-ring: 0 0% 100%;
+
+    /* Accent colors */
+    --sage: 133 14% 58%;
+    --sand: 26 33% 84%;
+    --lavender: 257 67% 85%;
+    --lavender-light: 257 67% 91%;
+
+    /* Task status colors */
+    --status-pending: 215 16% 47%;
+    --status-in-progress: 177 88% 45%;
+    --status-in-review: 43 96% 56%;
+    --status-completed: 177 89% 45%;
+
+    /* Priority colors */
+    --priority-low: 215 16% 47%;
+    --priority-medium: 43 96% 56%;
+    --priority-high: 25 95% 53%;
+    --priority-urgent: 0 84% 60%;
+
+    /* Success, warning, info */
+    --success: 177 89% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 100%;
+    --info: 177 88% 45%;
+    --info-foreground: 0 0% 100%;
+
+    /* Chart palette tokens */
+    --chart-indigo: #4F46E5;
+    --chart-yellow: #FBBF24;
+    --chart-teal: #0DD9D0;
+    --chart-grid: #E6FAFA;
+  }
+
+  .dark {
+    /* Dark mode - blue accent kept */
+    --background: 220 20% 9%;
+    --foreground: 220 15% 96%;
+
+    --card: 220 18% 12%;
+    --card-foreground: 220 15% 96%;
+
+    --popover: 220 18% 12%;
+    --popover-foreground: 220 15% 96%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 18% 16%;
+    --secondary-foreground: 220 15% 96%;
+
+    --muted: 220 18% 16%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 217 50% 22%;
+    --accent-foreground: 217 90% 75%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 20%;
+    --input: 220 18% 16%;
+    --ring: 217 91% 60%;
+
+    --sidebar-background: 220 20% 11%;
+    --sidebar-foreground: 220 15% 96%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 50% 20%;
+    --sidebar-accent-foreground: 217 90% 75%;
+    --sidebar-border: 220 18% 18%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Accent colors for dark mode */
+    --sage: 133 14% 55%;
+    --sand: 26 25% 70%;
+    --lavender: 257 50% 70%;
+    --lavender-light: 257 50% 75%;
+
+    /* Status colors - slightly brighter for dark mode */
+    --status-pending: 240 10% 60%;
+    --status-in-progress: 268 80% 65%;
+    --status-in-review: 38 92% 55%;
+    --status-completed: 133 40% 55%;
+
+    /* Priority colors */
+    --priority-low: 240 10% 55%;
+    --priority-medium: 38 92% 55%;
+    --priority-high: 25 95% 58%;
+    --priority-urgent: 0 84% 65%;
+
+    /* Success, warning, info */
+    --success: 142 71% 50%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Kanban column styling - Snapshot style */
+  .kanban-column {
+    @apply bg-white dark:bg-gray-800/50 rounded-xl p-4 min-h-[500px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)];
+  }
+
+  .kanban-column-header {
+    @apply flex items-center justify-between mb-4 pb-3 border-b border-border;
+  }
+
+  /* Task card - subtle shadow, rounded */
+  .task-card {
+    @apply bg-card rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-border hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-primary/20 transition-all cursor-pointer;
+  }
+
+  .task-card-dragging {
+    @apply shadow-xl ring-2 ring-primary/30 rotate-1;
+  }
+
+  /* Status badge variations - More refined */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  }
+
+  .status-pending {
+    @apply bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700;
+  }
+
+  .status-in-progress {
+    @apply bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:border-primary/30;
+  }
+
+  .status-in-review {
+    @apply bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800;
+  }
+
+  .status-completed {
+    @apply bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800;
+  }
+
+  /* Priority badge variations */
+  .priority-low {
+    @apply text-gray-500;
+  }
+
+  .priority-medium {
+    @apply text-amber-500;
+  }
+
+  .priority-high {
+    @apply text-orange-500;
+  }
+
+  .priority-urgent {
+    @apply text-red-500;
+  }
+
+  /* Page layout — Ice-Blue Dashboard: generous spacing, max 1400px */
+  .page-container {
+    @apply flex-1 p-6 md:p-10 overflow-auto max-w-[1400px] mx-auto w-full;
+  }
+
+  .page-header {
+    @apply mb-8 md:mb-10;
+  }
+
+  .page-title {
+    @apply text-xl md:text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  .page-description {
+    @apply text-muted-foreground mt-1.5 text-sm;
+  }
+
+  /* Stat card icon circle — teal filled (non-KPI) */
+  .stat-icon-circle {
+    @apply h-11 w-11 rounded-2xl flex items-center justify-center flex-shrink-0;
+    background: linear-gradient(135deg, #0DD9D0, #0BBFB7);
+    color: white;
+  }
+
+  /* KPI card icon badge — teal soft */
+  .kpi-icon-badge {
+    @apply h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#0DD9D0]/10 text-[#0DD9D0];
+  }
+
+  /* Focus ring teal (no blue) */
+  .focus-ring-teal:focus-visible {
+    @apply outline-none ring-2 ring-[#0DD9D0]/30 border-[#0DD9D0]/40;
+  }
+
+  /* Widget card base — big radius, soft shadow */
+  .widget-card {
+    @apply rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200;
+  }
+
+  .widget-card:hover {
+    @apply shadow-[0_4px_16px_rgba(0,0,0,0.07)];
+  }
+}
+
+@layer utilities {
+  /* Fade in animation */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Slide in animation */
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  /* Hover lift effect */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+}
