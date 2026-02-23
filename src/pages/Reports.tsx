@@ -294,6 +294,47 @@ function TabEquipo() {
     team_count: w.team_count,
   }));
 
+  const capacityMembers = capacity?.members ?? [];
+  const defaultWeeklyCapacity = capacity?.schedule.weekly_hours ?? 40.25;
+
+  const teamPendingHours = capacityMembers.reduce((sum, m) => {
+    const value = Number.isFinite(m.pending_horas) ? m.pending_horas : 0;
+    return sum + value;
+  }, 0);
+
+  const teamCapacityHours = capacityMembers.reduce((sum, m) => {
+    const baseWeekly =
+      Number.isFinite(m.weekly_hours_capacity) && m.weekly_hours_capacity > 0
+        ? m.weekly_hours_capacity
+        : defaultWeeklyCapacity;
+    return sum + baseWeekly;
+  }, 0);
+
+  const teamUtilPct = teamCapacityHours > 0
+    ? Math.round((teamPendingHours / teamCapacityHours) * 100) || 0
+    : 0;
+
+  const teamGapHours = teamCapacityHours - teamPendingHours;
+  const absTeamGapHours = Math.abs(teamGapHours);
+
+  let teamGapDisplay = '0h';
+  if (teamGapHours > 0) {
+    teamGapDisplay = `Holgura ${formatHours(teamGapHours)}`;
+  } else if (teamGapHours < 0) {
+    teamGapDisplay = `Exceso ${formatHours(absTeamGapHours)}`;
+  }
+
+  const riskCounts = capacityMembers.reduce(
+    (acc, m) => {
+      const level = m.risk_level || 'ok';
+      if (level === 'over') acc.over += 1;
+      else if (level === 'warning') acc.warning += 1;
+      else acc.ok += 1;
+      return acc;
+    },
+    { ok: 0, warning: 0, over: 0 },
+  );
+
   // Capacity bar chart data
   const capacityBarData = (capacity?.members || []).map(m => ({
     name: m.full_name.split(' ').slice(0, 2).join(' '),
@@ -319,6 +360,75 @@ function TabEquipo() {
       {/* Capacity Section */}
       {capacity && capacity.members.length > 0 && (
         <>
+          {/* Global team capacity indicator */}
+          {capacityMembers.length > 0 && (
+            <Card className={CARD_CLASS}>
+              <CardContent className="py-4 px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+                    Indicador global de capacidad
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <p className="text-xl font-semibold text-[#0F172A]">{teamUtilPct}%</p>
+                      <p className="text-muted-foreground">Utilización global</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {teamPendingHours > 0 ? formatHours(teamPendingHours) : '0h'}
+                      </p>
+                      <p className="text-muted-foreground">Horas pendientes</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {teamCapacityHours > 0 ? formatHours(teamCapacityHours) : '0h'}
+                      </p>
+                      <p className="text-muted-foreground">Capacidad semanal</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {teamGapDisplay}
+                      </p>
+                      <p className="text-muted-foreground">Gap global</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start sm:items-end gap-2 text-xs">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Riesgo del equipo
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {riskCounts.ok > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px]"
+                      >
+                        OK · {riskCounts.ok}
+                      </Badge>
+                    )}
+                    {riskCounts.warning > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px]"
+                      >
+                        Riesgo · {riskCounts.warning}
+                      </Badge>
+                    )}
+                    {riskCounts.over > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="border-red-200 bg-red-50 text-red-700 px-2 py-0.5 text-[11px]"
+                      >
+                        Sobrecargado · {riskCounts.over}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Schedule info bar */}
           <Card className={`${CARD_CLASS} border-teal-200 bg-teal-50/50`}>
             <CardContent className="flex flex-wrap items-center gap-4 py-3 text-xs">
