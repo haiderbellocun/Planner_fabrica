@@ -34,7 +34,7 @@ export const SERIES_COLORS = [
 // Status name → color mapping
 export const STATUS_COLORS: Record<string, string> = {
   'Sin iniciar': CHART_COLORS.muted,
-  'En proceso': CHART_COLORS.indigo,
+  'En proceso': '#570d49',
   'En pausa': CHART_COLORS.indigoLight,
   'En revisión': CHART_COLORS.yellow,
   'Ajustes': CHART_COLORS.yellowLight,

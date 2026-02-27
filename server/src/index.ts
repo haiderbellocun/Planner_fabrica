@@ -28,10 +28,23 @@ const PORT = env.PORT;
 app.use(healthRoutes);
 
 // Middleware
+// Parse CORS_ORIGIN: supports comma-separated list or '*'
+const rawOrigin = env.CORS_ORIGIN.trim();
+const corsOrigin: string | string[] | boolean =
+  rawOrigin === '*'
+    ? true                              // allow any — bracket avoids credentials conflict
+    : rawOrigin.includes(',')
+      ? rawOrigin.split(',').map(o => o.trim())
+      : rawOrigin;
+
 app.use(cors({
-  origin: env.CORS_ORIGIN,
-  credentials: true,
+  origin: corsOrigin,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: false,                   // JWT in Authorization header — no cookies needed
 }));
+// Handle OPTIONS preflight explicitly for all routes
+app.options('*', cors({ origin: corsOrigin, credentials: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

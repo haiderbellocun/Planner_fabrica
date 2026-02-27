@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, AlertTriangle, ListTodo, CalendarDays } from 'lucide-react';
 import { format, isBefore, endOfWeek, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -424,29 +424,52 @@ export function MyFocusToday() {
       )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className={cardBase}>
-          <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-[#0F172A]">{vencenHoy.length}</div>
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencen hoy</p>
+          <CardContent className="p-4 flex flex-row items-start justify-between">
+            <div>
+              <div className="text-2xl font-semibold text-[#0F172A]">{vencenHoy.length}</div>
+              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencen hoy</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
           </CardContent>
         </Card>
         <Card className={hasOverdue ? cardRed : cardBase}>
-          <CardContent className="p-4">
-            <div className={`text-2xl font-semibold ${hasOverdue ? 'text-red-600' : 'text-[#0F172A]'}`}>
-              {vencidas.length}
+          <CardContent className="p-4 flex flex-row items-start justify-between">
+            <div>
+              <div className={`text-2xl font-semibold ${hasOverdue ? 'text-red-600' : 'text-[#0F172A]'}`}>
+                {vencidas.length}
+              </div>
+              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencidas</p>
             </div>
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencidas</p>
+            <div className={cn(
+              'h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
+              hasOverdue ? 'bg-red-100' : 'bg-primary/10'
+            )}>
+              <AlertTriangle className={cn('h-5 w-5', hasOverdue ? 'text-red-600' : 'text-primary')} />
+            </div>
           </CardContent>
         </Card>
         <Card className={cardBase}>
-          <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-[#0F172A]">{enCurso.length}</div>
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">En curso</p>
+          <CardContent className="p-4 flex flex-row items-start justify-between">
+            <div>
+              <div className="text-2xl font-semibold text-[#0F172A]">{enCurso.length}</div>
+              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">En curso</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <ListTodo className="h-5 w-5 text-primary" />
+            </div>
           </CardContent>
         </Card>
         <Card className={cardBase}>
-          <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-[#0F172A]">{estaSemana.length}</div>
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Esta semana</p>
+          <CardContent className="p-4 flex flex-row items-start justify-between">
+            <div>
+              <div className="text-2xl font-semibold text-[#0F172A]">{estaSemana.length}</div>
+              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Esta semana</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CalendarDays className="h-5 w-5 text-primary" />
+            </div>
           </CardContent>
         </Card>
       </div>

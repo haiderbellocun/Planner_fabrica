@@ -211,6 +211,13 @@ app_planner/
 
 ## 🐛 Troubleshooting
 
+### Avatares en producción (frontend en Cloud Storage)
+Si el frontend está en Cloud Storage y el backend en Cloud Run, las URLs relativas de avatares (`/avatars/...`) darían 404 porque el navegador las pide al dominio del frontend. **Solución:** definir en el build de producción la variable `VITE_API_URL` con la URL pública del backend (Cloud Run), sin barra final. Ejemplo en `.env.production`:
+```bash
+VITE_API_URL=https://tu-servicio-xxxxxx.run.app
+```
+Copia `.env.production.example` a `.env.production` y ajusta la URL. Así todos los `<AvatarImage src={avatar_url}>` resolverán las rutas relativas contra el backend.
+
 ### Error: No se puede conectar a PostgreSQL
 ```bash
 # Verificar que PostgreSQL esté corriendo

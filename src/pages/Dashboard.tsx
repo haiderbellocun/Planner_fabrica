@@ -15,6 +15,10 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
+import projectsImg from '@/assets/dashboard/projects.png';
+import tasksImg from '@/assets/dashboard/tasks.png';
+import notificationsImg from '@/assets/dashboard/notifications.png.png';
+import productivityImg from '@/assets/dashboard/productivity.png';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,7 +32,7 @@ export default function DashboardPage() {
 
   // Calculate stats
   const totalProjects = projects.length;
-  const totalTasks = projects.reduce((acc, p) => acc + p.tasks_count, 0);
+  const totalTasks = projects.reduce((acc, p) => acc + Number(p.tasks_count ?? 0), 0);
   const completedStatus = statuses.find((s) => s.is_completed);
 
   const greeting = () => {
@@ -74,14 +78,12 @@ export default function DashboardPage() {
       <MyFocusToday />
       {/* Stats Cards — KPI recipe: rounded-2xl, shadow, icon badge */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 md:gap-8">
-        <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <img src={projectsImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Proyectos
             </CardTitle>
-            <div className="kpi-icon-badge">
-              <FolderKanban className="h-5 w-5" />
-            </div>
           </CardHeader>
           <CardContent className="p-0 pt-3">
             <div className="text-3xl font-semibold text-[#0F172A]">{totalProjects}</div>
@@ -89,14 +91,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <img src={tasksImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Tareas Totales
             </CardTitle>
-            <div className="kpi-icon-badge">
-              <ListTodo className="h-5 w-5" />
-            </div>
           </CardHeader>
           <CardContent className="p-0 pt-3">
             <div className="text-3xl font-semibold text-[#0F172A]">{totalTasks}</div>
@@ -104,14 +104,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <img src={notificationsImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Notificaciones
             </CardTitle>
-            <div className="kpi-icon-badge">
-              <Bell className="h-5 w-5" />
-            </div>
           </CardHeader>
           <CardContent className="p-0 pt-3">
             <div className="text-3xl font-semibold text-[#0F172A]">{unreadNotifications.length}</div>
@@ -119,14 +117,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <img src={productivityImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Productividad
             </CardTitle>
-            <div className="kpi-icon-badge">
-              <TrendingUp className="h-5 w-5" />
-            </div>
           </CardHeader>
           <CardContent className="p-0 pt-3">
             <div className="text-3xl font-semibold text-[#0F172A]">—</div>

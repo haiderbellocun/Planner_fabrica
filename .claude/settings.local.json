@@ -1,7 +1,31 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(GCLOUD=\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\":*)",
+      "Bash(TMPDIR=\"C:/Users/haider_bello/AppData/Local/Temp\")",
+      "Bash(PROJECT=\"it-fab-contenido-edu-1\")",
+      "Bash(__NEW_LINE_a3322085f04b0b38__ powershell -Command \"& ''$GCLOUD'' secrets create cors-origin --data-file=''$TMPDIR/cors_origin.txt'' --replication-policy=automatic --project=$PROJECT 2>&1\")",
+      "Bash(powershell -Command \"& ''$GCLOUD'' projects get-iam-policy $PROJECT --format=json 2>&1\")",
+      "Bash(python:*)",
+      "Bash(powershell -Command \"& ''$GCLOUD'' projects get-iam-policy $PROJECT --flatten=bindings --format=''table\\(bindings.role,bindings.members\\)'' 2>&1\")",
+      "Bash(powershell -Command \"& ''$GCLOUD'' projects get-iam-policy $PROJECT --flatten=''bindings[].members'' --filter=''bindings.members:desarrollofabrica'' --format=''value\\(bindings.role\\)'' 2>&1\")",
+      "Bash(powershell -Command \"& ''$GCLOUD'' run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=''yaml'' 2>&1\")",
+      "Bash(__NEW_LINE_01214907a42ff663__ powershell -NonInteractive -Command \"\nSet-Location ''C:\\\\app_planner''\n& ''$GCLOUD'' builds submit . --config=cloudbuild-build-only.yaml --project=$PROJECT 2>&1\n\")",
+      "Bash(VITE_API_URL=\"https://planner-api-688781705159.us-central1.run.app\" npm run build:*)",
+      "Bash(IMAGE=\"us-central1-docker.pkg.dev/$PROJECT/taskflow-images/api:latest\")",
+      "Bash(__NEW_LINE_8c0078a7b8b398d9__ powershell -NonInteractive -Command \"\n& ''$GCLOUD'' run deploy planner-api   --image=''$IMAGE''   --region=us-central1   --platform=managed   --allow-unauthenticated   --port=8080   --set-secrets=JWT_SECRET=jwt-secret:latest,DATABASE_URL=database-url:latest,CORS_ORIGIN=cors-origin:latest   --add-cloudsql-instances=it-fab-contenido-edu-1:us-central1:taskflow-db   --min-instances=0   --max-instances=5   --memory=512Mi   --cpu=1   --project=$PROJECT 2>&1\n\")",
+      "Bash(curl:*)",
+      "Bash(powershell -NonInteractive -Command \"\n\\(Invoke-WebRequest -Uri ''https://planner-api-688781705159.us-central1.run.app/healthz'' -UseBasicParsing -ErrorAction SilentlyContinue\\).StatusCode\n\")",
+      "Bash(powershell -NonInteractive -Command \"\ntry {\n  $r = Invoke-WebRequest -Uri ''https://planner-api-688781705159.us-central1.run.app/api/task-statuses'' -UseBasicParsing -ErrorAction Stop\n  Write-Output ''Status:'' $r.StatusCode\n  Write-Output $r.Content.Substring\\(0,200\\)\n} catch {\n  Write-Output ''Error:'' $_.Exception.Message\n  if \\($_.Exception.Response\\) {\n    $stream = $_.Exception.Response.GetResponseStream\\(\\)\n    $reader = New-Object System.IO.StreamReader\\($stream\\)\n    Write-Output $reader.ReadToEnd\\(\\).Substring\\(0,300\\)\n  }\n}\n\")",
+      "Bash(ls:*)",
+      "Bash(powershell -NonInteractive -Command \"& ''$GCLOUD'' sql instances patch planner-postgres --authorized-networks=0.0.0.0/0 --project=$PROJECT 2>&1\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" secrets versions access latest --secret=database-url --project=it-fab-contenido-edu-1)",
+      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=\"yaml\\(spec.template.spec.containers[0].env\\)\")",
+      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services get-iam-policy planner-api --region=us-central1 --project=it-fab-contenido-edu-1)",
+      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=\"yaml\\(metadata.name,spec.template.spec.containers[0].image,spec.template.spec.containers[0].ports,spec.template.spec.containers[0].env,status.url\\)\")"
     ]
   }
 }

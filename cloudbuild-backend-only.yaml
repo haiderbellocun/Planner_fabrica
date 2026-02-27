@@ -1,0 +1,51 @@
+# Solo backend: build y deploy a Cloud Run
+# Uso: gcloud builds submit . --config=cloudbuild-backend-only.yaml --project=it-fab-contenido-edu-1
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE: planner-api
+  _IMAGE: gcr.io/it-fab-contenido-edu-1/planner-api
+  _CLOUD_SQL: it-fab-contenido-edu-1:us-central1:taskflow-db
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -f
+      - server/Dockerfile
+      - -t
+      - '${_IMAGE}:$COMMIT_SHA'
+      - -t
+      - '${_IMAGE}:latest'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - --all-tags
+      - '${_IMAGE}'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - '${_SERVICE}'
+      - --image=${_IMAGE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --set-secrets=JWT_SECRET=jwt-secret:latest,DATABASE_URL=database-url:latest,CORS_ORIGIN=cors-origin:latest
+      - --add-cloudsql-instances=${_CLOUD_SQL}
+      - --min-instances=0
+      - --max-instances=5
+      - --memory=512Mi
+      - --cpu=1
+
+images:
+  - '${_IMAGE}:$COMMIT_SHA'
+  - '${_IMAGE}:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

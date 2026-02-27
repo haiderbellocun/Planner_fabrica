@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "deploy": "npm run build && gsutil -m rsync -r -d dist gs://it-fab-contenido-edu-1-planner-web && gsutil -m setmeta -h \"Cache-Control:no-cache, max-age=0\" gs://it-fab-contenido-edu-1-planner-web/index.html && gsutil -m setmeta -h \"Cache-Control:public, max-age=31536000, immutable\" \"gs://it-fab-contenido-edu-1-planner-web/assets/*\"",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

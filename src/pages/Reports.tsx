@@ -1,4 +1,7 @@
-import { Loader2, FolderKanban, Users, Package, Clock, BarChart3, CalendarDays, AlertTriangle } from 'lucide-react';
+import { Component, ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, Package, Clock, BarChart3, CalendarDays, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -27,29 +30,55 @@ import {
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import ViolinChart from '@/components/reports/ViolinChart';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
+import kpiProjectsImg from '@/assets/dashboard/projects.png';
+import kpiTasksImg from '@/assets/dashboard/tasks.png';
+import kpiPackageImg from '@/assets/dashboard/productivity.png';
+import kpiUsersImg from '@/assets/dashboard/notifications.png.png';
 
-// Snapshot Operativo style — light theme, same as Dashboard
+// Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
 
 // Ranking colors for top collaborators
 const RANKING_COLORS = ['#FBBF24', '#4F46E5', '#0DD9D0', '#6366F1', '#BFEFF0'];
 
-// ---------- KPI Card — recipe: rounded-2xl, shadow, icon badge teal ----------
+// ---------- Error Boundary (evita pantalla en blanco por errores no capturados) ----------
+class ReportsErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
+  state = { hasError: false, message: '' };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || 'Error al cargar reportes' };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="page-container flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <AlertTriangle className="h-12 w-12 mb-4 text-amber-500" />
+          <h2 className="text-lg font-semibold text-foreground mb-1">No se pudo cargar la página de Reportes</h2>
+          <p className="text-sm max-w-md text-center mb-2">{this.state.message}</p>
+          <p className="text-xs mb-4">Revisa que el backend esté en marcha (puerto 3001) y que hayas iniciado sesión.</p>
+          <p className="text-xs text-muted-foreground">Abre la pestaña <strong>Console</strong> (F12) para ver el detalle del error.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------- KPI Card — solo imagen (logo nuevo), sin icono montado ----------
 function KpiCard({
-  title, value, subtitle, icon: Icon,
+  title, value, subtitle, image,
 }: {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: React.ElementType;
+  image: string;
 }) {
   return (
-    <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
+    <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+      <img src={image} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-70 pointer-events-none" />
+      <CardHeader className="pb-2 p-0">
         <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">{title}</CardTitle>
-        <div className="kpi-icon-badge">
-          <Icon className="h-5 w-5" />
-        </div>
       </CardHeader>
       <CardContent className="p-0 pt-3">
         <div className="text-3xl font-semibold text-[#0F172A]">{value}</div>
@@ -61,24 +90,45 @@ function KpiCard({
 
 // ---------- Tab: Resumen ----------
 function TabResumen() {
-  const { data: overview, isLoading } = useReportOverview();
+  const { data: overview, isLoading, isError, error } = useReportOverview();
   const { data: projectsProgress = [] } = useReportProjectsProgress();
   const { data: team = [] } = useReportTeamPerformance();
 
-  if (isLoading || !overview) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
-  // Polar area chart data
-  const statusData = overview.tasks.by_status.map(s => ({
-    name: s.name,
-    value: s.count,
-    color: STATUS_COLORS[s.name] || CHART_COLORS.muted,
-  }));
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <AlertTriangle className="h-10 w-10 mb-3" />
+        <p className="text-sm">No se pudo cargar el resumen. {(error as Error)?.message || 'Error de conexión.'}</p>
+      </div>
+    );
+  }
+
+  if (!overview) {
+    return <LoadingState />;
+  }
+
+  const tasks = overview.tasks ?? {};
+  const byStatus = tasks.by_status ?? [];
+  const projectsData = overview.projects ?? { total: 0, active: 0 };
+  const materialsData = overview.materials ?? { total: 0, completed: 0, completion_rate: 0 };
+  const teamData = overview.team ?? { active_members: 0 };
+
+  // Polar area chart data (solo valores numéricos válidos)
+  const statusData = byStatus
+    .map((s: { name?: string; count?: number }) => ({
+      name: String(s?.name ?? ''),
+      value: Number(s?.count ?? 0) || 0,
+      color: STATUS_COLORS[s?.name ?? ''] || CHART_COLORS.muted,
+    }))
+    .filter(s => s.name);
 
   // Top 5 collaborators with ranking colors
   const top5 = team.slice(0, 5).map((t, i) => ({
-    name: t.full_name.split(' ').slice(0, 2).join(' '),
+    name: (t.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') || 'Usuario',
     completadas: t.completed_tasks,
     en_progreso: t.in_progress_tasks,
     total: t.total_tasks,
@@ -91,13 +141,19 @@ function TabResumen() {
   };
 
   // Project progress for stacked bar
-  const projectBarData = projectsProgress.slice(0, 8).map(p => ({
-    name: p.key,
-    completadas: p.completed_tasks,
-    en_progreso: p.in_progress_tasks,
-    en_revision: p.in_review_tasks,
-    pendientes: Math.max(0, p.total_tasks - p.completed_tasks - p.in_progress_tasks - p.in_review_tasks),
-  }));
+  const projectBarData = (projectsProgress.slice(0, 8) ?? []).map(p => {
+    const total = Number(p.total_tasks ?? 0);
+    const completed = Number(p.completed_tasks ?? 0);
+    const inProgress = Number(p.in_progress_tasks ?? 0);
+    const inReview = Number(p.in_review_tasks ?? 0);
+    return {
+      name: p.key,
+      completadas: completed,
+      en_progreso: inProgress,
+      en_revision: inReview,
+      pendientes: Math.max(0, total - completed - inProgress - inReview),
+    };
+  });
 
   const projectBarConfig: ChartConfig = {
     completadas: { label: 'Completadas', color: CHART_COLORS.teal },
@@ -112,29 +168,29 @@ function TabResumen() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
         <KpiCard
           title="Proyectos Activos"
-          value={overview.projects.active}
-          subtitle={`${overview.projects.total} totales`}
-          icon={FolderKanban}
+          value={projectsData.active}
+          subtitle={`${projectsData.total} totales`}
+          image={kpiProjectsImg}
         />
         <KpiCard
           title="Tareas Totales"
-          value={overview.tasks.total}
-          subtitle={`${overview.recent_completed_30d} completadas (30d)`}
-          icon={BarChart3}
+          value={tasks.total ?? 0}
+          subtitle={`${overview.recent_completed_30d ?? 0} completadas (30d)`}
+          image={kpiTasksImg}
         />
         <KpiCard
           title="Materiales"
-          value={`${overview.materials.completion_rate}%`}
-          subtitle={`${overview.materials.completed} de ${overview.materials.total} completados`}
-          icon={Package}
+          value={`${materialsData.completion_rate ?? 0}%`}
+          subtitle={`${materialsData.completed} de ${materialsData.total} completados`}
+          image={kpiPackageImg}
         />
         <KpiCard
           title="Equipo Activo"
-          value={overview.team.active_members}
+          value={teamData.active_members}
           subtitle={overview.avg_completion_seconds > 0
             ? `Promedio: ${formatDuration(overview.avg_completion_seconds)}`
             : 'Sin datos de tiempo aún'}
-          icon={Users}
+          image={kpiUsersImg}
         />
       </div>
 
@@ -337,10 +393,10 @@ function TabEquipo() {
 
   // Capacity bar chart data
   const capacityBarData = (capacity?.members || []).map(m => ({
-    name: m.full_name.split(' ').slice(0, 2).join(' '),
+    name: (m.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') || 'Usuario',
     pending_horas: m.pending_horas,
     completed_horas: m.completed_horas,
-    capacidad_semanal: capacity?.schedule.weekly_hours || 40.25,
+    capacidad_semanal: capacity?.schedule?.weekly_hours || 40.25,
   }));
 
   const capacityBarConfig: ChartConfig = {
@@ -436,10 +492,14 @@ function TabEquipo() {
                 <Clock className="h-3.5 w-3.5 text-teal-600" />
                 <span className="font-medium text-teal-900">Jornada laboral:</span>
               </div>
-              <span className="text-teal-700">Lun-Jue: {capacity.schedule.mon_thu_hours}h</span>
-              <span className="text-teal-700">Vie: {capacity.schedule.friday_hours}h</span>
-              <span className="text-teal-700 font-semibold">Semanal: {capacity.schedule.weekly_hours}h</span>
-              <span className="text-teal-700">Promedio diario: {capacity.schedule.avg_daily_hours}h</span>
+              {capacity.schedule && (
+                <>
+                  <span className="text-teal-700">Lun-Jue: {capacity.schedule.mon_thu_hours}h</span>
+                  <span className="text-teal-700">Vie: {capacity.schedule.friday_hours}h</span>
+                  <span className="text-teal-700 font-semibold">Semanal: {capacity.schedule.weekly_hours}h</span>
+                  <span className="text-teal-700">Promedio diario: {capacity.schedule.avg_daily_hours}h</span>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -474,12 +534,12 @@ function TabEquipo() {
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={member.avatar_url || ''} />
                         <AvatarFallback className="text-xs">
-                          {member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                          {(member.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm truncate">{member.full_name}</p>
+                          <p className="font-semibold text-sm truncate">{member.full_name || 'Sin nombre'}</p>
                           <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 border ${riskBadgeClass}`}>
                             {member.risk_label}
                           </Badge>
@@ -639,10 +699,10 @@ function TabEquipo() {
                         <Avatar className="h-7 w-7">
                           <AvatarImage src={member.avatar_url || ''} />
                           <AvatarFallback className="text-xs">
-                            {member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                            {(member.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium truncate max-w-[150px]">{member.full_name}</span>
+                        <span className="font-medium truncate max-w-[150px]">{member.full_name || 'Sin nombre'}</span>
                       </div>
                     </td>
                     <td className="py-3 px-2">
@@ -705,7 +765,7 @@ function TabProduccion() {
   const polarMatData = activeMaterials.map((m, i) => ({
     name: m.name.replace(/_/g, ' '),
     value: m.total_required,
-    color: SERIES_COLORS[i % SERIES_COLORS.length],
+    color: RANKING_COLORS[i % RANKING_COLORS.length],
   }));
 
   return (
@@ -931,44 +991,52 @@ function EmptyState({ message }: { message: string }) {
 
 // ---------- Main Page ----------
 export default function ReportsPage() {
+  const { isAdmin, isProjectLeader } = useAuth();
+
+  if (!isAdmin && !isProjectLeader) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Reportes</h1>
-        <p className="page-description">
-          Monitoreo y analítica de la Fábrica de Contenidos
-        </p>
+    <ReportsErrorBoundary>
+      <div className="page-container">
+        <div className="page-header">
+          <h1 className="page-title">Reportes</h1>
+          <p className="page-description">
+            Monitoreo y analítica de la Fábrica de Contenidos
+          </p>
+        </div>
+
+        <Tabs defaultValue="resumen" className="space-y-8">
+          <TabsList className="grid w-full grid-cols-5 max-w-[600px]">
+            <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
+            <TabsTrigger value="equipo">Equipo</TabsTrigger>
+            <TabsTrigger value="produccion">Producción</TabsTrigger>
+            <TabsTrigger value="eficiencia">Eficiencia</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="resumen">
+            <TabResumen />
+          </TabsContent>
+
+          <TabsContent value="proyectos">
+            <TabProyectos />
+          </TabsContent>
+
+          <TabsContent value="equipo">
+            <TabEquipo />
+          </TabsContent>
+
+          <TabsContent value="produccion">
+            <TabProduccion />
+          </TabsContent>
+
+          <TabsContent value="eficiencia">
+            <TabEficiencia />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Tabs defaultValue="resumen" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-5 max-w-[600px]">
-          <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
-          <TabsTrigger value="equipo">Equipo</TabsTrigger>
-          <TabsTrigger value="produccion">Producción</TabsTrigger>
-          <TabsTrigger value="eficiencia">Eficiencia</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="resumen">
-          <TabResumen />
-        </TabsContent>
-
-        <TabsContent value="proyectos">
-          <TabProyectos />
-        </TabsContent>
-
-        <TabsContent value="equipo">
-          <TabEquipo />
-        </TabsContent>
-
-        <TabsContent value="produccion">
-          <TabProduccion />
-        </TabsContent>
-
-        <TabsContent value="eficiencia">
-          <TabEficiencia />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </ReportsErrorBoundary>
   );
 }

@@ -1,0 +1,20 @@
+# One-shot build: compiles and pushes the backend Docker image to Artifact Registry.
+# Run from the project root:
+#   gcloud builds submit . --config=cloudbuild-build-only.yaml --project=it-fab-contenido-edu-1
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-api
+    args:
+      - build
+      - -f
+      - server/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/it-fab-contenido-edu-1/taskflow-images/api:latest
+      - .
+
+images:
+  - us-central1-docker.pkg.dev/it-fab-contenido-edu-1/taskflow-images/api:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8

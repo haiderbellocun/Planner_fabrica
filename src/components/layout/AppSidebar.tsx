@@ -41,8 +41,12 @@ const baseNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
   { title: 'Proyectos', url: '/projects', icon: FolderKanban },
   { title: 'Mis Tareas', url: '/my-tasks', icon: ListTodo },
-  { title: 'Reportes', url: '/reports', icon: BarChart3 },
 ];
+
+const reportsNavItem = { title: 'Reportes', url: '/reports', icon: BarChart3 };
+
+const baseNavItemsWithReports = (showReports: boolean) =>
+  showReports ? [...baseNavItems, reportsNavItem] : baseNavItems;
 
 const leaderNavItems = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
@@ -73,8 +77,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-white/10 bg-[#0DD9D0]">
       <SidebarHeader className="border-b border-white/20 px-3 py-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <img src="/logo.png" alt="FC" className="h-6 w-6 object-contain" />
+          <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <img src="/logo.png" alt="FC" className="h-8 w-8 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
@@ -90,7 +94,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {[...baseNavItems, ...(isProjectLeader ? leaderNavItems : [])].map((item) => (
+              {[...baseNavItemsWithReports(isAdmin || isProjectLeader), ...(isProjectLeader ? leaderNavItems : [])].map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.url}>
                     <NavLink

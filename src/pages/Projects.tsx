@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FolderKanban, Users, ListTodo, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
+import projectsImg from '@/assets/dashboard/projects.png';
 
 export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
@@ -76,8 +77,9 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
             <Link key={project.id} to={`/projects/${project.id}`}>
-              <Card className="h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer">
-                <CardHeader>
+              <Card className="relative h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
+                <img src={projectsImg} alt="" className="absolute bottom-0 right-0 h-24 w-24 object-contain opacity-20 pointer-events-none z-0" />
+                <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <FolderKanban className="h-5 w-5 text-primary" />
@@ -89,7 +91,7 @@ export default function ProjectsPage() {
                     {project.description || 'Sin descripción'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">

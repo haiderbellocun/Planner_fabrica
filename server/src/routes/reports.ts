@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { reportsAccessMiddleware } from '../middleware/permissions.js';
 import {
   getOverview,
   getProjectsProgress,
@@ -13,8 +14,9 @@ import {
 
 const router = Router();
 
-// All report endpoints require authentication
+// All report endpoints require authentication and admin or project_leader role
 router.use(authMiddleware);
+router.use(reportsAccessMiddleware);
 
 router.get('/overview', getOverview);
 router.get('/projects-progress', getProjectsProgress);

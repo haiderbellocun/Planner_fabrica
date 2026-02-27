@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LayoutGrid, Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
+import logo from '@/assets/LOGOS-07.png';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -118,15 +119,11 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full relative flex flex-col items-center justify-center p-4">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-md">
       <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="h-10 w-10 rounded-lg flex items-center justify-center">
-            <img src="/logo.png" alt="Fábrica de Contenido" className="h-10 w-10 object-contain" />
-          </div>
-          <h1 className="text-3xl font-bold">Fábrica de Contenido</h1>
-        </div>
-        <p className="text-muted-foreground">Planner Fabrica - Gestión de contenido</p>
+        <img src={logo} alt="Fábrica de Contenido" className="h-[52px] md:h-16 w-auto object-contain mx-auto" />
+        <p className="text-muted-foreground mt-2">Planner Fabrica - Gestión de contenido</p>
       </div>
 
       <Card className="w-full max-w-md">
@@ -264,6 +261,7 @@ export default function AuthPage() {
           Volver al inicio
         </Link>
       </p>
+      </div>
     </div>
   );
 }
