@@ -1,4 +1,17 @@
-node_modules
+node_modules/
 .env
 *.env
 server/.env
+
+# builds
+dist/
+build/
+
+# logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
