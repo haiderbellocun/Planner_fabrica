@@ -4,6 +4,7 @@ import path from 'path';
 import authRoutes from './routes/auth.js';
 import projectsRoutes from './routes/projects.js';
 import tasksRoutes, { projectTasksRouter } from './routes/tasks.js';
+import chatRoutes from './routes/chat.js';
 import taskStatusesRoutes from './routes/taskStatuses.js';
 import profilesRoutes from './routes/profiles.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -90,6 +91,7 @@ app.use('/api', materialAssigneesRoutes);
 app.use('/api/tiempos-estimados', tiemposRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/leaders', leadersRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404 handler
 app.use((req, res) => {

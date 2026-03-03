@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
+import { sendTaskAssignedEmail } from '../services/emailService.js';
 
 /**
  * GET /api/projects/:projectId/tasks
@@ -482,13 +483,59 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     const task = result.rows[0];
 
-    // Create notification if assigned to someone else
+    // Create notification + email if assigned to someone else
     if (assignee_id && assignee_id !== reporterId) {
       await query(
         `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
          VALUES ($1, $2, $3, 'task_assigned', 'Nueva tarea asignada', $4)`,
         [assignee_id, projectId, task.id, `Se te ha asignado la tarea: ${title}`]
       );
+
+      try {
+        const assigneeResult = await query(
+          'SELECT full_name, email FROM public.profiles WHERE id = $1',
+          [assignee_id]
+        );
+        const projectResult = await query(
+          'SELECT name FROM public.projects WHERE id = $1',
+          [projectId]
+        );
+
+        const assignee = assigneeResult.rows[0];
+        const project = projectResult.rows[0];
+
+        if (assignee?.email) {
+          const frontendUrl = env.FRONTEND_URL ?? '';
+          const taskLink = frontendUrl ? `${frontendUrl}/#/my-tasks` : '';
+
+          const subject = `Nueva tarea asignada en ${project?.name ?? 'un proyecto'}`;
+          const htmlParts = [
+            `<p>Hola ${assignee.full_name ?? ''},</p>`,
+            `<p>Se te ha asignado una nueva tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
+            `<p><strong>${title}</strong></p>`,
+          ];
+
+          if (due_date) {
+            htmlParts.push(`<p>Fecha de vencimiento: <strong>${due_date}</strong></p>`);
+          }
+
+          if (taskLink) {
+            htmlParts.push(
+              `<p>Puedes verla en la aplicación aquí: <a href="${taskLink}">${taskLink}</a></p>`
+            );
+          }
+
+          htmlParts.push('<p>Fábrica de Contenidos</p>');
+
+          await sendTaskAssignedEmail({
+            to: assignee.email,
+            subject,
+            html: htmlParts.join(''),
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending task assignment email:', emailError);
+      }
     }
 
     res.status(201).json(task);

@@ -68,6 +68,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // Tab 2: Programas
   const [programas, setProgramas] = useState<Programa[]>([]);
@@ -101,6 +102,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setName('');
     setKey('');
     setDescription('');
+    setEndDate('');
     setProgramas([]);
     setCurrentPrograma({ name: '', code: '', description: '', tipo_programa: '', asignaturas: [] });
     setCurrentAsignatura({ name: '', code: '', description: '', semestre: null, temas: [] });
@@ -117,6 +119,11 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
       return;
     }
 
+    if (!endDate) {
+      toast.error('La fecha de entrega/finalización del proyecto es requerida');
+      return;
+    }
+
     setIsPending(true);
 
     try {
@@ -125,6 +132,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
         name: name.trim(),
         key: key.trim(),
         description: description.trim() || null,
+        end_date: endDate,
       });
 
       const projectId = projectResponse.id;
@@ -340,6 +348,17 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                 <p className="text-xs text-muted-foreground">
                   Se usará como prefijo para las tareas (ej: {key || 'CONT'}-1)
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="end_date">Fecha de entrega / finalización *</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="space-y-2">

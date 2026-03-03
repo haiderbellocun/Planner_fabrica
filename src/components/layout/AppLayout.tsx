@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Loader2, Search, Bell, FolderKanban, Settings, LogOut } from 'lucide-react';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
+import { LuminaWidget } from '@/components/chat/LuminaWidget';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -105,8 +106,9 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1">
+          <main className="flex-1 relative">
             {children}
+            <LuminaWidget />
           </main>
         </SidebarInset>
       </div>

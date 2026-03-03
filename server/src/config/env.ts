@@ -21,6 +21,14 @@ const envSchema = z
       .string()
       .min(1, 'CORS_ORIGIN must be set')
       .default('http://localhost:5173'),
+    FRONTEND_URL: z.string().url().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_MODEL: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     const hasDatabaseUrl = !!env.DATABASE_URL;

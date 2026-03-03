@@ -1,0 +1,7 @@
+POST http://localhost:3001/api/chat
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAxNTNmYWU1LTQ5ZDEtNGJmMC05MTlmLTFkOGFkOTk1ZTM2ZiIsInByb2ZpbGVJZCI6Ijk2YzlkZmJmLTM4YjEtNGY3ZS05YWJmLTJmMGFmZGVjNGQ3NCIsImVtYWlsIjoiaGFpZGVyX2JlbGxvQGN1bi5lZHUuY28iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzI0ODM2NzIsImV4cCI6MTc3MzA4ODQ3Mn0.rKJ3JUnqX59vG4Tijyqs8eLVCOtZob5IYLzhJ8oLxgo
+Content-Type: application/json
+
+{
+  "message": "¿Cuántas tareas tengo hoy y cuántas vencidas?"
+}

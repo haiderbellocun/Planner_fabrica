@@ -56,6 +56,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [tipoPrograma, setTipoPrograma] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // Asignaturas
   const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
@@ -71,6 +72,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setKey('');
     setDescription('');
     setTipoPrograma('');
+    setEndDate('');
     setAsignaturas([]);
     setCurrentAsignatura({ name: '', code: '', description: '', materiales: [] });
   };
@@ -78,10 +80,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!endDate) {
+      // La API también lo valida, pero lo exigimos en el cliente para mejor UX
+      return;
+    }
+
     await createProject.mutateAsync({
       name,
       key,
       description: description || undefined,
+      end_date: endDate,
       tipo_programa: tipoPrograma as any || undefined,
       asignaturas: asignaturas.length > 0 ? asignaturas : undefined,
     });
@@ -197,6 +205,17 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 <p className="text-xs text-muted-foreground">
                   Se usará como prefijo para las tareas (ej: {key || 'CONT-2024'}-1)
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="end_date">Fecha de entrega / finalización *</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -390,7 +409,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             </Button>
             <Button
               type="submit"
-              disabled={createProject.isPending || !name.trim() || !key.trim()}
+              disabled={createProject.isPending || !name.trim() || !key.trim() || !endDate}
             >
               {createProject.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Crear Proyecto
