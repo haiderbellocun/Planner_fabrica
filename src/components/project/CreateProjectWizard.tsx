@@ -59,6 +59,9 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type ProjectCategory = 'academico' | 'marketing' | 'otros';
+type WizardStep = 'category' | 'form';
+
 export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardProps) {
   const queryClient = useQueryClient();
   const { data: materialTypes = [] } = useMaterialTypes();
@@ -69,6 +72,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [endDate, setEndDate] = useState<string>('');
+  const [category, setCategory] = useState<ProjectCategory | null>(null);
+
+  // Información específica para proyectos de marketing
+  const [marketingPiecesType, setMarketingPiecesType] = useState<'imagen' | 'video' | 'ambos' | ''>('');
+  const [marketingFormat, setMarketingFormat] = useState<string>(''); // texto libre
+  const [marketingVideoKind, setMarketingVideoKind] = useState<'promocional' | 'institucional' | ''>('');
+
+  const [step, setStep] = useState<WizardStep>('category');
 
   // Tab 2: Programas
   const [programas, setProgramas] = useState<Programa[]>([]);
@@ -103,6 +114,11 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setKey('');
     setDescription('');
     setEndDate('');
+    setCategory(null);
+    setMarketingPiecesType('');
+    setMarketingFormat('');
+    setMarketingVideoKind('');
+    setStep('category');
     setProgramas([]);
     setCurrentPrograma({ name: '', code: '', description: '', tipo_programa: '', asignaturas: [] });
     setCurrentAsignatura({ name: '', code: '', description: '', semestre: null, temas: [] });
@@ -119,9 +135,34 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
       return;
     }
 
+    if (!category) {
+      toast.error('Selecciona el tipo de proyecto (Académico, Marketing u Otros).');
+      return;
+    }
+
     if (!endDate) {
       toast.error('La fecha de entrega/finalización del proyecto es requerida');
       return;
+    }
+
+    // Construir descripción enriquecida según categoría
+    let finalDescription = description.trim();
+
+    if (category === 'marketing') {
+      const marketingSummaryLines = [
+        '',
+        '[Proyecto de Marketing]',
+        `Piezas: ${marketingPiecesType || 'no especificado'}`,
+        `Formato(s): ${marketingFormat || 'no especificado'}`,
+        `Tipo de video: ${marketingVideoKind || 'no aplica'}`,
+      ];
+      finalDescription = `${finalDescription}${marketingSummaryLines.join('\n')}`.trim();
+    } else if (category === 'otros') {
+      const extra = '\n[Proyecto de tipo: Otros]';
+      finalDescription = `${finalDescription}${extra}`;
+    } else if (category === 'academico') {
+      const extra = '\n[Proyecto Académico]';
+      finalDescription = `${finalDescription}${extra}`;
     }
 
     setIsPending(true);
@@ -131,7 +172,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
       const projectResponse = await api.post('/api/projects', {
         name: name.trim(),
         key: key.trim(),
-        description: description.trim() || null,
+        description: finalDescription || null,
         end_date: endDate,
       });
 
@@ -288,32 +329,101 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Crear Proyecto Educativo</DialogTitle>
-            <DialogDescription>
-              Configura toda la estructura del proyecto: programas, asignaturas, temas y materiales
-            </DialogDescription>
-          </DialogHeader>
+        {step === 'category' ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Nuevo Proyecto</DialogTitle>
+              <DialogDescription>
+                Elige primero el tipo de proyecto que quieres crear.
+              </DialogDescription>
+            </DialogHeader>
 
-          <Tabs defaultValue="basic" className="w-full mt-4">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card
+                className={`cursor-pointer transition shadow-sm ${
+                  category === 'academico' ? 'border-primary shadow-md' : ''
+                }`}
+                onClick={() => {
+                  setCategory('academico');
+                  setStep('form');
+                }}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Académico</CardTitle>
+                  <CardDescription>
+                    Usa programas, asignaturas, temas y materiales.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card
+                className={`cursor-pointer transition shadow-sm ${
+                  category === 'marketing' ? 'border-primary shadow-md' : ''
+                }`}
+                onClick={() => {
+                  setCategory('marketing');
+                  setStep('form');
+                }}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Marketing</CardTitle>
+                  <CardDescription>
+                    Define piezas, formatos y tipo de video.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card
+                className={`cursor-pointer transition shadow-sm ${
+                  category === 'otros' ? 'border-primary shadow-md' : ''
+                }`}
+                onClick={() => {
+                  setCategory('otros');
+                  setStep('form');
+                }}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Otros</CardTitle>
+                  <CardDescription>
+                    Solo información básica del proyecto.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Crear Proyecto Educativo</DialogTitle>
+              <DialogDescription>
+                {category === 'academico'
+                  ? 'Configura la estructura del proyecto: programas, asignaturas, temas y materiales.'
+                  : 'Configura la información del proyecto.'}
+              </DialogDescription>
+            </DialogHeader>
+
+            <Tabs defaultValue="basic" className="w-full mt-4">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="basic">
                 <FileText className="h-4 w-4 mr-1" />
                 Básico
               </TabsTrigger>
-              <TabsTrigger value="programs">
-                <Folder className="h-4 w-4 mr-1" />
-                Programas ({programas.length})
-              </TabsTrigger>
-              <TabsTrigger value="subjects">
-                <BookOpen className="h-4 w-4 mr-1" />
-                Asignaturas ({totalAsignaturas})
-              </TabsTrigger>
-              <TabsTrigger value="topics">
-                <Layout className="h-4 w-4 mr-1" />
-                Temas ({totalTemas})
-              </TabsTrigger>
+                {category === 'academico' && (
+                  <>
+                    <TabsTrigger value="programs">
+                      <Folder className="h-4 w-4 mr-1" />
+                      Programas ({programas.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="subjects">
+                      <BookOpen className="h-4 w-4 mr-1" />
+                      Asignaturas ({totalAsignaturas})
+                    </TabsTrigger>
+                    <TabsTrigger value="topics">
+                      <Layout className="h-4 w-4 mr-1" />
+                      Temas ({totalTemas})
+                    </TabsTrigger>
+                  </>
+                )}
               <TabsTrigger value="review">
                 <Package className="h-4 w-4 mr-1" />
                 Revisar
@@ -371,10 +481,81 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                   rows={4}
                 />
               </div>
+              {/* Información sobre el tipo de proyecto + campos adicionales si aplica */}
+              {category === 'academico' && (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Tipo de proyecto: <span className="font-medium">Académico</span>. Usa las pestañas de
+                  Programas, Asignaturas y Temas para definir la estructura.
+                </p>
+              )}
+
+              {category === 'otros' && (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Tipo de proyecto: <span className="font-medium">Otros</span>. Solo se usará la información básica.
+                </p>
+              )}
+
+              {category === 'marketing' && (
+                <div className="mt-4 space-y-4 rounded-lg border bg-muted/40 p-4">
+                  <p className="text-sm font-medium">
+                    Tipo de proyecto: <span className="font-semibold">Marketing</span>
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label>Tipo de piezas</Label>
+                    <Select
+                      value={marketingPiecesType}
+                      onValueChange={(value: 'imagen' | 'video' | 'ambos') =>
+                        setMarketingPiecesType(value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el tipo de piezas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="imagen">Solo imágenes</SelectItem>
+                        <SelectItem value="video">Solo videos</SelectItem>
+                        <SelectItem value="ambos">Imágenes y videos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Formatos de las piezas</Label>
+                    <Input
+                      placeholder="Ej: Reels, historias, posts, banners..."
+                      value={marketingFormat}
+                      onChange={(e) => setMarketingFormat(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Escribe una lista separada por comas.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tipo de video</Label>
+                    <Select
+                      value={marketingVideoKind}
+                      onValueChange={(value: 'promocional' | 'institucional') =>
+                        setMarketingVideoKind(value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el tipo de video (si aplica)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="promocional">Promocional</SelectItem>
+                        <SelectItem value="institucional">Institucional</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
-            {/* Tab 2: Programas */}
-            <TabsContent value="programs" className="space-y-4 mt-4">
+            {/* Tab 2: Programas (solo proyectos académicos) */}
+            {category === 'academico' && (
+              <TabsContent value="programs" className="space-y-4 mt-4">
               {programas.length > 0 && (
                 <div className="space-y-2">
                   <Label>Programas Agregados</Label>
@@ -481,10 +662,12 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                   </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
+              </TabsContent>
+            )}
 
-            {/* Tab 3: Asignaturas */}
-            <TabsContent value="subjects" className="space-y-4 mt-4">
+            {/* Tab 3: Asignaturas (solo proyectos académicos) */}
+            {category === 'academico' && (
+              <TabsContent value="subjects" className="space-y-4 mt-4">
               {programas.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
@@ -592,10 +775,12 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                   )}
                 </>
               )}
-            </TabsContent>
+              </TabsContent>
+            )}
 
-            {/* Tab 4: Temas */}
-            <TabsContent value="topics" className="space-y-4 mt-4">
+            {/* Tab 4: Temas (solo proyectos académicos) */}
+            {category === 'academico' && (
+              <TabsContent value="topics" className="space-y-4 mt-4">
               {totalAsignaturas === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
@@ -734,7 +919,8 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                   )}
                 </>
               )}
-            </TabsContent>
+              </TabsContent>
+            )}
 
             {/* Tab 5: Revisar */}
             <TabsContent value="review" className="space-y-4 mt-4">
@@ -742,52 +928,108 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                 <CardHeader>
                   <CardTitle>Resumen del Proyecto</CardTitle>
                   <CardDescription>
-                    Revisa toda la configuración antes de crear el proyecto
+                    Revisa la información antes de crear el proyecto.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <p className="font-semibold">{name || '(Sin nombre)'}</p>
                     <p className="text-sm text-muted-foreground">{key || '(Sin clave)'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tipo de proyecto:{' '}
+                      <span className="font-medium capitalize">
+                        {category === 'academico'
+                          ? 'Académico'
+                          : category === 'marketing'
+                          ? 'Marketing'
+                          : category === 'otros'
+                          ? 'Otros'
+                          : 'Sin definir'}
+                      </span>
+                    </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-medium mb-2">Estructura:</p>
-                    <ul className="space-y-1 text-sm">
-                      <li>📁 {programas.length} Programas</li>
-                      <li>📚 {totalAsignaturas} Asignaturas</li>
-                      <li>📖 {totalTemas} Temas</li>
-                    </ul>
-                  </div>
+                  {/* Resumen específico según el tipo */}
+                  {category === 'academico' && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Estructura académica:</p>
+                      <ul className="space-y-1 text-sm">
+                        <li>📁 {programas.length} Programas</li>
+                        <li>📚 {totalAsignaturas} Asignaturas</li>
+                        <li>📖 {totalTemas} Temas</li>
+                      </ul>
+                      {programas.length === 0 && (
+                        <p className="text-sm text-amber-600 mt-2">
+                          ⚠️ No has agregado ningún programa aún.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                  {programas.length === 0 && (
-                    <p className="text-sm text-amber-600">
-                      ⚠️ No has agregado ningún programa aún
+                  {category === 'marketing' && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Configuración de Marketing:</p>
+                      <ul className="space-y-1 text-sm">
+                        <li>
+                          Tipo de piezas:{' '}
+                          <span className="font-medium">
+                            {marketingPiecesType || 'no especificado'}
+                          </span>
+                        </li>
+                        <li>
+                          Formatos:{' '}
+                          <span className="font-medium">
+                            {marketingFormat || 'no especificado'}
+                          </span>
+                        </li>
+                        <li>
+                          Tipo de video:{' '}
+                          <span className="font-medium">
+                            {marketingVideoKind || 'no aplica'}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {category === 'otros' && (
+                    <p className="text-sm text-muted-foreground">
+                      Este proyecto solo usará la información básica (no tiene estructura académica
+                      ni configuración de marketing adicional).
                     </p>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
+            </Tabs>
 
-          <DialogFooter className="mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                resetForm();
-                onOpenChange(false);
-              }}
-              disabled={isPending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending || !name.trim() || !key.trim()}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Crear Proyecto
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  onOpenChange(false);
+                }}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep('category')}
+                disabled={isPending}
+              >
+                Cambiar tipo
+              </Button>
+              <Button type="submit" disabled={isPending || !name.trim() || !key.trim()}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Crear Proyecto
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
