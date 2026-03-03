@@ -48,6 +48,7 @@ export interface Project {
   tipo_programa: TipoPrograma | null;
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
 }
 
 export interface ProjectMember {

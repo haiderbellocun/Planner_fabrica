@@ -301,6 +301,71 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /api/projects/:id/complete
+ * Mark project as completed (only if all tasks are completed)
+ */
+export const completeProject = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 1) Ensure project exists
+    const projectResult = await query('SELECT id, status FROM public.projects WHERE id = $1', [id]);
+
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const project = projectResult.rows[0];
+
+    if (project.status === 'completed') {
+      return res.status(400).json({ error: 'El proyecto ya está finalizado' });
+    }
+
+    // 2) Check task completion status for this project
+    const tasksResult = await query(
+      `SELECT
+         COUNT(*) AS total_tasks,
+         COUNT(*) FILTER (WHERE ts.is_completed = true) AS completed_tasks
+       FROM public.tasks t
+       JOIN public.task_statuses ts ON ts.id = t.status_id
+       WHERE t.project_id = $1`,
+      [id]
+    );
+
+    const taskStats = tasksResult.rows[0] || { total_tasks: 0, completed_tasks: 0 };
+    const totalTasks = parseInt(taskStats.total_tasks, 10) || 0;
+    const completedTasks = parseInt(taskStats.completed_tasks, 10) || 0;
+
+    // If there are tasks, require all of them to be completed
+    if (totalTasks > 0 && completedTasks < totalTasks) {
+      return res.status(400).json({
+        error: 'No puedes finalizar el proyecto porque aún hay tareas abiertas',
+        details: {
+          total_tasks: totalTasks,
+          completed_tasks: completedTasks,
+        },
+      });
+    }
+
+    // 3) Mark project as completed
+    const updateResult = await query(
+      `UPDATE public.projects
+       SET status = 'completed',
+           updated_at = NOW(),
+           completed_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (error) {
+    console.error('Complete project error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
  * PATCH /api/projects/:id
  * Update project
  */

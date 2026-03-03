@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProject } from '@/hooks/useProjects';
+import { useProject, useCompleteProject } from '@/hooks/useProjects';
 import { useTasks, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
@@ -68,9 +68,16 @@ export default function ProjectDetailPage() {
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
 
   const deletePrograma = useDeletePrograma(projectId || '');
+  const completeProject = useCompleteProject();
 
   // Check if user can manage asignaturas (admin or project leader)
   const canManageAsignaturas =
+    user?.role === 'admin' ||
+    project?.members?.some(
+      (member) => member.user_id === user?.profileId && member.role === 'leader'
+    );
+
+  const canCompleteProject =
     user?.role === 'admin' ||
     project?.members?.some(
       (member) => member.user_id === user?.profileId && member.role === 'leader'
@@ -158,6 +165,11 @@ export default function ProjectDetailPage() {
           <div className="flex items-center gap-2 mb-1">
             <h1 className="page-title">{project.name}</h1>
             <Badge variant="secondary">{project.key}</Badge>
+            {project.status === 'completed' && (
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                Finalizado
+              </Badge>
+            )}
           </div>
           <p className="page-description">{project.description || 'Sin descripción'}</p>
         </div>
@@ -178,10 +190,37 @@ export default function ProjectDetailPage() {
           <Button variant="outline" size="icon">
             <Settings className="h-4 w-4" />
           </Button>
-          <Button onClick={() => setCreateTaskOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Tarea
-          </Button>
+          {project.status !== 'completed' && (
+            <Button onClick={() => setCreateTaskOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva Tarea
+            </Button>
+          )}
+          {canCompleteProject && project.status !== 'completed' && projectId && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (
+                  !confirm(
+                    '¿Estás seguro de finalizar este proyecto? Todas las tareas deben estar completadas.'
+                  )
+                ) {
+                  return;
+                }
+                completeProject.mutate(projectId);
+              }}
+              disabled={completeProject.isPending}
+            >
+              {completeProject.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Finalizando...
+                </>
+              ) : (
+                'Finalizar proyecto'
+              )}
+            </Button>
+          )}
         </div>
       </div>
 

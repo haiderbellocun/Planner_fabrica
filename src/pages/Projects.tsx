@@ -84,7 +84,14 @@ export default function ProjectsPage() {
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <FolderKanban className="h-5 w-5 text-primary" />
                     </div>
-                    <Badge variant="secondary">{project.key}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary">{project.key}</Badge>
+                      {project.status === 'completed' && (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] px-2 py-0">
+                          Finalizado
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <CardTitle className="mt-3">{project.name}</CardTitle>
                   <CardDescription className="line-clamp-2">

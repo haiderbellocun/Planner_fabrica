@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS public.projects (
     end_date DATE,
     owner_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ
 );
 
 -- =====================

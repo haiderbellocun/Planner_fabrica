@@ -6,6 +6,7 @@ import {
   updateProject,
   deleteProject,
   addMember,
+  completeProject,
 } from '../controllers/projectsController.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import {
@@ -31,6 +32,9 @@ router.post('/', canCreateProjectMiddleware, validateProjectCreate, createProjec
 
 // Update project (project leader only)
 router.patch('/:id', projectLeaderMiddleware, validateProjectUpdate, updateProject);
+
+// Mark project as completed (project leader or admin)
+router.post('/:id/complete', projectLeaderMiddleware, completeProject);
 
 // Delete project (admin only)
 router.delete('/:id', adminMiddleware, deleteProject);

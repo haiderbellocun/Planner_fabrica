@@ -101,6 +101,25 @@ export function useUpdateProject() {
   });
 }
 
+export function useCompleteProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const project = await api.post<Project>(`/api/projects/${projectId}/complete`, {});
+      return project;
+    },
+    onSuccess: (_data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Proyecto finalizado');
+    },
+    onError: (error: any) => {
+      toast.error('No se pudo finalizar el proyecto: ' + error.message);
+    },
+  });
+}
+
 export function useDeleteProject() {
   const queryClient = useQueryClient();
 
