@@ -101,7 +101,7 @@ export function LuminaWidget() {
           {/* Fondo: imagen + overlay suave para legibilidad */}
           <div
             className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat rounded-3xl"
-            style={{ backgroundImage: 'url(/chat-bg.png)' }}
+            style={{ backgroundImage: 'url(./chat-bg.png)' }}
             aria-hidden
           />
           <div className="absolute inset-0 z-0 rounded-3xl bg-white/35" aria-hidden />

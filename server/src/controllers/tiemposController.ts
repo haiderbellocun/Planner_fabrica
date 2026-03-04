@@ -61,7 +61,7 @@ export const calcularTiempo = async (req: AuthRequest, res: Response) => {
     }
 
     // Find matching tiempos - exact match first, then closest
-    let result = await query(
+    const result = await query(
       `SELECT te.*, mt.name as material_type_name
        FROM public.tiempos_estimados te
        LEFT JOIN public.material_types mt ON mt.id = te.material_type_id

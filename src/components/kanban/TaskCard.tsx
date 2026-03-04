@@ -5,6 +5,7 @@ import { Calendar, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { parseDateOnly } from '@/lib/dates';
 
 interface TaskCardProps {
   task: TaskWithDetails;
@@ -79,18 +80,28 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
           {task.due_date && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              <span>{format(new Date(task.due_date), 'd MMM', { locale: es })}</span>
+              <span>
+                {(() => {
+                  const d = parseDateOnly(task.due_date);
+                  return d ? format(d, 'd MMM', { locale: es }) : null;
+                })()}
+              </span>
             </div>
           )}
         </div>
 
         {task.assignee && (
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={task.assignee.avatar_url || undefined} />
-            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-              {getInitials(task.assignee.full_name)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex items-center gap-2 max-w-[55%] justify-end">
+            <Avatar className="h-6 w-6 flex-shrink-0">
+              <AvatarImage src={task.assignee.avatar_url || undefined} />
+              <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+                {getInitials(task.assignee.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs text-muted-foreground truncate">
+              {task.assignee.full_name}
+            </span>
+          </div>
         )}
       </div>
     </div>

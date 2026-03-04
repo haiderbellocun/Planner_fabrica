@@ -86,6 +86,65 @@ export const createTaskComment = async (req: AuthRequest, res: Response) => {
 
     const user = userResult.rows[0];
 
+    // Create notifications based on who commented and who owns/has assigned task
+    try {
+      const taskResult = await query(
+        `SELECT project_id, title, assignee_id, reporter_id
+         FROM public.tasks
+         WHERE id = $1`,
+        [taskId]
+      );
+
+      const task = taskResult.rows[0];
+
+      if (task && userId) {
+        const { project_id: projectId, title, assignee_id: assigneeId, reporter_id: reporterId } = task;
+
+        // Check if reporter is a project leader for this project
+        let isReporterLeader = false;
+        if (reporterId) {
+          const pmResult = await query(
+            `SELECT role
+             FROM public.project_members
+             WHERE project_id = $1 AND user_id = $2`,
+            [projectId, reporterId]
+          );
+          isReporterLeader = pmResult.rows.some((row: any) => row.role === 'leader');
+        }
+
+        // Case 1: alguien (no el líder) comenta -> notificar al project_leader que creó la tarea
+        if (reporterId && isReporterLeader && userId !== reporterId) {
+          await query(
+            `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
+             VALUES ($1, $2, $3, 'task_commented', 'Nuevo comentario en tarea', $4)`,
+            [
+              reporterId,
+              projectId,
+              taskId,
+              `Han comentado en la tarea "${title}"`,
+            ]
+          );
+        }
+
+        // Case 2: el project_leader que creó la tarea comenta -> notificar al responsable de la tarea
+        if (isReporterLeader && reporterId && userId === reporterId && assigneeId && assigneeId !== reporterId) {
+          await query(
+            `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
+             VALUES ($1, $2, $3, 'task_commented', 'Nuevo comentario en tu tarea', $4)`,
+            [
+              assigneeId,
+              projectId,
+              taskId,
+              `El líder del proyecto comentó en la tarea "${title}"`,
+            ]
+          );
+        }
+      }
+    } catch (notifyError) {
+      console.error('Create task comment notification error:', notifyError);
+      // No rompemos la creación del comentario si fallan las notificaciones
+    }
+
     res.status(201).json({
       id: newComment.id,
       task_id: newComment.task_id,

@@ -9,6 +9,7 @@ import { Loader2, ListTodo, Clock, AlertTriangle, CheckCircle } from 'lucide-rea
 import { format, isAfter, isBefore, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { parseDateOnly } from '@/lib/dates';
 
 const priorityConfig = {
   low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
@@ -25,12 +26,16 @@ export default function MyTasksPage() {
 
   const pendingTasks = tasks.filter((t) => !t.status.is_completed);
   const completedTasks = tasks.filter((t) => t.status.is_completed);
-  const overdueTasks = pendingTasks.filter(
-    (t) => t.due_date && isBefore(new Date(t.due_date), new Date())
-  );
-  const upcomingTasks = pendingTasks.filter(
-    (t) => t.due_date && isAfter(new Date(t.due_date), new Date()) && isBefore(new Date(t.due_date), addDays(new Date(), 7))
-  );
+  const today = new Date();
+  const overdueTasks = pendingTasks.filter((t) => {
+    const d = parseDateOnly(t.due_date);
+    return d !== null && isBefore(d, today);
+  });
+  const upcomingTasks = pendingTasks.filter((t) => {
+    const d = parseDateOnly(t.due_date);
+    if (!d) return false;
+    return isAfter(d, today) && isBefore(d, addDays(today, 7));
+  });
 
   const handleTaskClick = (task: MyTaskWithProject) => {
     setSelectedTask(task);
@@ -47,7 +52,8 @@ export default function MyTasksPage() {
 
   const TaskCard = ({ task }: { task: MyTaskWithProject }) => {
     const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
-    const isOverdue = task.due_date && isBefore(new Date(task.due_date), new Date()) && !task.status.is_completed;
+    const parsedDue = parseDateOnly(task.due_date);
+    const isOverdue = parsedDue && isBefore(parsedDue, new Date()) && !task.status.is_completed;
 
     return (
       <div
@@ -83,7 +89,7 @@ export default function MyTasksPage() {
             {task.due_date && (
               <span className={cn('text-xs', isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground')}>
                 {isOverdue && <AlertTriangle className="inline h-3 w-3 mr-1" />}
-                {format(new Date(task.due_date), 'dd MMM yyyy', { locale: es })}
+                {parsedDue ? format(parsedDue, 'dd MMM yyyy', { locale: es }) : null}
               </span>
             )}
           </div>

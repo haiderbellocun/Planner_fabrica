@@ -36,7 +36,7 @@ if (!parsed.success) {
     // Show a clear error and fail fast on boot
     console.error('❌ Invalid environment configuration:');
     console.error(JSON.stringify(parsed.error.format(), null, 2));
-    // eslint-disable-next-line no-process-exit
+     
     process.exit(1);
 }
 export const env = parsed.data;

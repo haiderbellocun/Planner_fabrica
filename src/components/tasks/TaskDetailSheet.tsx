@@ -31,6 +31,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { parseDateOnly } from '@/lib/dates';
 import { useState } from 'react';
 
 interface TaskDetailSheetProps {
@@ -309,7 +310,13 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
             {taskData.due_date && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                <span>Vence: {format(new Date(taskData.due_date), 'd MMM yyyy', { locale: es })}</span>
+                <span>
+                  Vence:{' '}
+                  {(() => {
+                    const d = parseDateOnly(taskData.due_date);
+                    return d ? format(d, 'd MMM yyyy', { locale: es }) : null;
+                  })()}
+                </span>
               </div>
             )}
             <div className="flex items-center gap-2 text-muted-foreground">

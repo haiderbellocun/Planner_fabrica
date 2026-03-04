@@ -123,17 +123,25 @@ export const createAsignatura = async (req: AuthRequest, res: Response) => {
 export const createAsignaturaInPrograma = async (req: AuthRequest, res: Response) => {
   try {
     const { programaId } = req.params;
-    const { name, code, description, display_order, semestre } = req.body;
+    const { name, code, description, display_order, semestre, tipo_asignatura } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ error: 'Name is required' });
     }
 
     const result = await query(
-      `INSERT INTO public.asignaturas (programa_id, name, code, description, display_order, semestre)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO public.asignaturas (programa_id, name, code, description, display_order, semestre, tipo_asignatura)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [programaId, name.trim(), code || null, description || null, display_order || 0, semestre || null]
+      [
+        programaId,
+        name.trim(),
+        code || null,
+        description || null,
+        display_order || 0,
+        semestre || null,
+        tipo_asignatura || null,
+      ]
     );
 
     res.status(201).json(result.rows[0]);
@@ -150,7 +158,7 @@ export const createAsignaturaInPrograma = async (req: AuthRequest, res: Response
 export const updateAsignatura = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, code, description, display_order, semestre } = req.body;
+    const { name, code, description, display_order, semestre, tipo_asignatura } = req.body;
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -175,6 +183,10 @@ export const updateAsignatura = async (req: AuthRequest, res: Response) => {
     if (semestre !== undefined) {
       updates.push(`semestre = $${paramCount++}`);
       values.push(semestre);
+    }
+    if (tipo_asignatura !== undefined) {
+      updates.push(`tipo_asignatura = $${paramCount++}`);
+      values.push(tipo_asignatura);
     }
 
     if (updates.length === 0) {

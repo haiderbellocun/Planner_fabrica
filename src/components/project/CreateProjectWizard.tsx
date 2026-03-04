@@ -43,6 +43,7 @@ interface Asignatura {
   code: string;
   description: string;
   semestre: number | null;
+  tipo_asignatura?: 'propedeutica' | 'transversal' | 'normal' | '';
   temas: Tema[];
 }
 
@@ -98,6 +99,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     code: '',
     description: '',
     semestre: null,
+    tipo_asignatura: '',
     temas: [],
   });
 
@@ -121,7 +123,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setStep('category');
     setProgramas([]);
     setCurrentPrograma({ name: '', code: '', description: '', tipo_programa: '', asignaturas: [] });
-    setCurrentAsignatura({ name: '', code: '', description: '', semestre: null, temas: [] });
+    setCurrentAsignatura({
+      name: '',
+      code: '',
+      description: '',
+      semestre: null,
+      tipo_asignatura: '',
+      temas: [],
+    });
     setCurrentTema({ title: '', description: '', materiales: [] });
     setSelectedProgramaIndex(null);
     setSelectedAsignaturaIndex(null);
@@ -196,6 +205,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
             code: asignatura.code || null,
             description: asignatura.description || null,
             semestre: asignatura.semestre || null,
+            tipo_asignatura: asignatura.tipo_asignatura || null,
           });
 
           const asignaturaId = asignaturaResponse.id;
@@ -260,7 +270,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     const updatedProgramas = [...programas];
     updatedProgramas[selectedProgramaIndex].asignaturas.push(currentAsignatura);
     setProgramas(updatedProgramas);
-    setCurrentAsignatura({ name: '', code: '', description: '', semestre: null, temas: [] });
+    setCurrentAsignatura({
+      name: '',
+      code: '',
+      description: '',
+      semestre: null,
+      tipo_asignatura: '',
+      temas: [],
+    });
     toast.success('Asignatura agregada');
   };
 
@@ -678,14 +695,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                 <>
                   <div className="space-y-2">
                     <Label>Selecciona el Programa</Label>
-                    <Select
-                      value={selectedProgramaIndex?.toString() || ''}
-                      onValueChange={(value) => setSelectedProgramaIndex(parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un programa" />
-                      </SelectTrigger>
-                      <SelectContent>
+                      <Select
+                        value={selectedProgramaIndex?.toString() || ''}
+                        onValueChange={(value) => setSelectedProgramaIndex(parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un programa" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
                         {programas.map((prog, index) => (
                           <SelectItem key={index} value={index.toString()}>
                             {prog.name} ({prog.asignaturas.length} asignaturas)
@@ -765,6 +782,28 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                             </Select>
                           </div>
 
+                          <div className="space-y-2">
+                            <Label>Tipo de Asignatura</Label>
+                            <Select
+                              value={currentAsignatura.tipo_asignatura || ''}
+                              onValueChange={(value: 'propedeutica' | 'transversal' | 'normal') =>
+                                setCurrentAsignatura({
+                                  ...currentAsignatura,
+                                  tipo_asignatura: value,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona el tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="propedeutica">Propedéutica</SelectItem>
+                                <SelectItem value="transversal">Transversal</SelectItem>
+                                <SelectItem value="normal">Normal</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           <Button type="button" onClick={addAsignatura} className="w-full">
                             <Plus className="h-4 w-4 mr-2" />
                             Agregar Asignatura
@@ -822,7 +861,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona una asignatura" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-60 overflow-y-auto">
                             {programas[selectedProgramaIndex].asignaturas.map((asig, index) => (
                               <SelectItem key={index} value={index.toString()}>
                                 {asig.name}
