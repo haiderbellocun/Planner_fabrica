@@ -183,6 +183,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
         key: key.trim(),
         description: finalDescription || null,
         end_date: endDate,
+        category: category || null,
       });
 
       const projectId = projectResponse.id;

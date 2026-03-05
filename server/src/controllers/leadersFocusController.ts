@@ -17,9 +17,9 @@ function mapRowsToTasks(rows: any[]) {
       is_completed: row.status_is_completed,
     },
     assignee: {
-      full_name: row.assignee_full_name,
-      email: row.assignee_email,
-      cargo: row.assignee_cargo,
+      full_name: row.assignee_full_name ?? null,
+      email: row.assignee_email ?? null,
+      cargo: row.assignee_cargo ?? null,
     },
     project: {
       id: row.project_id,
@@ -46,7 +46,30 @@ const TASKS_SELECT = `
   FROM public.tasks t
   JOIN public.task_statuses ts ON ts.id = t.status_id
   JOIN public.projects p ON p.id = t.project_id
-  JOIN public.profiles assignee ON assignee.id = t.assignee_id
+  LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
+  WHERE ts.is_completed = false
+    AND t.due_date IS NOT NULL
+`;
+
+const TASKS_SELECT_FOR_LEADER_PROJECTS = `
+  SELECT
+    t.id,
+    t.title,
+    t.due_date,
+    ts.name AS status_name,
+    ts.color AS status_color,
+    ts.is_completed AS status_is_completed,
+    assignee.full_name AS assignee_full_name,
+    assignee.email AS assignee_email,
+    assignee.cargo AS assignee_cargo,
+    p.id AS project_id,
+    p.name AS project_name,
+    p.key AS project_key
+  FROM public.tasks t
+  JOIN public.task_statuses ts ON ts.id = t.status_id
+  JOIN public.projects p ON p.id = t.project_id
+  JOIN public.project_members pm ON pm.project_id = p.id AND pm.user_id = $1 AND pm.role = 'leader'
+  LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
   WHERE ts.is_completed = false
     AND t.due_date IS NOT NULL
 `;
@@ -75,7 +98,7 @@ export const getLeadersFocus = async (req: AuthRequest, res: Response) => {
         cargos = cargoParam.split(',').map((c) => c.trim()).filter(Boolean);
       }
     } else {
-      // project_leader: scope from leader_cargo_scope (leader_profile_id = profiles.id)
+      // project_leader: scope from leader_cargo_scope; if empty, show all tasks from projects they lead
       const validProfileId =
         typeof profileId === 'string' && profileId.trim() !== '' ? profileId.trim() : undefined;
       if (!validProfileId) {
@@ -89,8 +112,14 @@ export const getLeadersFocus = async (req: AuthRequest, res: Response) => {
         [validProfileId]
       );
       cargos = (scopeResult?.rows ?? []).map((r: { cargo?: string }) => r.cargo).filter(Boolean) as string[];
+
       if (cargos.length === 0) {
-        return res.status(200).json([]);
+        // Sin scope de cargo: mostrar todas las tareas de proyectos donde es líder
+        const result = await query(
+          `${TASKS_SELECT_FOR_LEADER_PROJECTS} ORDER BY t.due_date ASC`,
+          [validProfileId]
+        );
+        return res.json(mapRowsToTasks(result.rows ?? []));
       }
     }
 

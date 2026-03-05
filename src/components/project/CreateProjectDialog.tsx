@@ -129,6 +129,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       description: finalDescription || undefined,
       end_date: endDate,
       tipo_programa: tipoPrograma as any || undefined,
+      category: category ?? undefined,
       asignaturas: asignaturas.length > 0 ? asignaturas : undefined,
     });
 

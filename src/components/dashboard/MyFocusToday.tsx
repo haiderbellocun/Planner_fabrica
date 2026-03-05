@@ -42,40 +42,42 @@ type PersonLoad = {
 };
 
 export function MyFocusToday() {
-  const { isProjectLeader } = useAuth();
+  const { isAdmin, isProjectLeader } = useAuth();
   const [focusTab, setFocusTab] = useState<FocusTab>('mine');
   const [showAllRanking, setShowAllRanking] = useState(false);
 
   const { tasks, data: myTasksData, isLoading, isError, error } = useMyTasks();
 
-  const showTeamTab = !!isProjectLeader;
+  const showTeamTab = !!isAdmin || !!isProjectLeader;
   const {
     data: teamTasks = [],
     isLoading: teamLoading,
     error: teamError,
-  } = useLeadersFocus(showTeamTab && focusTab === 'team');
+  } = useLeadersFocus(showTeamTab);
 
-  useEffect(() => {
-    if (import.meta.env.DEV && myTasksData !== undefined) {
-      console.log('[MyFocusToday] my-tasks data', myTasksData.length, myTasksData);
-    }
-  }, [myTasksData]);
+  const teamList: LeadersFocusTask[] = Array.isArray(teamTasks)
+    ? teamTasks.filter((t): t is LeadersFocusTask => t != null && typeof t === 'object')
+    : [];
 
   const pending = tasks.filter((t) => !t.status?.is_completed);
 
-  const vencenHoy = pending.filter((t) => {
-    if (!t.due_date || typeof t.due_date !== 'string') return false;
-    return t.due_date.slice(0, 10) === todayStr;
+  const pendingForCards = showTeamTab && !teamLoading ? teamList : pending;
+  const vencenHoy = pendingForCards.filter((t) => {
+    const due = 'due_date' in t ? t.due_date : null;
+    if (!due || typeof due !== 'string') return false;
+    return due.slice(0, 10) === todayStr;
   });
-  const vencidas = pending.filter((t) => {
-    if (!t.due_date) return false;
-    const d = parseDue(t.due_date);
+  const vencidas = pendingForCards.filter((t) => {
+    const due = 'due_date' in t ? t.due_date : null;
+    if (!due) return false;
+    const d = parseDue(due);
     return d !== null && isBefore(d, today);
   });
-  const enCurso = pending;
-  const estaSemana = pending.filter((t) => {
-    if (!t.due_date || typeof t.due_date !== 'string') return false;
-    const dStr = t.due_date.slice(0, 10);
+  const enCurso = pendingForCards;
+  const estaSemana = pendingForCards.filter((t) => {
+    const due = 'due_date' in t ? t.due_date : null;
+    if (!due || typeof due !== 'string') return false;
+    const dStr = due.slice(0, 10);
     return dStr >= todayStr && dStr <= endOfWeekStr;
   });
 

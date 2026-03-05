@@ -47,6 +47,7 @@ export function useCreateProject() {
       start_date?: string;
       end_date?: string;
       tipo_programa?: 'profesional' | 'diplomado' | 'maestria' | 'doctorado';
+      category?: 'academico' | 'marketing' | 'otros' | null;
       asignaturas?: Array<{
         name: string;
         code?: string;
@@ -67,6 +68,7 @@ export function useCreateProject() {
         start_date: data.start_date,
         end_date: data.end_date,
         tipo_programa: data.tipo_programa,
+        category: data.category ?? null,
         asignaturas: data.asignaturas,
       });
 

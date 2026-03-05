@@ -14,6 +14,13 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
     const profileId = req.user?.profileId;
     const userRole = req.user?.role;
 
+    // Get project category (marketing/otros = users only see their own tasks)
+    const projectRow = await query(
+      'SELECT category FROM public.projects WHERE id = $1',
+      [projectId]
+    );
+    const projectCategory = projectRow.rows[0]?.category ?? null;
+
     // Check if user is project leader
     const isLeader = userRole !== 'admin' && (await query(
       'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
@@ -53,15 +60,22 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         console.log('Params:', params);
       }
     } else if (userRole !== 'admin') {
-      // Normal users see:
-      // 1. Original tasks (parent_task_id IS NULL)
-      // 2. Any task (including copies) where they are directly assigned, or have tema/material assignments
-      whereClause += ` AND (
+      // Normal users: for Marketing/Otros only see tasks assigned to them; for Académico see originals + their assignments
+      const onlyOwnTasks = projectCategory === 'marketing' || projectCategory === 'otros';
+      if (onlyOwnTasks) {
+        whereClause += ` AND (
+          t.assignee_id = $2
+          OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
+          OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
+        )`;
+      } else {
+        whereClause += ` AND (
         t.parent_task_id IS NULL
         OR t.assignee_id = $2
         OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
         OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
       )`;
+      }
       params.push(profileId);
       if (env.NODE_ENV !== 'production') {
         console.log('Visibility filter applied for normal user');
