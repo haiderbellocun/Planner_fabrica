@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { apiBaseUrl } from '@/lib/api';
+
+// Minutos de inactividad antes de cerrar sesión (ej: 120 = 2 horas)
+const INACTIVITY_TIMEOUT_MINUTES = 120;
+
+const INACTIVITY_TIMEOUT_MS = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000;
 
 // Local User type (replacing Supabase types)
 export interface LocalUser {
@@ -33,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [session, setSession] = useState<{ token: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Helper function to make authenticated requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -161,12 +168,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
-      // Clear token and state regardless of API response
       localStorage.removeItem('taskflow_token');
       setUser(null);
       setSession(null);
     }
   };
+
+  const signOutRef = useRef(signOut);
+  signOutRef.current = signOut;
+
+  // Cerrar sesión por inactividad
+  useEffect(() => {
+    if (!session) {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      return;
+    }
+
+    const scheduleLogout = () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = setTimeout(() => {
+        signOutRef.current();
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const onActivity = () => {
+      lastActivityRef.current = Date.now();
+      scheduleLogout();
+    };
+
+    scheduleLogout();
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((ev) => window.addEventListener(ev, onActivity));
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, onActivity));
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    };
+  }, [session]);
 
   // Compute roles
   const roles: AppRole[] = user?.role ? [user.role] : [];

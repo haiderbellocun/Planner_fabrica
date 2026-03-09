@@ -18,6 +18,7 @@ import materialAssigneesRoutes from './routes/materialAssignees.js';
 import tiemposRoutes from './routes/tiempos.js';
 import reportsRoutes from './routes/reports.js';
 import leadersRoutes from './routes/leaders.js';
+import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
@@ -92,6 +93,7 @@ app.use('/api/tiempos-estimados', tiemposRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/leaders', leadersRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/admin', adminUsersRoutes);
 
 // 404 handler
 app.use((req, res) => {

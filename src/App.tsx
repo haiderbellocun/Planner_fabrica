@@ -16,6 +16,7 @@ import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
 import ProjectCalculator from "./pages/ProjectCalculator";
 import Settings from "./pages/Settings";
+import Flows from "./pages/Flows";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
             <Route path="/calculator" element={<AppLayout><ProjectCalculator /></AppLayout>} />
+            <Route path="/flows" element={<AppLayout><Flows /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

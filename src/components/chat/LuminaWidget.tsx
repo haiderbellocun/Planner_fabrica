@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import luminaGif from '@/assets/lumina.gif';
 
 type ChatMessage = {
   id: string;
@@ -88,10 +89,16 @@ export function LuminaWidget() {
         <button
           type="button"
           onClick={toggle}
-          className="h-12 w-12 rounded-full bg-[#00C6B5] shadow-lg flex items-center justify-center hover:bg-[#00B0A1] transition-colors overflow-hidden"
+          className="h-12 w-12 rounded-full bg-[#00C6B5] shadow-lg flex items-center justify-center hover:bg-[#00B0A1] transition-colors overflow-hidden p-0.5"
           aria-label="Abrir asistente Lumina"
         >
-          <Sparkles className="h-6 w-6 text-white" />
+          <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden shadow-inner">
+            <img
+              src={luminaGif}
+              alt="Lumina"
+              className="h-9 w-9 object-contain"
+            />
+          </div>
         </button>
       )}
 
@@ -107,9 +114,13 @@ export function LuminaWidget() {
           <div className="absolute inset-0 z-0 rounded-3xl bg-white/35" aria-hidden />
           <header className="relative z-10 flex items-center justify-between px-4 py-3 bg-[#00C6B5] text-white">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
+            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+              <img
+                src={luminaGif}
+                alt="Lumina"
+                className="h-7 w-7 object-contain"
+              />
+            </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">Lumina</span>
                 <span className="text-[11px] text-white/80">Asistente en línea</span>

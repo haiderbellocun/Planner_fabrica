@@ -25,6 +25,7 @@ import {
   LogOut,
   Bell,
   User,
+  GitBranch,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,10 @@ const baseNavItemsWithReports = (showReports: boolean) =>
 
 const leaderNavItems = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
+];
+
+const adminFlowNavItems = [
+  { title: 'Flujo', url: '/flows', icon: GitBranch },
 ];
 
 const settingsNavItems = [
@@ -94,7 +99,10 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {[...baseNavItemsWithReports(isAdmin || isProjectLeader), ...(isProjectLeader ? leaderNavItems : [])].map((item) => (
+              {[...baseNavItemsWithReports(isAdmin || isProjectLeader),
+                ...(isAdmin || isProjectLeader ? leaderNavItems : []),
+                ...(isAdmin ? adminFlowNavItems : []),
+              ].map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.url}>
                     <NavLink

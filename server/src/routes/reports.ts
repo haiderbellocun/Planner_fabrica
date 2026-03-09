@@ -10,6 +10,8 @@ import {
   getTimeDistribution,
   getWorkflowTransitions,
   getWorkloadByCargo,
+  getProjectCategoriesSummary,
+  getTasksWeeklyTrend,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -26,5 +28,7 @@ router.get('/material-production', getMaterialProduction);
 router.get('/time-distribution', getTimeDistribution);
 router.get('/workflow-transitions', getWorkflowTransitions);
 router.get('/workload-by-cargo', getWorkloadByCargo);
+router.get('/project-categories', getProjectCategoriesSummary);
+router.get('/tasks-weekly-trend', getTasksWeeklyTrend);
 
 export default router;

@@ -36,30 +36,16 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
     }
 
     // Build WHERE clause based on user role
+    // Admins and project leaders deben ver todas las tareas del proyecto.
+    // Solo los usuarios normales tienen filtros de visibilidad.
     let whereClause = 't.project_id = $1';
     const params: any[] = [projectId];
 
-    // For project leaders (not admins), apply visibility filter
-    if (isLeader) {
-      // Leaders see:
-      // 1. Original tasks they created (parent_task_id IS NULL AND reporter_id = their id)
-      // 2. Copy tasks (level 2 ONLY) from other leaders — the copy's parent must be an original
-      // 3. User tasks they themselves assigned (reporter_id = their id AND assignee_id IS NOT NULL)
-      whereClause += ` AND (
-        (t.parent_task_id IS NULL AND t.reporter_id = $2)
-        OR
-        (t.parent_task_id IS NOT NULL AND t.reporter_id != $2
-         AND EXISTS (SELECT 1 FROM public.tasks pt WHERE pt.id = t.parent_task_id AND pt.parent_task_id IS NULL))
-        OR
-        (t.parent_task_id IS NOT NULL AND t.reporter_id = $2 AND t.assignee_id IS NOT NULL)
-      )`;
-      params.push(profileId);
+    if (userRole === 'admin' || isLeader) {
       if (env.NODE_ENV !== 'production') {
-        console.log('Visibility filter applied for leader');
-        console.log('WHERE clause:', whereClause);
-        console.log('Params:', params);
+        console.log('No visibility filter (admin/leader sees all)');
       }
-    } else if (userRole !== 'admin') {
+    } else {
       // Normal users: for Marketing/Otros only see tasks assigned to them; for Académico see originals + their assignments
       const onlyOwnTasks = projectCategory === 'marketing' || projectCategory === 'otros';
       if (onlyOwnTasks) {
@@ -80,12 +66,7 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       if (env.NODE_ENV !== 'production') {
         console.log('Visibility filter applied for normal user');
       }
-    } else {
-      if (env.NODE_ENV !== 'production') {
-        console.log('No visibility filter (admin sees all)');
-      }
     }
-    // Admins see all tasks in the project (no additional filter)
 
     const result = await query(
       `SELECT
@@ -755,61 +736,6 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
     );
 
     const task = result.rows[0];
-
-    // If task is marked as "Finalizado" by a PROJECT LEADER or ADMIN,
-    // AND it's an ORIGINAL task (not a copy),
-    // create ONE copy for other leaders to assign to next person
-    if (newStatusName === 'Finalizado' && isAdminOrLeader && !task.parent_task_id) {
-      // Get default status (Sin iniciar)
-      const defaultStatusResult = await query(
-        'SELECT id FROM public.task_statuses WHERE is_default = true LIMIT 1'
-      );
-
-      if (defaultStatusResult.rows.length > 0) {
-        const defaultStatusId = defaultStatusResult.rows[0].id;
-
-        // Create new task (exact copy but without assignee)
-        const newTaskResult = await query(
-          `INSERT INTO public.tasks
-           (project_id, title, description, priority, status_id, assignee_id, reporter_id, asignatura_id, material_requerido_id, due_date, tags, parent_task_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-           RETURNING *`,
-          [
-            task.project_id,
-            task.title, // Mismo título
-            task.description, // Misma descripción
-            task.priority,
-            defaultStatusId,
-            null, // Sin asignar - los líderes deben asignar
-            profileId, // El líder que finalizó crea la nueva tarea
-            task.asignatura_id,
-            task.material_requerido_id,
-            task.due_date,
-            task.tags || [],
-            task.id // parent_task_id: referencia a la tarea original
-          ]
-        );
-
-        const newTask = newTaskResult.rows[0];
-
-        // Notify all project leaders about new task to assign
-        const leadersResult = await query(
-          `SELECT pm.user_id
-           FROM public.project_members pm
-           WHERE pm.project_id = $1 AND pm.role = 'leader'`,
-          [task.project_id]
-        );
-
-        // Send notification to each leader
-        for (const leader of leadersResult.rows) {
-          await query(
-            `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
-             VALUES ($1, $2, $3, 'task_assigned', 'Nueva tarea para asignar', $4)`,
-            [leader.user_id, task.project_id, newTask.id, `La tarea "${task.title}" fue finalizada. Asigne al siguiente responsable.`]
-          );
-        }
-      }
-    }
 
     // Notify assignee
     if (task.assignee_id && task.assignee_id !== req.user?.profileId) {

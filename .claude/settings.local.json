@@ -25,7 +25,8 @@
       "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" secrets versions access latest --secret=database-url --project=it-fab-contenido-edu-1)",
       "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=\"yaml\\(spec.template.spec.containers[0].env\\)\")",
       "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services get-iam-policy planner-api --region=us-central1 --project=it-fab-contenido-edu-1)",
-      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=\"yaml\\(metadata.name,spec.template.spec.containers[0].image,spec.template.spec.containers[0].ports,spec.template.spec.containers[0].env,status.url\\)\")"
+      "Bash(\"C:/Users/haider_bello/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run services describe planner-api --region=us-central1 --project=it-fab-contenido-edu-1 --format=\"yaml\\(metadata.name,spec.template.spec.containers[0].image,spec.template.spec.containers[0].ports,spec.template.spec.containers[0].env,status.url\\)\")",
+      "Bash(wc -l /c/app_planner/server/src/controllers/*.ts)"
     ]
   }
 }

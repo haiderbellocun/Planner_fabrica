@@ -519,3 +519,92 @@ export const getWorkloadByCargo = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+/**
+ * GET /api/reports/project-categories
+ * Summary by project category (académico / marketing / otros)
+ */
+export const getProjectCategoriesSummary = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT
+        COALESCE(NULLIF(category, ''), 'sin_categoria') AS category,
+        COUNT(*) AS total_projects,
+        COUNT(t.id) AS total_tasks
+      FROM public.projects p
+      LEFT JOIN public.tasks t ON t.project_id = p.id
+      GROUP BY COALESCE(NULLIF(category, ''), 'sin_categoria')
+      ORDER BY 1
+    `);
+
+    const data = result.rows.map(r => ({
+      category: r.category,
+      total_projects: parseInt(r.total_projects),
+      total_tasks: parseInt(r.total_tasks),
+    }));
+
+    res.json(data);
+  } catch (error) {
+    console.error('Project categories summary error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/tasks-weekly-trend
+ * Weekly trend of tasks created vs completed (last 12 weeks)
+ */
+export const getTasksWeeklyTrend = async (req: AuthRequest, res: Response) => {
+  try {
+    // Created per week
+    const createdRes = await query(`
+      SELECT
+        DATE_TRUNC('week', created_at)::date AS week_start,
+        COUNT(*) AS created
+      FROM public.tasks
+      WHERE created_at >= NOW() - INTERVAL '12 weeks'
+      GROUP BY DATE_TRUNC('week', created_at)::date
+      ORDER BY week_start
+    `);
+
+    // Completed per week (using updated_at when status is completed)
+    const completedRes = await query(`
+      SELECT
+        DATE_TRUNC('week', updated_at)::date AS week_start,
+        COUNT(*) AS completed
+      FROM public.tasks t
+      JOIN public.task_statuses ts ON ts.id = t.status_id
+      WHERE ts.is_completed = true
+        AND updated_at >= NOW() - INTERVAL '12 weeks'
+      GROUP BY DATE_TRUNC('week', updated_at)::date
+      ORDER BY week_start
+    `);
+
+    const map = new Map<string, { week: string; created: number; completed: number }>();
+
+    createdRes.rows.forEach(r => {
+      const week = (r.week_start as Date).toISOString().split('T')[0];
+      map.set(week, {
+        week,
+        created: parseInt(r.created),
+        completed: 0,
+      });
+    });
+
+    completedRes.rows.forEach(r => {
+      const week = (r.week_start as Date).toISOString().split('T')[0];
+      const existing = map.get(week) || { week, created: 0, completed: 0 };
+      existing.completed = parseInt(r.completed);
+      map.set(week, existing);
+    });
+
+    // Sort by week ascending
+    const data = Array.from(map.values()).sort((a, b) => a.week.localeCompare(b.week));
+
+    res.json(data);
+  } catch (error) {
+    console.error('Tasks weekly trend error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+

@@ -53,6 +53,7 @@ interface Programa {
   description: string;
   tipo_programa: string;
   asignaturas: Asignatura[];
+  defaultMaterials?: Material[];
 }
 
 interface CreateProjectWizardProps {
@@ -90,6 +91,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     description: '',
     tipo_programa: '',
     asignaturas: [],
+    defaultMaterials: [],
   });
 
   // Tab 3: Asignaturas (del programa seleccionado)
@@ -122,7 +124,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setMarketingVideoKind('');
     setStep('category');
     setProgramas([]);
-    setCurrentPrograma({ name: '', code: '', description: '', tipo_programa: '', asignaturas: [] });
+    setCurrentPrograma({
+      name: '',
+      code: '',
+      description: '',
+      tipo_programa: '',
+      asignaturas: [],
+      defaultMaterials: [],
+    });
     setCurrentAsignatura({
       name: '',
       code: '',
@@ -249,7 +258,14 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     }
 
     setProgramas([...programas, currentPrograma]);
-    setCurrentPrograma({ name: '', code: '', description: '', tipo_programa: '', asignaturas: [] });
+    setCurrentPrograma({
+      name: '',
+      code: '',
+      description: '',
+      tipo_programa: '',
+      asignaturas: [],
+      defaultMaterials: [],
+    });
     toast.success('Programa agregado');
   };
 
@@ -294,45 +310,61 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     }
 
     const updatedProgramas = [...programas];
-    updatedProgramas[selectedProgramaIndex].asignaturas[selectedAsignaturaIndex].temas.push(
-      currentTema
-    );
+    const programa = updatedProgramas[selectedProgramaIndex];
+    const asignatura = programa.asignaturas[selectedAsignaturaIndex];
+    const defaultMaterials = programa.defaultMaterials || [];
+
+    const nuevoTema: Tema = {
+      title: currentTema.title,
+      description: currentTema.description,
+      materiales: defaultMaterials.map((m) => ({ ...m })),
+    };
+
+    asignatura.temas.push(nuevoTema);
     setProgramas(updatedProgramas);
-    setCurrentTema({ title: '', description: '', materiales: [] });
+
+    // Reiniciar solo título y descripción; materiales vienen del programa
+    setCurrentTema({
+      title: '',
+      description: '',
+      materiales: [],
+    });
     toast.success('Tema agregado');
   };
 
-  const toggleMaterial = (materialTypeId: string) => {
-    const exists = currentTema.materiales.find((m) => m.material_type_id === materialTypeId);
+  const toggleProgramaMaterial = (materialTypeId: string) => {
+    if (selectedProgramaIndex === null) return;
+    const updated = [...programas];
+    const prog = updated[selectedProgramaIndex];
+    const current = prog.defaultMaterials || [];
+    const exists = current.find((m) => m.material_type_id === materialTypeId);
+
     if (exists) {
-      setCurrentTema({
-        ...currentTema,
-        materiales: currentTema.materiales.map((m) =>
-          m.material_type_id === materialTypeId ? { ...m, cantidad: m.cantidad + 1 } : m
-        ),
-      });
+      prog.defaultMaterials = current.map((m) =>
+        m.material_type_id === materialTypeId ? { ...m, cantidad: m.cantidad + 1 } : m
+      );
     } else {
-      setCurrentTema({
-        ...currentTema,
-        materiales: [...currentTema.materiales, { material_type_id: materialTypeId, cantidad: 1 }],
-      });
+      prog.defaultMaterials = [...current, { material_type_id: materialTypeId, cantidad: 1 }];
     }
+
+    setProgramas(updated);
   };
 
-  const updateMaterialCantidad = (materialTypeId: string, cantidad: number) => {
+  const updateProgramaMaterialCantidad = (materialTypeId: string, cantidad: number) => {
+    if (selectedProgramaIndex === null) return;
+    const updated = [...programas];
+    const prog = updated[selectedProgramaIndex];
+    const current = prog.defaultMaterials || [];
+
     if (cantidad <= 0) {
-      setCurrentTema({
-        ...currentTema,
-        materiales: currentTema.materiales.filter((m) => m.material_type_id !== materialTypeId),
-      });
+      prog.defaultMaterials = current.filter((m) => m.material_type_id !== materialTypeId);
     } else {
-      setCurrentTema({
-        ...currentTema,
-        materiales: currentTema.materiales.map((m) =>
-          m.material_type_id === materialTypeId ? { ...m, cantidad } : m
-        ),
-      });
+      prog.defaultMaterials = current.map((m) =>
+        m.material_type_id === materialTypeId ? { ...m, cantidad } : m
+      );
     }
+
+    setProgramas(updated);
   };
 
   const getMaterialName = (id: string) => materialTypes.find((mt) => mt.id === id)?.name || '';
@@ -874,6 +906,83 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                     )}
                   </div>
 
+                  {selectedProgramaIndex !== null && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Materiales para todos los temas del programa</CardTitle>
+                        <CardDescription>
+                          Selecciónalos una sola vez; se copiarán automáticamente a cada tema nuevo.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          {materialTypes.map((mt) => {
+                            const defaultMaterials =
+                              programas[selectedProgramaIndex].defaultMaterials || [];
+                            const material = defaultMaterials.find(
+                              (m) => m.material_type_id === mt.id
+                            );
+                            const cantidad = material?.cantidad || 0;
+
+                            return (
+                              <div
+                                key={mt.id}
+                                className="flex items-center justify-between p-2 border rounded-lg"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span className="text-lg">{mt.icon}</span>
+                                  <span className="text-xs">{mt.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {cantidad > 0 ? (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() =>
+                                          updateProgramaMaterialCantidad(mt.id, cantidad - 1)
+                                        }
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="text-sm w-6 text-center">{cantidad}</span>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() =>
+                                          updateProgramaMaterialCantidad(mt.id, cantidad + 1)
+                                        }
+                                      >
+                                        +
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2"
+                                      onClick={() => toggleProgramaMaterial(mt.id)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Puedes cambiar estas cantidades; afectarán solo a los temas que crees después del cambio.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {selectedProgramaIndex !== null && selectedAsignaturaIndex !== null && (
                     <Card className="border-dashed">
                       <CardHeader>
@@ -890,64 +999,16 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                             }
                           />
                         </div>
-
                         <div className="space-y-2">
-                          <Label>Materiales Requeridos</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {materialTypes.map((mt) => {
-                              const material = currentTema.materiales.find(
-                                (m) => m.material_type_id === mt.id
-                              );
-                              const cantidad = material?.cantidad || 0;
-
-                              return (
-                                <div
-                                  key={mt.id}
-                                  className="flex items-center justify-between p-2 border rounded-lg"
-                                >
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-lg">{mt.icon}</span>
-                                    <span className="text-xs">{mt.name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {cantidad > 0 ? (
-                                      <>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-6 w-6 p-0"
-                                          onClick={() => updateMaterialCantidad(mt.id, cantidad - 1)}
-                                        >
-                                          -
-                                        </Button>
-                                        <span className="text-sm w-6 text-center">{cantidad}</span>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-6 w-6 p-0"
-                                          onClick={() => updateMaterialCantidad(mt.id, cantidad + 1)}
-                                        >
-                                          +
-                                        </Button>
-                                      </>
-                                    ) : (
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-6 px-2"
-                                        onClick={() => toggleMaterial(mt.id)}
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                          <Label>Descripción</Label>
+                          <Textarea
+                            placeholder="Descripción breve del tema..."
+                            value={currentTema.description}
+                            onChange={(e) =>
+                              setCurrentTema({ ...currentTema, description: e.target.value })
+                            }
+                            rows={2}
+                          />
                         </div>
 
                         <Button type="button" onClick={addTema} className="w-full">

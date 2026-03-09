@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LineChart, Line,
 } from 'recharts';
 import {
   useReportOverview,
@@ -21,6 +21,8 @@ import {
   useReportTimeDistribution,
   useReportWorkflowTransitions,
   useReportWorkloadByCargo,
+  useReportProjectCategories,
+  useReportTasksWeeklyTrend,
 } from '@/hooks/useReports';
 import {
   CHART_COLORS, SERIES_COLORS, STATUS_COLORS, BAR_RADIUS,
@@ -93,6 +95,8 @@ function TabResumen() {
   const { data: overview, isLoading, isError, error } = useReportOverview();
   const { data: projectsProgress = [] } = useReportProjectsProgress();
   const { data: team = [] } = useReportTeamPerformance();
+  const { data: categories = [] } = useReportProjectCategories();
+  const { data: weeklyTrend = [] } = useReportTasksWeeklyTrend();
 
   if (isLoading) {
     return <LoadingState />;
@@ -161,6 +165,25 @@ function TabResumen() {
     en_revision: { label: 'En revisión', color: CHART_COLORS.yellow },
     pendientes: { label: 'Pendientes', color: CHART_COLORS.muted },
   };
+
+  // Packed bubbles data (simple flex layout of bubbles by category)
+  const mappedCategories = (categories || []).map(c => {
+    let label = 'Sin categoría';
+    if (c.category === 'academico') label = 'Académico';
+    else if (c.category === 'marketing') label = 'Marketing';
+    else if (c.category === 'otros') label = 'Otros';
+    return {
+      ...c,
+      label,
+    };
+  });
+
+  // Weekly trend data formatted for chart
+  const weeklyData = (weeklyTrend || []).map(p => ({
+    week: p.week,
+    created: p.created,
+    completed: p.completed,
+  }));
 
   return (
     <div className="space-y-8">
@@ -236,7 +259,97 @@ function TabResumen() {
         </Card>
       </div>
 
-      {/* Row 3: Top Collaborators with ranking colors */}
+      {/* Row 3: Categorías de proyecto + tendencia semanal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Proyectos por tipo</CardTitle>
+            <CardDescription>Académico, Marketing y Otros</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {mappedCategories.length === 0 ? (
+              <EmptyState message="No hay proyectos registrados" />
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center pt-2">
+                {mappedCategories.map(c => {
+                  const size = 60 + Math.min(c.total_projects * 15, 80);
+                  const color =
+                    c.category === 'academico'
+                      ? CHART_COLORS.indigo
+                      : c.category === 'marketing'
+                        ? CHART_COLORS.teal
+                        : c.category === 'otros'
+                          ? CHART_COLORS.yellow
+                          : CHART_COLORS.muted;
+                  return (
+                    <div key={c.category} className="flex flex-col items-center gap-1">
+                      <div
+                        className="flex items-center justify-center rounded-full shadow-sm text-sm font-semibold text-white cursor-pointer transition-transform duration-200 hover:scale-110 hover:shadow-[0_12px_30px_rgba(15,23,42,0.35)]"
+                        style={{ width: size, height: size, background: color }}
+                        title={`${c.label}\nProyectos: ${c.total_projects}\nTareas: ${c.total_tasks}`}
+                      >
+                        {c.total_projects}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{c.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Tendencia semanal</CardTitle>
+            <CardDescription>Tareas creadas vs. finalizadas (últimas 12 semanas)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {weeklyData.length === 0 ? (
+              <EmptyState message="No hay datos de tareas recientes" />
+            ) : (
+              <ChartContainer
+                config={{
+                  created: { label: 'Creadas', color: CHART_COLORS.indigo },
+                  completed: { label: 'Finalizadas', color: CHART_COLORS.teal },
+                }}
+                className="h-[260px] w-full"
+              >
+                <LineChart data={weeklyData} margin={{ left: 10, right: 10, top: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" {...GRID_STYLE} />
+                  <XAxis
+                    dataKey="week"
+                    {...AXIS_STYLE}
+                    tickFormatter={(v) => {
+                      const d = new Date(v + 'T00:00:00');
+                      return d.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+                    }}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis {...AXIS_STYLE} />
+                  <ChartTooltip content={<CustomTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="created"
+                    stroke={CHART_COLORS.indigo}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="completed"
+                    stroke={CHART_COLORS.teal}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 4: Top Collaborators with ranking colors */}
       {top5.length > 0 && (
         <Card className={CARD_CLASS}>
           <CardHeader className="pb-2">

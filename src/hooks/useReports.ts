@@ -92,6 +92,18 @@ export interface WorkloadByCargo {
   completion_rate: number;
 }
 
+export interface ProjectCategorySummary {
+  category: string;
+  total_projects: number;
+  total_tasks: number;
+}
+
+export interface TasksWeeklyTrendPoint {
+  week: string; // ISO date (week start)
+  created: number;
+  completed: number;
+}
+
 export interface CapacityMember {
   id: string;
   full_name: string;
@@ -187,6 +199,22 @@ export function useReportTeamCapacity() {
   return useQuery({
     queryKey: ['report-team-capacity'],
     queryFn: () => api.get<TeamCapacity>('/api/reports/team-capacity'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportProjectCategories() {
+  return useQuery({
+    queryKey: ['report-project-categories'],
+    queryFn: () => api.get<ProjectCategorySummary[]>('/api/reports/project-categories'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportTasksWeeklyTrend() {
+  return useQuery({
+    queryKey: ['report-tasks-weekly-trend'],
+    queryFn: () => api.get<TasksWeeklyTrendPoint[]>('/api/reports/tasks-weekly-trend'),
     staleTime: STALE_TIME,
   });
 }
