@@ -35,6 +35,7 @@ type PersonLoad = {
   name: string;
   email?: string | null;
   cargo?: string | null;
+  projects: string[];
   pending: number;
   overdue: number;
   dueToday: number;
@@ -198,17 +199,26 @@ export function MyFocusToday() {
       const dueToday = dStr !== null && dStr === todayStr;
       const dueThisWeek = dStr !== null && dStr >= todayStr && dStr <= endOfWeekStr;
 
+      const projectLabel =
+        task.project?.key && task.project?.name
+          ? `${task.project.key} · ${task.project.name}`
+          : task.project?.name ?? task.project?.key ?? null;
+
       if (existing) {
         if (notCompleted) existing.pending += 1;
         if (overdue) existing.overdue += 1;
         if (dueToday) existing.dueToday += 1;
         if (dueThisWeek) existing.dueThisWeek += 1;
+        if (projectLabel && !existing.projects.includes(projectLabel)) {
+          existing.projects.push(projectLabel);
+        }
       } else {
         personMap.set(key, {
           key,
           name,
           email: task.assignee?.email ?? null,
           cargo: task.assignee?.cargo ?? null,
+          projects: projectLabel ? [projectLabel] : [],
           pending: notCompleted ? 1 : 0,
           overdue: overdue ? 1 : 0,
           dueToday: dueToday ? 1 : 0,
@@ -293,6 +303,13 @@ export function MyFocusToday() {
                                   <p className="font-semibold text-sm text-[#0F172A] truncate">{person.name}</p>
                                   {person.cargo && (
                                     <p className="text-[12px] text-[#64748B] truncate">{person.cargo}</p>
+                                  )}
+                                  {person.projects.length > 0 && (
+                                    <p className="text-[11px] text-[#94A3B8] truncate">
+                                      {person.projects.length === 1
+                                        ? person.projects[0]
+                                        : `${person.projects[0]} +${person.projects.length - 1} proyectos`}
+                                    </p>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1.5">

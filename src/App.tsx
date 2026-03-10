@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import MyTasks from "./pages/MyTasks";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+            <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
             <Route path="/projects" element={<AppLayout><Projects /></AppLayout>} />
             <Route path="/projects/:projectId" element={<AppLayout><ProjectDetail /></AppLayout>} />
             <Route path="/my-tasks" element={<AppLayout><MyTasks /></AppLayout>} />

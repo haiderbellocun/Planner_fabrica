@@ -65,43 +65,56 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Get members for each project
-    const projects = await Promise.all(
-      result.rows.map(async (project) => {
-        const membersResult = await query(
-          `SELECT
-            pm.id, pm.project_id, pm.user_id, pm.role,
-            pm.can_view, pm.can_create, pm.can_edit, pm.can_assign, pm.joined_at,
-            p.id as profile_id, p.full_name, p.avatar_url, p.email
-           FROM public.project_members pm
-           JOIN public.profiles p ON p.id = pm.user_id
-           WHERE pm.project_id = $1
-           ORDER BY pm.joined_at ASC`,
-          [project.id]
-        );
+    // Get members for all projects in a single query (avoid N+1)
+    const projectRows = result.rows;
 
-        return {
-          ...project,
-          members: membersResult.rows.map((m) => ({
-            id: m.id,
-            project_id: m.project_id,
-            user_id: m.user_id,
-            role: m.role,
-            can_view: m.can_view,
-            can_create: m.can_create,
-            can_edit: m.can_edit,
-            can_assign: m.can_assign,
-            joined_at: m.joined_at,
-            profile: {
-              id: m.profile_id,
-              full_name: m.full_name,
-              avatar_url: m.avatar_url,
-              email: m.email,
-            },
-          })),
-        };
-      })
+    if (projectRows.length === 0) {
+      return res.json([]);
+    }
+
+    const projectIds = projectRows.map((p) => p.id);
+
+    const membersResult = await query(
+      `SELECT
+        pm.id, pm.project_id, pm.user_id, pm.role,
+        pm.can_view, pm.can_create, pm.can_edit, pm.can_assign, pm.joined_at,
+        p.id as profile_id, p.full_name, p.avatar_url, p.email
+       FROM public.project_members pm
+       JOIN public.profiles p ON p.id = pm.user_id
+       WHERE pm.project_id = ANY($1)
+       ORDER BY pm.project_id ASC, pm.joined_at ASC`,
+      [projectIds],
     );
+
+    const membersByProject = new Map<string, any[]>();
+    membersResult.rows.forEach((m) => {
+      const key = String(m.project_id);
+      if (!membersByProject.has(key)) {
+        membersByProject.set(key, []);
+      }
+      membersByProject.get(key)!.push({
+        id: m.id,
+        project_id: m.project_id,
+        user_id: m.user_id,
+        role: m.role,
+        can_view: m.can_view,
+        can_create: m.can_create,
+        can_edit: m.can_edit,
+        can_assign: m.can_assign,
+        joined_at: m.joined_at,
+        profile: {
+          id: m.profile_id,
+          full_name: m.full_name,
+          avatar_url: m.avatar_url,
+          email: m.email,
+        },
+      });
+    });
+
+    const projects = projectRows.map((project) => ({
+      ...project,
+      members: membersByProject.get(String(project.id)) || [],
+    }));
 
     res.json(projects);
   } catch (error) {

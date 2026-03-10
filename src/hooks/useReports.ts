@@ -135,6 +135,64 @@ export interface TeamCapacity {
   members: CapacityMember[];
 }
 
+export interface UserMiniReportTask {
+  id: string;
+  title: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
+  due_date: string | null;
+  created_at: string;
+  status_name: string;
+  is_completed: boolean;
+  horas_estimadas: number | null;
+  project: {
+    id: string;
+    name: string;
+    key: string;
+  };
+}
+
+export interface UserMiniReportStatusBucket {
+  status_name: string;
+  is_completed: boolean;
+  count: number;
+}
+
+export interface UserMiniReport {
+  user: {
+    id: string;
+    full_name: string;
+    cargo: string | null;
+    avatar_url: string | null;
+    email: string;
+  };
+  summary: {
+    total_tasks: number;
+    pending_tasks: number;
+    in_progress_tasks: number;
+    in_review_tasks: number;
+    adjustment_tasks: number;
+    completed_tasks: number;
+    overdue_tasks: number;
+    today_tasks: number;
+    tasks_sin_estimacion: number;
+    high_priority_tasks: number;
+    pending_horas: number;
+    completed_horas: number;
+    weekly_hours_capacity: number;
+    utilization_pct: number;
+    capacity_gap_hours: number;
+    holgura_horas: number;
+  };
+  health: {
+    status: 'ok' | 'attention' | 'risk' | 'no_load';
+    label: 'OK' | 'Atención' | 'Riesgo' | 'Sin carga';
+    color: 'emerald' | 'amber' | 'red' | 'slate';
+    reasons: string[];
+  };
+  tasks_by_status: UserMiniReportStatusBucket[];
+  top_tasks: UserMiniReportTask[];
+}
+
 // --- Hooks ---
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
@@ -200,6 +258,15 @@ export function useReportTeamCapacity() {
     queryKey: ['report-team-capacity'],
     queryFn: () => api.get<TeamCapacity>('/api/reports/team-capacity'),
     staleTime: STALE_TIME,
+  });
+}
+
+export function useUserMiniReport(userId: string | null) {
+  return useQuery({
+    queryKey: ['report-user-mini', userId],
+    queryFn: () => api.get<UserMiniReport>(`/api/reports/user-mini-report/${userId}`),
+    enabled: !!userId,
+    staleTime: 60 * 1000,
   });
 }
 

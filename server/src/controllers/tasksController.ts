@@ -324,7 +324,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
          FROM public.temas t
          WHERE t.asignatura_id = $1
          ORDER BY t.display_order ASC, t.created_at ASC`,
-        [row.asignatura_id]
+        [row.asignatura_id],
       );
 
       // Fetch tema assignees for this task
@@ -355,13 +355,13 @@ export const getTask = async (req: AuthRequest, res: Response) => {
          FROM public.task_material_assignees tma
          JOIN public.profiles p ON p.id = tma.assignee_id
          WHERE tma.task_id = $1`,
-        [row.id]
+        [row.id],
       );
 
       // Create a map of material_id -> { assignee, horas_estimadas }
-      const materialAssigneesMap = new Map();
+      const materialAssigneesMap = new Map<string, any>();
       materialAssigneesResult.rows.forEach((assigneeRow: any) => {
-        materialAssigneesMap.set(assigneeRow.material_id, {
+        materialAssigneesMap.set(String(assigneeRow.material_id), {
           assignee: {
             id: assigneeRow.profile_id,
             full_name: assigneeRow.full_name,
@@ -372,39 +372,60 @@ export const getTask = async (req: AuthRequest, res: Response) => {
         });
       });
 
-      const temasWithMateriales = await Promise.all(
-        temasResult.rows.map(async (tema: any) => {
-          const materialesResult = await query(
-            `SELECT mr.id, mr.descripcion,
-                    mt.id as material_type_id, mt.name as material_type_name, mt.icon as material_type_icon
-             FROM public.materiales_requeridos mr
-             JOIN public.material_types mt ON mt.id = mr.material_type_id
-             WHERE mr.tema_id = $1
-             ORDER BY mt.display_order ASC`,
-            [tema.id]
-          );
+      // Fetch all materiales for all temas in una sola consulta (evita N+1)
+      const temaIds = temasResult.rows.map((t: any) => t.id);
+      let materialesByTema = new Map<string, any[]>();
 
-          return {
-            id: tema.id,
-            title: tema.title,
-            assignee: temaAssigneesMap.get(tema.id) || null,
-            materiales: materialesResult.rows.map((m: any) => {
-              const materialData = materialAssigneesMap.get(m.id);
-              return {
-                id: m.id,
-                descripcion: m.descripcion,
-                assignee: materialData?.assignee || null,
-                horas_estimadas: materialData?.horas_estimadas || null,
-                material_type: {
-                  id: m.material_type_id,
-                  name: m.material_type_name,
-                  icon: m.material_type_icon,
-                },
-              };
-            }),
-          };
-        })
-      );
+      if (temaIds.length > 0) {
+        const materialesResult = await query(
+          `SELECT
+             mr.id,
+             mr.descripcion,
+             mr.tema_id,
+             mt.id  AS material_type_id,
+             mt.name AS material_type_name,
+             mt.icon AS material_type_icon
+           FROM public.materiales_requeridos mr
+           JOIN public.material_types mt ON mt.id = mr.material_type_id
+           WHERE mr.tema_id = ANY($1)
+           ORDER BY mr.tema_id ASC, mt.display_order ASC`,
+          [temaIds],
+        );
+
+        materialesByTema = new Map<string, any[]>();
+
+        materialesResult.rows.forEach((m: any) => {
+          const key = String(m.tema_id);
+          if (!materialesByTema.has(key)) {
+            materialesByTema.set(key, []);
+          }
+          materialesByTema.get(key)!.push(m);
+        });
+      }
+
+      const temasWithMateriales = temasResult.rows.map((tema: any) => {
+        const materialesForTema = materialesByTema.get(String(tema.id)) || [];
+
+        return {
+          id: tema.id,
+          title: tema.title,
+          assignee: temaAssigneesMap.get(tema.id) || null,
+          materiales: materialesForTema.map((m: any) => {
+            const materialData = materialAssigneesMap.get(String(m.id));
+            return {
+              id: m.id,
+              descripcion: m.descripcion,
+              assignee: materialData?.assignee || null,
+              horas_estimadas: materialData?.horas_estimadas || null,
+              material_type: {
+                id: m.material_type_id,
+                name: m.material_type_name,
+                icon: m.material_type_icon,
+              },
+            };
+          }),
+        };
+      });
 
       task.temas_materiales = temasWithMateriales;
     }

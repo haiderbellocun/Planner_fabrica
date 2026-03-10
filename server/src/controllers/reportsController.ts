@@ -172,7 +172,7 @@ export const getTeamPerformance = async (req: AuthRequest, res: Response) => {
         COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.name = 'En proceso') as in_progress_tasks,
         COUNT(DISTINCT tma.id) as materials_assigned,
-        COALESCE(SUM(DISTINCT tma.horas_estimadas), 0) as total_horas_estimadas,
+        COALESCE(SUM(tma.horas_estimadas), 0) as total_horas_estimadas,
         COALESCE(actual.total_actual_hours, 0) as total_horas_reales
       FROM public.profiles p
       LEFT JOIN public.tasks t ON t.assignee_id = p.id
@@ -482,6 +482,285 @@ export const getTeamCapacity = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * GET /api/reports/user-mini-report/:userId
+ * Per-user diagnostic summary for the Equipo tab drawer:
+ * - Task counts by status and critical buckets (vencidas, hoy, sin estimación, alta prioridad)
+ * - Pending vs completed hours and weekly capacity
+ * - Top 5 tasks that require attention
+ */
+export const getUserMiniReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = (req.params.userId || (req.query.userId as string | undefined) || '').trim();
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId inválido' });
+    }
+
+    // Basic profile + capacity
+    const profileRes = await query(
+      `
+        SELECT
+          id,
+          full_name,
+          cargo,
+          avatar_url,
+          email,
+          COALESCE(weekly_hours_capacity, 40.25) AS weekly_hours_capacity
+        FROM public.profiles
+        WHERE id = $1
+      `,
+      [userId],
+    );
+
+    if (profileRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const profile = profileRes.rows[0];
+
+    // Aggregate metrics and status distribution for this user
+    const summaryRes = await query(
+      `
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            t.title,
+            t.priority,
+            t.due_date,
+            t.created_at,
+            t.updated_at,
+            t.project_id,
+            ts.name AS status_name,
+            ts.is_completed,
+            COALESCE(tma.horas_estimadas, NULL) AS horas_estimadas
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          LEFT JOIN public.task_material_assignees tma
+            ON tma.task_id = t.parent_task_id
+            AND tma.assignee_id = t.assignee_id
+            AND tma.material_id = t.material_requerido_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          COUNT(*) AS total_tasks,
+          COUNT(*) FILTER (WHERE NOT is_completed) AS pending_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'En proceso') AS in_progress_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'En revisión') AS in_review_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'Ajustes') AS adjustment_tasks,
+          COUNT(*) FILTER (WHERE is_completed) AS completed_tasks,
+          COUNT(*) FILTER (WHERE due_date < CURRENT_DATE AND NOT is_completed) AS overdue_tasks,
+          COUNT(*) FILTER (WHERE due_date = CURRENT_DATE AND NOT is_completed) AS today_tasks,
+          COUNT(*) FILTER (WHERE NOT is_completed AND horas_estimadas IS NULL) AS tasks_sin_estimacion,
+          COUNT(*) FILTER (WHERE NOT is_completed AND priority IN ('high', 'urgent')) AS high_priority_tasks,
+          COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed), 0) AS pending_horas,
+          COALESCE(SUM(horas_estimadas) FILTER (WHERE is_completed), 0) AS completed_horas
+        FROM user_tasks
+      `,
+      [userId],
+    );
+
+    const statusRes = await query(
+      `
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            ts.name AS status_name,
+            ts.is_completed
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          status_name,
+          is_completed,
+          COUNT(*) AS count
+        FROM user_tasks
+        GROUP BY status_name, is_completed
+        ORDER BY status_name
+      `,
+      [userId],
+    );
+
+    const topTasksRes = await query(
+      `
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            t.title,
+            t.priority,
+            t.due_date,
+            t.created_at,
+            ts.name AS status_name,
+            ts.is_completed,
+            COALESCE(tma.horas_estimadas, NULL) AS horas_estimadas,
+            p.id AS project_id,
+            p.name AS project_name,
+            p.key AS project_key
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          JOIN public.projects p ON p.id = t.project_id
+          LEFT JOIN public.task_material_assignees tma
+            ON tma.task_id = t.parent_task_id
+            AND tma.assignee_id = t.assignee_id
+            AND tma.material_id = t.material_requerido_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          id,
+          title,
+          priority,
+          due_date,
+          created_at,
+          status_name,
+          is_completed,
+          horas_estimadas,
+          project_id,
+          project_name,
+          project_key
+        FROM user_tasks
+        ORDER BY
+          CASE
+            WHEN NOT is_completed AND due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 1
+            WHEN NOT is_completed AND due_date = CURRENT_DATE THEN 2
+            WHEN NOT is_completed AND priority IN ('high', 'urgent') THEN 3
+            WHEN NOT is_completed AND horas_estimadas IS NULL THEN 4
+            ELSE 5
+          END,
+          COALESCE(due_date, CURRENT_DATE + INTERVAL '365 days'),
+          created_at DESC
+        LIMIT 5
+      `,
+      [userId],
+    );
+
+    const summary = summaryRes.rows[0] || {
+      total_tasks: 0,
+      pending_tasks: 0,
+      in_progress_tasks: 0,
+      in_review_tasks: 0,
+      adjustment_tasks: 0,
+      completed_tasks: 0,
+      overdue_tasks: 0,
+      today_tasks: 0,
+      tasks_sin_estimacion: 0,
+      high_priority_tasks: 0,
+      pending_horas: 0,
+      completed_horas: 0,
+    };
+
+    const totalTasks = Number(summary.total_tasks) || 0;
+    const pendingHoras = Number(summary.pending_horas) || 0;
+    const weeklyCapacity = Number(profile.weekly_hours_capacity) || 40.25;
+
+    const utilizationPct = weeklyCapacity > 0
+      ? Math.round((pendingHoras / weeklyCapacity) * 100)
+      : 0;
+
+    const capacityGapHours = Math.round((pendingHoras - weeklyCapacity) * 100) / 100;
+    const holguraHoras = capacityGapHours < 0 ? Math.abs(capacityGapHours) : 0;
+
+    // Health badge rules
+    const overdue = Number(summary.overdue_tasks) || 0;
+    const sinEstimacion = Number(summary.tasks_sin_estimacion) || 0;
+
+    let healthStatus: 'ok' | 'attention' | 'risk' | 'no_load' = 'ok';
+    const reasons: string[] = [];
+
+    if (totalTasks === 0 || (pendingHoras === 0 && weeklyCapacity > 0)) {
+      healthStatus = 'no_load';
+    } else if (
+      utilizationPct > 100
+      || overdue >= 2
+      || (overdue > 0 && summary.high_priority_tasks > 0)
+    ) {
+      healthStatus = 'risk';
+    } else if (
+      overdue > 0
+      || sinEstimacion >= 3
+      || (utilizationPct >= 85 && utilizationPct <= 100)
+    ) {
+      healthStatus = 'attention';
+    }
+
+    if (overdue > 0) reasons.push(`${overdue} tareas vencidas`);
+    if (summary.today_tasks > 0) reasons.push(`${summary.today_tasks} vencen hoy`);
+    if (summary.high_priority_tasks > 0) reasons.push(`${summary.high_priority_tasks} de alta prioridad`);
+    if (sinEstimacion > 0) reasons.push(`${sinEstimacion} sin estimación`);
+
+    let healthLabel = 'OK';
+    if (healthStatus === 'attention') healthLabel = 'Atención';
+    else if (healthStatus === 'risk') healthLabel = 'Riesgo';
+    else if (healthStatus === 'no_load') healthLabel = 'Sin carga';
+
+    let healthColor: 'emerald' | 'amber' | 'red' | 'slate' = 'emerald';
+    if (healthStatus === 'attention') healthColor = 'amber';
+    else if (healthStatus === 'risk') healthColor = 'red';
+    else if (healthStatus === 'no_load') healthColor = 'slate';
+
+    const tasksByStatus = statusRes.rows.map(r => ({
+      status_name: r.status_name as string,
+      is_completed: Boolean(r.is_completed),
+      count: parseInt(r.count, 10),
+    }));
+
+    const topTasks = topTasksRes.rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      priority: r.priority,
+      due_date: r.due_date,
+      created_at: r.created_at,
+      status_name: r.status_name,
+      is_completed: r.is_completed,
+      horas_estimadas: r.horas_estimadas != null ? Number(r.horas_estimadas) : null,
+      project: {
+        id: r.project_id,
+        name: r.project_name,
+        key: r.project_key,
+      },
+    }));
+
+    res.json({
+      user: {
+        id: profile.id,
+        full_name: profile.full_name,
+        cargo: profile.cargo,
+        avatar_url: profile.avatar_url,
+        email: profile.email,
+      },
+      summary: {
+        total_tasks: totalTasks,
+        pending_tasks: Number(summary.pending_tasks) || 0,
+        in_progress_tasks: Number(summary.in_progress_tasks) || 0,
+        in_review_tasks: Number(summary.in_review_tasks) || 0,
+        adjustment_tasks: Number(summary.adjustment_tasks) || 0,
+        completed_tasks: Number(summary.completed_tasks) || 0,
+        overdue_tasks: overdue,
+        today_tasks: Number(summary.today_tasks) || 0,
+        tasks_sin_estimacion: sinEstimacion,
+        high_priority_tasks: Number(summary.high_priority_tasks) || 0,
+        pending_horas: pendingHoras,
+        completed_horas: Number(summary.completed_horas) || 0,
+        weekly_hours_capacity: weeklyCapacity,
+        utilization_pct: utilizationPct,
+        capacity_gap_hours: capacityGapHours,
+        holgura_horas: holguraHoras,
+      },
+      health: {
+        status: healthStatus,
+        label: healthLabel,
+        color: healthColor,
+        reasons,
+      },
+      tasks_by_status: tasksByStatus,
+      top_tasks: topTasks,
+    });
+  } catch (error) {
+    console.error('User mini report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getWorkloadByCargo = async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(`
@@ -491,7 +770,7 @@ export const getWorkloadByCargo = async (req: AuthRequest, res: Response) => {
         COUNT(DISTINCT t.id) as total_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE NOT ts.is_completed AND t.id IS NOT NULL) as pending_tasks,
-        COALESCE(SUM(DISTINCT tma.horas_estimadas), 0) as total_horas_estimadas
+        COALESCE(SUM(tma.horas_estimadas), 0) as total_horas_estimadas
       FROM public.profiles p
       LEFT JOIN public.tasks t ON t.assignee_id = p.id
       LEFT JOIN public.task_statuses ts ON ts.id = t.status_id

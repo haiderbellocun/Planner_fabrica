@@ -12,6 +12,7 @@ import {
   getWorkloadByCargo,
   getProjectCategoriesSummary,
   getTasksWeeklyTrend,
+  getUserMiniReport,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -30,5 +31,6 @@ router.get('/workflow-transitions', getWorkflowTransitions);
 router.get('/workload-by-cargo', getWorkloadByCargo);
 router.get('/project-categories', getProjectCategoriesSummary);
 router.get('/tasks-weekly-trend', getTasksWeeklyTrend);
+router.get('/user-mini-report/:userId', getUserMiniReport);
 
 export default router;

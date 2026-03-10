@@ -43,7 +43,7 @@ interface Asignatura {
   code: string;
   description: string;
   semestre: number | null;
-  tipo_asignatura?: 'propedeutica' | 'transversal' | 'normal' | '';
+  tipo_asignatura?: 'propedeutica' | 'transversal' | 'normal' | 'electiva' | '';
   temas: Tema[];
 }
 
@@ -819,7 +819,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                             <Label>Tipo de Asignatura</Label>
                             <Select
                               value={currentAsignatura.tipo_asignatura || ''}
-                              onValueChange={(value: 'propedeutica' | 'transversal' | 'normal') =>
+                              onValueChange={(value: 'propedeutica' | 'transversal' | 'normal' | 'electiva') =>
                                 setCurrentAsignatura({
                                   ...currentAsignatura,
                                   tipo_asignatura: value,
@@ -833,6 +833,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                                 <SelectItem value="propedeutica">Propedéutica</SelectItem>
                                 <SelectItem value="transversal">Transversal</SelectItem>
                                 <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="electiva">Electiva</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import projectsRoutes from './routes/projects.js';
 import tasksRoutes, { projectTasksRouter } from './routes/tasks.js';
@@ -47,8 +48,26 @@ app.use(cors({
 }));
 // Handle OPTIONS preflight explicitly for all routes
 app.options('*', cors({ origin: corsOrigin, credentials: false }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// --- Rate limiting ---
+// 1) Chat: máximo 20 mensajes/hora por IP
+const chatLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Has superado el límite de mensajes del chat por hora.' },
+});
+
+// 2) API general: 100 peticiones/minuto por IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Serve static files (avatars)
 // In Docker (production) WORKDIR=/app so avatars are at /app/public/avatars.
@@ -90,10 +109,10 @@ app.use('/api', temaAssigneesRoutes);
 app.use('/api/my-tasks', myTasksRoutes);
 app.use('/api', materialAssigneesRoutes);
 app.use('/api/tiempos-estimados', tiemposRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/leaders', leadersRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/admin', adminUsersRoutes);
+app.use('/api/reports', apiLimiter, reportsRoutes);
+app.use('/api/leaders', apiLimiter, leadersRoutes);
+app.use('/api/chat', chatLimiter, chatRoutes);
+app.use('/api/admin', apiLimiter, adminUsersRoutes);
 
 // 404 handler
 app.use((req, res) => {

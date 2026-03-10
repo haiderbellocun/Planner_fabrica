@@ -1,4 +1,4 @@
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Package, Clock, BarChart3, CalendarDays, AlertTriangle } from 'lucide-react';
@@ -7,6 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import {
@@ -23,6 +30,8 @@ import {
   useReportWorkloadByCargo,
   useReportProjectCategories,
   useReportTasksWeeklyTrend,
+  useUserMiniReport,
+  type UserMiniReport,
 } from '@/hooks/useReports';
 import {
   CHART_COLORS, SERIES_COLORS, STATUS_COLORS, BAR_RADIUS,
@@ -447,6 +456,10 @@ function TabEquipo() {
   const { data: capacity, isLoading: loadingCapacity } = useReportTeamCapacity();
   const { data: workload = [] } = useReportWorkloadByCargo();
 
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: userReport, isLoading: loadingUserReport } = useUserMiniReport(selectedUserId);
+
   if (isLoading || loadingCapacity) return <LoadingState />;
 
   if (team.length === 0) return <EmptyState message="No hay datos de equipo" />;
@@ -639,9 +652,18 @@ function TabEquipo() {
                 }
               }
 
+              const onClick = () => {
+                setSelectedUserId(String(member.id));
+                setDrawerOpen(true);
+              };
+
               return (
                 <Card key={member.id} className={CARD_CLASS}>
-                  <CardContent className="pt-5 pb-4 space-y-3">
+                  <button
+                    type="button"
+                    onClick={onClick}
+                    className="w-full text-left pt-5 pb-4 px-4 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-2xl hover:bg-muted/40 transition-colors"
+                  >
                     {/* Header: Avatar + Name + Risk badge */}
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
@@ -731,7 +753,7 @@ function TabEquipo() {
                         </div>
                       )}
                     </div>
-                  </CardContent>
+                  </button>
                 </Card>
               );
             })}
@@ -782,6 +804,48 @@ function TabEquipo() {
           </CardContent>
         </Card>
       )}
+
+      {/* Drawer lateral de mini-reporte por usuario */}
+      <Dialog open={drawerOpen} onOpenChange={open => setDrawerOpen(open)}>
+        <DialogContent className="sm:max-w-[480px] sm:ml-auto sm:mr-4 w-full h-[90vh] sm:h-[90vh] flex flex-col p-0 border-l shadow-xl">
+          <DialogHeader className="px-4 pt-4 pb-2 border-b">
+            <DialogTitle className="text-base">
+              {userReport?.user.full_name || 'Detalle de colaborador'}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Resumen de carga, riesgos y tareas que requieren atención.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+            {loadingUserReport && (
+              <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Cargando resumen del colaborador...
+              </div>
+            )}
+
+            {!loadingUserReport && userReport && (
+              <>
+                {/* Encabezado con avatar y badge de salud */}
+                <ColaboradorHeader report={userReport} />
+
+                {/* Distribución de tareas por estado */}
+                <TareasPorEstadoChart report={userReport} />
+
+                {/* Alertas clave */}
+                <AlertasClave report={userReport} />
+
+                {/* Tareas que requieren atención */}
+                <TareasCriticasList report={userReport} />
+
+                {/* Capacidad y planificación */}
+                <CapacidadResumen report={userReport} />
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Team Table */}
       <Card className={CARD_CLASS}>
@@ -846,6 +910,309 @@ function TabEquipo() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ---------- Componentes auxiliares para el drawer de Equipo ----------
+
+function ColaboradorHeader({ report }: { report: UserMiniReport }) {
+  const { user, summary, health } = report;
+
+  const healthClasses =
+    health.color === 'red'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : health.color === 'amber'
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        : health.color === 'slate'
+          ? 'border-slate-200 bg-slate-50 text-slate-700'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+  const shortReasons = health.reasons.slice(0, 2).join(' · ');
+
+  return (
+    <Card className="border border-border/80 shadow-none">
+      <CardContent className="pt-3 pb-3 px-3 space-y-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={user.avatar_url || ''} />
+            <AvatarFallback className="text-xs">
+              {(user.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-sm truncate">{user.full_name || 'Sin nombre'}</p>
+              <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${healthClasses}`}>
+                {health.label}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              {user.cargo || 'Sin cargo asignado'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Resumen rápido</p>
+            <p className="text-[11px] text-foreground">
+              {summary.pending_tasks} pendientes, {summary.overdue_tasks} vencidas,{' '}
+              {summary.today_tasks} para hoy.
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Capacidad semanal</p>
+            <p className="text-[11px] text-foreground">
+              Utilización {summary.utilization_pct}% ·{' '}
+              {summary.holgura_horas > 0
+                ? `Holgura ${formatHours(summary.holgura_horas)}`
+                : `Exceso ${formatHours(Math.abs(summary.capacity_gap_hours))}`}
+            </p>
+          </div>
+        </div>
+
+        {shortReasons && (
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+            {shortReasons}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TareasPorEstadoChart({ report }: { report: UserMiniReport }) {
+  const data = report.tasks_by_status
+    .filter(b => b.count > 0)
+    .map(b => ({
+      name: b.status_name,
+      count: b.count,
+      is_completed: b.is_completed,
+    }));
+
+  if (data.length === 0) {
+    return <EmptyState message="No hay tareas asignadas a este colaborador" />;
+  }
+
+  const config: ChartConfig = {
+    count: { label: 'Tareas', color: CHART_COLORS.indigo },
+  };
+
+  return (
+    <Card className={CARD_CLASS}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Estado de tareas</CardTitle>
+        <CardDescription className="text-xs">Distribución por estado actual</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={config} className="h-[200px] w-full">
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 10, right: 10, top: 10, bottom: 10 }}
+          >
+            <CartesianGrid horizontal={false} {...GRID_STYLE} />
+            <XAxis type="number" {...AXIS_STYLE} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              {...AXIS_STYLE}
+              width={90}
+              tick={{ fill: '#64748B', fontSize: 11 }}
+            />
+            <ChartTooltip content={<CustomTooltip />} />
+            <Bar dataKey="count" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
+              {data.map((item, idx) => (
+                <Cell
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={idx}
+                  fill={item.is_completed ? CHART_COLORS.teal : CHART_COLORS.indigo}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AlertasClave({ report }: { report: UserMiniReport }) {
+  const { summary } = report;
+
+  const items: { label: string; value: number; tone: 'red' | 'amber' | 'slate' | 'teal' }[] = [
+    { label: 'Vencidas', value: summary.overdue_tasks, tone: 'red' },
+    { label: 'Vencen hoy', value: summary.today_tasks, tone: 'amber' },
+    { label: 'Sin estimación', value: summary.tasks_sin_estimacion, tone: 'amber' },
+    { label: 'Alta prioridad', value: summary.high_priority_tasks, tone: 'red' },
+  ];
+
+  const visible = items.filter(i => i.value > 0);
+
+  if (visible.length === 0) {
+    return null;
+  }
+
+  const toneClass = (tone: 'red' | 'amber' | 'slate' | 'teal') => {
+    if (tone === 'red') return 'border-red-200 bg-red-50 text-red-700';
+    if (tone === 'amber') return 'border-amber-200 bg-amber-50 text-amber-700';
+    if (tone === 'teal') return 'border-teal-200 bg-teal-50 text-teal-700';
+    return 'border-slate-200 bg-slate-50 text-slate-700';
+  };
+
+  return (
+    <Card className={CARD_CLASS}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Alertas clave</CardTitle>
+        <CardDescription className="text-xs">
+          Indicadores para priorizar conversaciones y ajustes de carga.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {visible.map(item => (
+          <Badge
+            key={item.label}
+            variant="outline"
+            className={`px-2 py-1 text-[11px] font-medium ${toneClass(item.tone)}`}
+          >
+            {item.label}: {item.value}
+          </Badge>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TareasCriticasList({ report }: { report: UserMiniReport }) {
+  const tasks = report.top_tasks;
+
+  if (!tasks || tasks.length === 0) {
+    return null;
+  }
+
+  const formatDateShort = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+  };
+
+  const priorityLabel: Record<string, string> = {
+    low: 'Baja',
+    medium: 'Media',
+    high: 'Alta',
+    urgent: 'Urgente',
+  };
+
+  return (
+    <Card className={CARD_CLASS}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Tareas que requieren atención</CardTitle>
+        <CardDescription className="text-xs">
+          Hasta 5 tareas ordenadas por urgencia (vencidas, de hoy, alta prioridad, sin estimación).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {tasks.map(task => (
+          <div
+            key={task.id}
+            className="border border-border/60 rounded-lg px-2.5 py-2 text-xs flex flex-col gap-1 bg-background/80"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-medium truncate">{task.title}</p>
+              <span className="text-[11px] text-muted-foreground">
+                {task.project.key || ''} {task.project.name}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="px-1.5 py-0.5 text-[10px]">
+                  {task.status_name}
+                </Badge>
+                {task.priority && (
+                  <Badge
+                    variant="outline"
+                    className={`px-1.5 py-0.5 text-[10px] ${
+                      task.priority === 'high' || task.priority === 'urgent'
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-sky-200 bg-sky-50 text-sky-700'
+                    }`}
+                  >
+                    {priorityLabel[task.priority] || task.priority}
+                  </Badge>
+                )}
+                {task.horas_estimadas == null && (
+                  <Badge
+                    variant="outline"
+                    className="px-1.5 py-0.5 text-[10px] border-amber-200 bg-amber-50 text-amber-700"
+                  >
+                    Sin estimación
+                  </Badge>
+                )}
+              </div>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-[10px] text-muted-foreground">
+                  Compromiso: {formatDateShort(task.due_date)}
+                </span>
+                {task.horas_estimadas != null && task.horas_estimadas > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Est.: {formatHours(task.horas_estimadas)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CapacidadResumen({ report }: { report: UserMiniReport }) {
+  const { summary } = report;
+
+  return (
+    <Card className={CARD_CLASS}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Capacidad y planificación</CardTitle>
+        <CardDescription className="text-xs">
+          Relación entre horas asignadas, capacidad semanal y días de trabajo aproximados.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Capacidad semanal</p>
+            <p className="text-[11px] font-medium">
+              {formatHours(summary.weekly_hours_capacity)} disponibles
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Horas pendientes</p>
+            <p className="text-[11px] font-medium">
+              {summary.pending_horas > 0 ? formatHours(summary.pending_horas) : '0h'}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Utilización</p>
+            <p className="text-[11px] font-medium">{summary.utilization_pct}%</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Gap / Holgura</p>
+            <p className="text-[11px] font-medium">
+              {summary.capacity_gap_hours < 0
+                ? `Holgura ${formatHours(Math.abs(summary.capacity_gap_hours))}`
+                : `Exceso ${formatHours(summary.capacity_gap_hours)}`}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Este resumen usa las mismas horas semanales configuradas en la sección de capacidad del
+          equipo.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
