@@ -20,7 +20,7 @@ function getOpenAIClient(): OpenAI | null {
   return openaiClient;
 }
 
-export async function generateChatAnswer(prompt: string): Promise<string> {
+export async function generateChatAnswer(prompt: string, maxTokens = 600): Promise<string> {
   const client = getOpenAIClient();
   if (!client) {
     return 'El asistente aún no está configurado en el servidor (OPENAI_API_KEY no está definido).';
@@ -34,7 +34,7 @@ export async function generateChatAnswer(prompt: string): Promise<string> {
       {
         role: 'system',
         content:
-          'Eres un asistente de la Fábrica de Contenidos. Responde SIEMPRE en español, de forma breve y clara (máximo 6 líneas).',
+          'Eres Lumina, asistente de la Fábrica de Contenidos. Sigue las instrucciones del mensaje del usuario con exactitud.',
       },
       {
         role: 'user',
@@ -42,7 +42,7 @@ export async function generateChatAnswer(prompt: string): Promise<string> {
       },
     ],
     temperature: 0.2,
-    max_tokens: 400,
+    max_tokens: maxTokens,
   });
 
   const text = response.choices[0]?.message?.content;

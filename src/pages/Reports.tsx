@@ -17,7 +17,18 @@ import {
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LineChart, Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Cell,
+  LineChart,
+  Line,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  ReferenceLine,
 } from 'recharts';
 import {
   useReportOverview,
@@ -32,6 +43,15 @@ import {
   useReportTasksWeeklyTrend,
   useUserMiniReport,
   type UserMiniReport,
+  useReportProjectsTimeline,
+  useReportTeamMonthlyCompletion,
+  useReportTeamByCargo,
+  useReportWeeklyByCargo,
+  useReportUnassignedMaterials,
+  type TeamMonthlyPoint,
+  type TeamMemberByCargo,
+  type WeeklyByCargoPoint,
+  type UnassignedMaterial,
 } from '@/hooks/useReports';
 import {
   CHART_COLORS, SERIES_COLORS, STATUS_COLORS, BAR_RADIUS,
@@ -39,6 +59,7 @@ import {
   AXIS_STYLE, GRID_STYLE,
 } from '@/components/reports/ReportCharts';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
+import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import ViolinChart from '@/components/reports/ViolinChart';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
 import kpiProjectsImg from '@/assets/dashboard/projects.png';
@@ -390,13 +411,208 @@ function TabResumen() {
 // ---------- Tab: Proyectos ----------
 function TabProyectos() {
   const { data: projects = [], isLoading } = useReportProjectsProgress();
+  const { data: timeline = [] } = useReportProjectsTimeline();
 
   if (isLoading) return <LoadingState />;
 
   if (projects.length === 0) return <EmptyState message="No hay proyectos registrados" />;
 
+  const bgForRate = (n: number) =>
+    n >= 70 ? 'bg-emerald-50 text-emerald-700'
+      : n >= 40 ? 'bg-amber-50 text-amber-700'
+        : 'bg-red-50 text-red-700';
+
+  // Map projects by id for quick lookup in timeline / heatmap
+  const projectsById = new Map(projects.map(p => [p.id, p]));
+
+  const validTimeline = (timeline || []).filter(p => (p.start_date || p.estimated_end_date || p.target_date));
+
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
+
+  validTimeline.forEach(p => {
+    const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
+    const endBase = p.estimated_end_date || p.target_date;
+    const end = endBase ? new Date(endBase + 'T00:00:00') : null;
+    if (start) {
+      if (!minDate || start < minDate) minDate = start;
+      if (!maxDate || start > maxDate) maxDate = start;
+    }
+    if (end) {
+      if (!minDate || end < minDate) minDate = end;
+      if (!maxDate || end > maxDate) maxDate = end;
+    }
+  });
+
+  const totalSpan =
+    minDate && maxDate
+      ? Math.max(maxDate.getTime() - minDate.getTime(), 1)
+      : 1;
+
+  const formatShortDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+  };
+
+  const tickDates: string[] = [];
+  if (minDate && maxDate) {
+    const steps = 4;
+    for (let i = 0; i <= steps; i += 1) {
+      const t = new Date(minDate.getTime() + (totalSpan * i) / steps);
+      tickDates.push(t.toISOString().split('T')[0]);
+    }
+  }
+
   return (
     <div className="space-y-8">
+      {/* Línea de tiempo estimada */}
+      {validTimeline.length > 0 && minDate && maxDate && (() => {
+        const today = new Date();
+        const todayPct = Math.max(0, Math.min(
+          ((today.getTime() - minDate!.getTime()) / totalSpan) * 100,
+          100
+        ));
+        const showToday = todayPct > 0 && todayPct < 100;
+
+        return (
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Línea de tiempo</CardTitle>
+              <CardDescription>Barra verde = completado · gris/rojo = pendiente · línea = hoy</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="min-w-[480px]">
+                  {/* Column headers */}
+                  <div className="flex items-center gap-3 mb-2 px-2">
+                    <div className="w-36 flex-shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Proyecto</div>
+                    <div className="flex-1 text-[10px] uppercase tracking-wide text-muted-foreground">Progreso</div>
+                    <div className="w-20 flex-shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground text-right">Finaliza</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {validTimeline.map(p => {
+                      const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
+                      const endBase = p.estimated_end_date || p.target_date;
+                      const end = endBase ? new Date(endBase + 'T00:00:00') : null;
+                      if (!start || !end || !minDate || !maxDate) return null;
+
+                      const startPct = ((start.getTime() - minDate!.getTime()) / totalSpan) * 100;
+                      const endPct = Math.min(((end.getTime() - minDate!.getTime()) / totalSpan) * 100, 100);
+                      const barWidth = Math.max(endPct - startPct, 1);
+                      const completion = Math.max(0, Math.min(p.completion_rate, 100));
+                      const completedBarWidth = barWidth * (completion / 100);
+                      const remainingBarWidth = barWidth - completedBarWidth;
+
+                      const project = projectsById.get(p.id);
+                      const overdue = project?.overdue_tasks ?? p.overdue_tasks ?? 0;
+                      const isPastDeadline = end < today && completion < 100;
+                      const isAtRisk = overdue > 0 || isPastDeadline;
+
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/30 ${isAtRisk ? 'bg-red-50/40' : ''}`}
+                        >
+                          {/* Project name */}
+                          <div className="w-36 flex-shrink-0">
+                            <p className="text-xs font-medium truncate text-foreground leading-tight">{p.name}</p>
+                            <p className="text-[10px] text-muted-foreground leading-tight">{p.key} · {completion}%</p>
+                          </div>
+
+                          {/* Bar track */}
+                          <div className="flex-1 relative h-7">
+                            {/* Background track */}
+                            <div className="absolute inset-0 rounded-md bg-muted/20" />
+
+                            {/* Completed segment */}
+                            {completedBarWidth > 0.5 && (
+                              <div
+                                className="absolute top-0 bottom-0 rounded-l-md flex items-center overflow-hidden"
+                                style={{
+                                  left: `${startPct}%`,
+                                  width: `${completedBarWidth}%`,
+                                  background: `linear-gradient(90deg, ${CHART_COLORS.teal}, ${CHART_COLORS.indigo})`,
+                                  borderRadius: remainingBarWidth < 0.5 ? '6px' : '6px 0 0 6px',
+                                }}
+                              >
+                                {completedBarWidth > 10 && (
+                                  <span className="px-1.5 text-[10px] font-semibold text-white whitespace-nowrap">
+                                    {completion}%
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Remaining segment */}
+                            {remainingBarWidth > 0.5 && (
+                              <div
+                                className="absolute top-0 bottom-0"
+                                style={{
+                                  left: `${startPct + completedBarWidth}%`,
+                                  width: `${remainingBarWidth}%`,
+                                  backgroundColor: isAtRisk ? '#EF4444' : CHART_COLORS.muted,
+                                  opacity: isAtRisk ? 0.35 : 0.2,
+                                  borderRadius: completedBarWidth < 0.5 ? '6px' : '0 6px 6px 0',
+                                }}
+                              />
+                            )}
+
+                            {/* Today line */}
+                            {showToday && (
+                              <div
+                                className="absolute top-0 bottom-0 w-px bg-foreground/50 z-10"
+                                style={{ left: `${todayPct}%` }}
+                              >
+                                <div className="absolute -top-5 -translate-x-1/2 text-[9px] font-semibold text-foreground/70 whitespace-nowrap bg-background px-0.5 rounded">
+                                  Hoy
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* End date + risk */}
+                          <div className="w-20 flex-shrink-0 text-right">
+                            {endBase ? (
+                              <>
+                                <p className={`text-[11px] font-medium leading-tight ${isPastDeadline ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                  {formatShortDate(endBase)}
+                                </p>
+                                {overdue > 0 && (
+                                  <p className="text-[10px] text-red-500 leading-tight">{overdue} vencidas</p>
+                                )}
+                                {isPastDeadline && overdue === 0 && (
+                                  <p className="text-[10px] text-red-400 leading-tight">Tarde</p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground">Sin fecha</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Date axis */}
+                  {tickDates.length > 0 && (
+                    <div className="mt-3 ml-[153px] mr-[84px]">
+                      <div className="h-px bg-border mb-1" />
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        {tickDates.map(d => (
+                          <span key={d}>{formatShortDate(d)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
         {projects.map(p => (
           <Card key={p.id} className={CARD_CLASS}>
@@ -408,6 +624,16 @@ function TabProyectos() {
                     <Badge variant="outline" className="text-xs">{p.key}</Badge>
                     {p.tipo_programa && (
                       <Badge variant="secondary" className="text-xs capitalize">{p.tipo_programa}</Badge>
+                    )}
+                    {p.overdue_tasks > 0 && (
+                      <Badge className="text-[10px] px-1.5 py-0.5 border border-red-200 bg-red-50 text-red-700">
+                        ⚠ {p.overdue_tasks} vencidas
+                      </Badge>
+                    )}
+                    {p.due_soon_tasks > 0 && p.overdue_tasks === 0 && (
+                      <Badge className="text-[10px] px-1.5 py-0.5 border border-amber-200 bg-amber-50 text-amber-700">
+                        {p.due_soon_tasks} vencen pronto
+                      </Badge>
                     )}
                   </CardDescription>
                 </div>
@@ -446,6 +672,206 @@ function TabProyectos() {
           </Card>
         ))}
       </div>
+
+      {/* Matriz de riesgo */}
+      <Card className={CARD_CLASS}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Matriz de riesgo</CardTitle>
+          <CardDescription>Avance vs tareas vencidas — tamaño = volumen total</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[320px] h-[300px]">
+              <ScatterChart width={600} height={280} margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
+                <CartesianGrid {...GRID_STYLE} />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="Avance"
+                  domain={[0, 100]}
+                  tickFormatter={(v) => `${v}%`}
+                  label={{
+                    value: 'Avance (%)',
+                    position: 'insideBottom',
+                    offset: -10,
+                    fontSize: 11,
+                    fill: '#64748B',
+                  }}
+                  {...AXIS_STYLE}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  name="Vencidas"
+                  label={{
+                    value: 'Tareas vencidas',
+                    angle: -90,
+                    position: 'insideLeft',
+                    fontSize: 11,
+                    fill: '#64748B',
+                  }}
+                  {...AXIS_STYLE}
+                />
+                <ZAxis type="number" dataKey="z" range={[40, 400]} />
+                <ReferenceLine x={50} stroke={CHART_COLORS.muted} strokeDasharray="4 4" />
+                <ReferenceLine y={0} stroke={CHART_COLORS.muted} />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload as {
+                      name: string;
+                      completion_rate: number;
+                      overdue_tasks: number;
+                      total_tasks: number;
+                    };
+                    return (
+                      <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
+                        <p className="font-semibold">{d.name}</p>
+                        <p>Avance: {d.completion_rate}%</p>
+                        <p>Vencidas: {d.overdue_tasks}</p>
+                        <p>Total tareas: {d.total_tasks}</p>
+                      </div>
+                    );
+                  }}
+                />
+                <Scatter
+                  data={projects.map(p => ({
+                    x: p.completion_rate,
+                    y: p.overdue_tasks,
+                    z: Math.max((p.total_tasks || 0) * 8, 40),
+                    name: p.key,
+                    completion_rate: p.completion_rate,
+                    overdue_tasks: p.overdue_tasks,
+                    total_tasks: p.total_tasks,
+                  }))}
+                  fill={CHART_COLORS.indigo}
+                  opacity={0.75}
+                >
+                  {projects.map((p, index) => {
+                    const y = p.overdue_tasks;
+                    const x = p.completion_rate;
+                    const fill =
+                      y >= 3 || x < 20
+                        ? '#EF4444'
+                        : y > 0
+                          ? CHART_COLORS.yellow
+                          : x >= 70
+                            ? CHART_COLORS.teal
+                            : CHART_COLORS.indigo;
+                    return <Cell // eslint-disable-line react/no-array-index-key
+                      key={index}
+                      fill={fill}
+                    />;
+                  })}
+                </Scatter>
+              </ScatterChart>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span>🔴 Crítico (vencidas ≥ 3 o avance &lt; 20%)</span>
+            <span>🟡 En riesgo (tiene vencidas)</span>
+            <span>🟢 En buen camino (avance ≥ 70%)</span>
+            <span>🔵 Normal</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Salud de proyectos */}
+      <Card className={CARD_CLASS}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Salud de proyectos</CardTitle>
+          <CardDescription>Indicadores clave por proyecto</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="text-left py-2 px-2 font-medium">Proyecto</th>
+                  <th className="text-center py-2 px-2 font-medium">Avance</th>
+                  <th className="text-center py-2 px-2 font-medium">Vencidas</th>
+                  <th className="text-center py-2 px-2 font-medium">Pronto</th>
+                  <th className="text-center py-2 px-2 font-medium">Materiales</th>
+                  <th className="text-center py-2 px-2 font-medium">Riesgo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map(p => {
+                  const materialsRate =
+                    p.total_materials > 0
+                      ? Math.round((p.completed_materials / p.total_materials) * 100)
+                      : 0;
+                  const risk =
+                    p.overdue_tasks >= 3 || p.completion_rate < 20
+                      ? 'crítico'
+                      : p.overdue_tasks > 0 || p.due_soon_tasks > 2
+                        ? 'riesgo'
+                        : p.completion_rate >= 70
+                          ? 'ok'
+                          : 'normal';
+
+                  const riskClass =
+                    risk === 'crítico'
+                      ? 'border-red-200 bg-red-50 text-red-700 text-[11px]'
+                      : risk === 'riesgo'
+                        ? 'border-amber-200 bg-amber-50 text-amber-700 text-[11px]'
+                        : risk === 'ok'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px]'
+                          : 'border-slate-200 bg-slate-50 text-slate-600 text-[11px]';
+
+                  return (
+                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="py-2 px-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-xs truncate">{p.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{p.key}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] ${bgForRate(p.completion_rate)}`}>
+                          {p.completion_rate}%
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span
+                          className={
+                            p.overdue_tasks > 0
+                              ? 'inline-flex px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[11px]'
+                              : 'text-muted-foreground text-[11px]'
+                          }
+                        >
+                          {p.overdue_tasks}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span
+                          className={
+                            p.due_soon_tasks > 0
+                              ? 'inline-flex px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[11px]'
+                              : 'text-muted-foreground text-[11px]'
+                          }
+                        >
+                          {p.due_soon_tasks}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] ${bgForRate(materialsRate)}`}>
+                          {materialsRate}%
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full border ${riskClass}`}>
+                          {risk}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -455,6 +881,7 @@ function TabEquipo() {
   const { data: team = [], isLoading } = useReportTeamPerformance();
   const { data: capacity, isLoading: loadingCapacity } = useReportTeamCapacity();
   const { data: workload = [] } = useReportWorkloadByCargo();
+  const { data: teamMonthly = [] } = useReportTeamMonthlyCompletion();
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -736,6 +1163,33 @@ function TabEquipo() {
                       )}
                     </div>
 
+                    {/* Sparklines de completadas/mes */}
+                    {teamMonthly && teamMonthly.length > 0 && (
+                      (() => {
+                        const personMonthly = (teamMonthly as TeamMonthlyPoint[]).filter(
+                          p => p.profile_id === member.id,
+                        );
+                        if (personMonthly.length === 0) return null;
+                        const sparkColor =
+                          member.risk_color === 'red'
+                            ? '#EF4444'
+                            : member.risk_color === 'amber'
+                              ? CHART_COLORS.yellow
+                              : CHART_COLORS.teal;
+                        const sorted = [...personMonthly].sort((a, b) => a.month.localeCompare(b.month));
+                        const sparkData = sorted.map(p => ({
+                          month: p.month,
+                          completed_count: p.completed_count,
+                        }));
+                        return (
+                          <div className="flex items-center justify-end gap-1 pt-1">
+                            <span className="text-[9px] text-muted-foreground">Finalizadas/mes</span>
+                            <PersonSparkline data={sparkData} color={sparkColor} />
+                          </div>
+                        );
+                      })()
+                    )}
+
                     {/* Footer: completion date + warnings */}
                     <div className="flex items-center justify-between text-xs pt-1 border-t">
                       {member.estimated_completion_date ? (
@@ -800,6 +1254,88 @@ function TabEquipo() {
                 <Bar dataKey="completed_tasks" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
                 <Bar dataKey="pending_tasks" stackId="a" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
               </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Velocidad del equipo */}
+      {teamMonthly && (teamMonthly as TeamMonthlyPoint[]).length > 0 && (
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Velocidad del equipo</CardTitle>
+            <CardDescription>Tareas finalizadas por mes (últimos 6 meses)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[240px] w-full">
+              {(() => {
+                const points = teamMonthly as TeamMonthlyPoint[];
+                const uniquePeople = Array.from(
+                  new Map(points.map(p => [p.full_name, p.full_name])).values(),
+                );
+                const topPeople = uniquePeople.slice(0, 5);
+                const extraPeople = uniquePeople.slice(5);
+
+                const months = Array.from(
+                  new Set(points.map(p => p.month)),
+                ).sort((a, b) => a.localeCompare(b));
+
+                const data = months.map(m => {
+                  const base: Record<string, number | string> = {
+                    month: new Date(m + 'T12:00:00').toLocaleDateString('es-CO', {
+                      month: 'short',
+                    }),
+                  };
+                  topPeople.forEach(name => {
+                    const match = points.find(p => p.month === m && p.full_name === name);
+                    base[name] = match ? match.completed_count : 0;
+                  });
+                  if (extraPeople.length > 0) {
+                    const othersCount = points
+                      .filter(p => p.month === m && extraPeople.includes(p.full_name))
+                      .reduce((sum, p) => sum + p.completed_count, 0);
+                    base.Otros = othersCount;
+                  }
+                  return base;
+                });
+
+                const personsForStack = [...topPeople];
+                if (extraPeople.length > 0) {
+                  personsForStack.push('Otros');
+                }
+
+                const barConfig: ChartConfig = personsForStack.reduce((acc, name, idx) => {
+                  acc[name] = {
+                    label: name,
+                    color: RANKING_COLORS[idx % RANKING_COLORS.length],
+                  };
+                  return acc;
+                }, {} as ChartConfig);
+
+                return (
+                  <ChartContainer config={barConfig} className="h-[240px] w-full">
+                    <BarChart data={data} margin={{ left: 10, right: 10 }}>
+                      <CartesianGrid {...GRID_STYLE} />
+                      <XAxis dataKey="month" {...AXIS_STYLE} />
+                      <YAxis {...AXIS_STYLE} />
+                      <ChartTooltip content={<CustomTooltip />} />
+                      {personsForStack.map((name, idx) => (
+                        <Bar
+                          key={name}
+                          dataKey={name}
+                          stackId="a"
+                          fill={RANKING_COLORS[idx % RANKING_COLORS.length]}
+                          radius={
+                            idx === personsForStack.length - 1
+                              ? [BAR_RADIUS, BAR_RADIUS, 0, 0]
+                              : [0, 0, 0, 0]
+                          }
+                        />
+                      ))}
+                    </BarChart>
+                  </ChartContainer>
+                );
+              })()}
             </ChartContainer>
           </CardContent>
         </Card>
@@ -1320,6 +1856,9 @@ function TabProduccion() {
 function TabEficiencia() {
   const { data: timeDist = [], isLoading: loadingTime } = useReportTimeDistribution();
   const { data: transitions = [], isLoading: loadingTrans } = useReportWorkflowTransitions();
+  const { data: teamByCargo = [] } = useReportTeamByCargo();
+  const { data: weeklyByCargo = [] } = useReportWeeklyByCargo();
+  const { data: unassignedMaterials = [] } = useReportUnassignedMaterials();
 
   if (loadingTime || loadingTrans) return <LoadingState />;
 
@@ -1446,6 +1985,272 @@ function TabEficiencia() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="pt-4 border-t">
+        <h2 className="text-base font-semibold mb-1">Rendimiento por equipo</h2>
+        <p className="text-xs text-muted-foreground mb-6">
+          Análisis por cargo: utilización, productividad y materiales pendientes
+        </p>
+        <div className="space-y-10">
+          <CargoPanel cargo="Analista de diseño" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
+          <CargoPanel cargo="GIF" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
+          <CargoPanel cargo="Presentadora" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- CargoPanel (Rendimiento por equipo) ----------
+function CargoPanel({
+  cargo,
+  members,
+  weeklyByCargo,
+  unassignedMaterials,
+}: {
+  cargo: string;
+  members: TeamMemberByCargo[];
+  weeklyByCargo: WeeklyByCargoPoint[];
+  unassignedMaterials: UnassignedMaterial[];
+}) {
+  const cargoMembers = members.filter((m) => m.cargo === cargo);
+  const activeMembers = cargoMembers.filter((m) => m.is_active);
+  const idleMembers = cargoMembers.filter((m) => !m.is_active);
+  const cargoWeekly = weeklyByCargo.filter((w) => w.cargo === cargo);
+
+  const barData = cargoMembers.map((m) => ({
+    nombre: m.full_name,
+    nombreCorto: m.full_name.split(/\s+/).slice(0, 2).join(' '),
+    completed_tasks: m.completed_tasks,
+    active_tasks: m.active_tasks,
+    overdue_tasks: m.overdue_tasks,
+  }));
+
+  const weeklyChartData = cargoWeekly.length > 0
+    ? cargoWeekly.map((w) => ({
+        week: w.week,
+        completed_count: w.completed_count,
+        label: new Date(w.week + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }),
+      }))
+    : [];
+
+  const weekConfig: ChartConfig = {
+    completed_count: { label: 'Completadas', color: CHART_COLORS.teal },
+  };
+
+  const maxBarHeight = Math.max(cargoMembers.length * 34, 100);
+  const PRESENTADORA_MAX_ROWS = 10;
+  const materialsSlice = unassignedMaterials.slice(0, PRESENTADORA_MAX_ROWS);
+  const hasMoreMaterials = unassignedMaterials.length > PRESENTADORA_MAX_ROWS;
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col">
+          <span className="font-semibold text-sm">{cargo}</span>
+          <span className="text-xs text-muted-foreground">
+            {activeMembers.length} activos · {idleMembers.length} sin carga · {cargoMembers.length} total
+          </span>
+        </div>
+        {activeMembers.some((m) => m.overdue_tasks > 0) && (
+          <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 text-[10px]">
+            ⚠ Tiene vencidas
+          </Badge>
+        )}
+        {activeMembers.length === 0 && (
+          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600 text-[10px]">
+            Sin actividad
+          </Badge>
+        )}
+      </div>
+
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Utilización del equipo</CardTitle>
+              <CardDescription className="text-xs">
+                Verde = activo · Rojo = tiene vencidas · Gris = sin carga
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-[10px] text-muted-foreground mb-1">
+                {activeMembers.length} activos / {cargoMembers.length} total
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {cargoMembers.map((m) => {
+                  const color =
+                    m.overdue_tasks > 0 ? '#EF4444' : m.is_active ? CHART_COLORS.teal : '#CBD5E1';
+                  return (
+                    <div
+                      key={m.id}
+                      title={`${m.full_name}${m.is_active ? ` · ${m.completed_tasks} completadas` : ' · Sin tareas'}${m.overdue_tasks > 0 ? ` · ${m.overdue_tasks} vencidas` : ''}`}
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-[9px] font-bold text-white cursor-default transition-transform hover:scale-110"
+                      style={{ backgroundColor: color }}
+                    >
+                      {m.is_active ? (m.overdue_tasks > 0 ? '!' : '✓') : ''}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex gap-4 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: CHART_COLORS.teal }} /> Activo
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Con vencidas
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" /> Sin carga
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Velocidad semanal</CardTitle>
+              <CardDescription className="text-xs">
+                Tareas finalizadas por semana (últimas 8 semanas)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {weeklyChartData.length > 0 ? (
+                <ChartContainer config={weekConfig} className="h-[160px] w-full">
+                  <LineChart data={weeklyChartData} margin={{ left: 10, right: 10 }}>
+                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                    <XAxis dataKey="label" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
+                    <YAxis {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Line type="monotone" dataKey="completed_count" stroke={CHART_COLORS.teal} strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ChartContainer>
+              ) : (
+                <EmptyState message="Sin actividad registrada en las últimas 8 semanas" />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Productividad individual</CardTitle>
+            <CardDescription className="text-xs">
+              Tareas completadas y en curso por colaborador
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cargoMembers.length === 0 ? (
+              <EmptyState message="Este equipo aún no tiene tareas asignadas en el sistema" />
+            ) : barData.every((b) => b.completed_tasks === 0 && b.active_tasks === 0) ? (
+              <EmptyState message="Este equipo aún no tiene tareas asignadas en el sistema" />
+            ) : (
+              <ChartContainer config={{ completed_tasks: { label: 'Completadas', color: CHART_COLORS.teal }, active_tasks: { label: 'En curso', color: CHART_COLORS.indigo } }} className="w-full" style={{ height: maxBarHeight }}>
+                <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 10 }}>
+                  <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                  <XAxis type="number" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="nombreCorto" width={130} tick={{ fill: '#64748B', fontSize: 12 }} />
+                  <ChartTooltip content={<CustomTooltip />} />
+                  <Bar dataKey="completed_tasks" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} name="Completadas">
+                    {barData.map((_, index) => (
+                      <Cell key={index} fill={barData[index].overdue_tasks > 0 ? '#EF4444' : CHART_COLORS.teal} />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="active_tasks" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} name="En curso" />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {cargoMembers.length <= 10 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {cargoMembers.map((m) => {
+              const badge =
+                m.overdue_tasks > 0
+                  ? { label: 'RIESGO', cls: 'border-red-200 bg-red-50 text-red-700' }
+                  : !m.is_active
+                    ? { label: 'SIN CARGA', cls: 'border-slate-200 bg-slate-50 text-slate-600' }
+                    : { label: 'OK', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700' };
+              return (
+                <Card key={m.id} className={CARD_CLASS}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={m.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-xs">{m.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{m.cargo}</p>
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] flex-shrink-0 ${badge.cls}`}>
+                        {badge.label}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+                      <span>Total</span><span>{m.total_tasks}</span>
+                      <span>Completadas</span><span>{m.completed_tasks}</span>
+                      <span>Vencidas</span><span>{m.overdue_tasks}</span>
+                      <span>Ajustes</span><span>{m.ajustes_count}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {cargo === 'Presentadora' && (
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Materiales sin asignar</CardTitle>
+              <CardDescription className="text-xs">
+                Materiales que no tienen ningún colaborador asignado
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {unassignedMaterials.length === 0 ? (
+                <p className="text-sm text-emerald-700 flex items-center gap-2">
+                  <span>✓</span> Todos los materiales tienen colaboradores asignados.
+                </p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left py-2 pr-2">Icon</th>
+                          <th className="text-left py-2 pr-2">Material</th>
+                          <th className="text-left py-2 pr-2">Asignatura</th>
+                          <th className="text-left py-2 pr-2">Proyecto</th>
+                          <th className="text-right py-2">Cant.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {materialsSlice.map((row) => (
+                          <tr key={row.id} className="border-b hover:bg-muted/30">
+                            <td className="py-2 pr-2">{row.icon || '—'}</td>
+                            <td className="py-2 pr-2">{row.material_type}</td>
+                            <td className="py-2 pr-2">{row.asignatura}</td>
+                            <td className="py-2 pr-2">{row.project_name}</td>
+                            <td className="py-2 text-right">{row.cantidad}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {hasMoreMaterials && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Ver más ({unassignedMaterials.length - PRESENTADORA_MAX_ROWS} más)
+                    </p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

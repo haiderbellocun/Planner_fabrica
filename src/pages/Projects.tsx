@@ -28,6 +28,19 @@ export default function ProjectsPage() {
       .slice(0, 2);
   };
 
+  // Filtrar/ordenar proyectos según rol:
+  // - Usuarios y project_leaders: no ven proyectos finalizados
+  // - Admins: ven todos, pero los finalizados aparecen al final
+  const visibleProjects =
+    user?.role === 'admin'
+      ? [...projects].sort((a, b) => {
+          const aCompleted = a.status === 'completed';
+          const bCompleted = b.status === 'completed';
+          if (aCompleted === bCompleted) return 0;
+          return aCompleted ? 1 : -1;
+        })
+      : projects.filter((p) => p.status !== 'completed');
+
   if (isLoading) {
     return (
       <div className="page-container flex items-center justify-center min-h-[400px]">
@@ -55,7 +68,7 @@ export default function ProjectsPage() {
         <CreateProjectWizard open={dialogOpen} onOpenChange={setDialogOpen} />
       )}
 
-      {projects.length === 0 ? (
+      {visibleProjects.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
@@ -75,7 +88,7 @@ export default function ProjectsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
+          {visibleProjects.map((project) => (
             <Link key={project.id} to={`/projects/${project.id}`}>
               <Card className="relative h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
                 <img src={projectsImg} alt="" className="absolute bottom-0 right-0 h-24 w-24 object-contain opacity-20 pointer-events-none z-0" />

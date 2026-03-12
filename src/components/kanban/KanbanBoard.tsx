@@ -44,7 +44,7 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] -mx-8 px-8">
+      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] -mx-8 px-8 items-stretch">
         {statuses.map((status) => (
           <KanbanColumn
             key={status.id}
@@ -70,7 +70,7 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: KanbanColumnProps) {
   return (
-    <div className="kanban-column flex-shrink-0 w-72">
+    <div className="kanban-column flex-shrink-0 w-72 flex flex-col">
       <div className="kanban-column-header">
         <div className="flex items-center gap-2">
           <div
@@ -89,7 +89,7 @@ function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: Kanb
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`space-y-2 min-h-[200px] rounded-lg p-1 transition-colors ${
+            className={`space-y-2 min-h-[200px] rounded-lg p-1 transition-colors flex-1 ${
               snapshot.isDraggingOver ? 'bg-accent/50' : ''
             }`}
           >

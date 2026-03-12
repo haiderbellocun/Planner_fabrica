@@ -29,6 +29,8 @@ export interface ProjectProgress {
   total_materials: number;
   completed_materials: number;
   completion_rate: number;
+  overdue_tasks: number;
+  due_soon_tasks: number;
 }
 
 export interface TeamMember {
@@ -102,6 +104,27 @@ export interface TasksWeeklyTrendPoint {
   week: string; // ISO date (week start)
   created: number;
   completed: number;
+}
+
+export interface ProjectTimeline {
+  id: string;
+  name: string;
+  key: string;
+  start_date: string | null;
+  target_date: string | null;
+  estimated_end_date: string | null;
+  total_tasks: number;
+  completed_tasks: number;
+  overdue_tasks: number;
+  completion_rate: number;
+  estimated_days_remaining: number;
+}
+
+export interface TeamMonthlyPoint {
+  profile_id: string;
+  full_name: string;
+  month: string;
+  completed_count: number;
 }
 
 export interface CapacityMember {
@@ -193,6 +216,40 @@ export interface UserMiniReport {
   top_tasks: UserMiniReportTask[];
 }
 
+export interface TeamMemberByCargo {
+  id: string;
+  full_name: string;
+  cargo: string;
+  avatar_url: string | null;
+  total_tasks: number;
+  completed_tasks: number;
+  active_tasks: number;
+  overdue_tasks: number;
+  ajustes_count: number;
+  on_time_tasks: number;
+  completadas_con_fecha: number;
+  is_active: boolean;
+  on_time_rate: number | null;
+}
+
+export interface WeeklyByCargoPoint {
+  week: string;
+  cargo: string;
+  completed_count: number;
+}
+
+export interface UnassignedMaterial {
+  id: string;
+  cantidad: number;
+  material_type: string;
+  icon: string;
+  tema: string;
+  asignatura: string;
+  project_name: string;
+  project_key: string;
+  project_id: string;
+}
+
 // --- Hooks ---
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
@@ -282,6 +339,46 @@ export function useReportTasksWeeklyTrend() {
   return useQuery({
     queryKey: ['report-tasks-weekly-trend'],
     queryFn: () => api.get<TasksWeeklyTrendPoint[]>('/api/reports/tasks-weekly-trend'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportProjectsTimeline() {
+  return useQuery({
+    queryKey: ['report-projects-timeline'],
+    queryFn: () => api.get<ProjectTimeline[]>('/api/reports/projects-timeline'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportTeamMonthlyCompletion() {
+  return useQuery({
+    queryKey: ['report-team-monthly-completion'],
+    queryFn: () => api.get<TeamMonthlyPoint[]>('/api/reports/team-monthly-completion'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportTeamByCargo() {
+  return useQuery({
+    queryKey: ['report-team-by-cargo'],
+    queryFn: () => api.get<TeamMemberByCargo[]>('/api/reports/team-by-cargo'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportWeeklyByCargo() {
+  return useQuery({
+    queryKey: ['report-weekly-by-cargo'],
+    queryFn: () => api.get<WeeklyByCargoPoint[]>('/api/reports/weekly-by-cargo'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useReportUnassignedMaterials() {
+  return useQuery({
+    queryKey: ['report-unassigned-materials'],
+    queryFn: () => api.get<UnassignedMaterial[]>('/api/reports/unassigned-materials'),
     staleTime: STALE_TIME,
   });
 }
