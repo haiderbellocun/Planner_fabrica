@@ -331,8 +331,8 @@ function TabResumen() {
 
         <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Tendencia semanal</CardTitle>
-            <CardDescription>Tareas creadas vs. finalizadas (últimas 12 semanas)</CardDescription>
+            <CardTitle className="text-base">Tendencia diaria</CardTitle>
+            <CardDescription>Tareas creadas vs. finalizadas (últimos 12 días)</CardDescription>
           </CardHeader>
           <CardContent>
             {weeklyData.length === 0 ? (
@@ -352,9 +352,10 @@ function TabResumen() {
                     {...AXIS_STYLE}
                     tickFormatter={(v) => {
                       const d = new Date(v + 'T00:00:00');
-                      return d.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+                      return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
                     }}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 10 }}
+                    interval={0}
                   />
                   <YAxis {...AXIS_STYLE} />
                   <ChartTooltip content={<CustomTooltip />} />
@@ -425,7 +426,12 @@ function TabProyectos() {
   // Map projects by id for quick lookup in timeline / heatmap
   const projectsById = new Map(projects.map(p => [p.id, p]));
 
-  const validTimeline = (timeline || []).filter(p => (p.start_date || p.estimated_end_date || p.target_date));
+  // Solo proyectos activos en el timeline
+  const activeProjects = projects.filter(p => p.status === 'active');
+  const validTimeline = (timeline || []).filter(p =>
+    (p.start_date || p.estimated_end_date || p.target_date) &&
+    projectsById.get(p.id)?.status === 'active'
+  );
 
   let minDate: Date | null = null;
   let maxDate: Date | null = null;
@@ -614,7 +620,7 @@ function TabProyectos() {
       })()}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
-        {projects.map(p => (
+        {activeProjects.map(p => (
           <Card key={p.id} className={CARD_CLASS}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -796,7 +802,7 @@ function TabProyectos() {
                 </tr>
               </thead>
               <tbody>
-                {projects.map(p => {
+                {activeProjects.map(p => {
                   const materialsRate =
                     p.total_materials > 0
                       ? Math.round((p.completed_materials / p.total_materials) * 100)
@@ -2110,9 +2116,9 @@ function CargoPanel({
 
           <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Velocidad semanal</CardTitle>
+              <CardTitle className="text-sm">Velocidad diaria</CardTitle>
               <CardDescription className="text-xs">
-                Tareas finalizadas por semana (últimas 8 semanas)
+                Tareas finalizadas por día (últimos 12 días)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -2120,14 +2126,14 @@ function CargoPanel({
                 <ChartContainer config={weekConfig} className="h-[160px] w-full">
                   <LineChart data={weeklyChartData} margin={{ left: 10, right: 10 }}>
                     <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis dataKey="label" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
+                    <XAxis dataKey="label" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} interval={0} />
                     <YAxis {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
                     <ChartTooltip content={<CustomTooltip />} />
                     <Line type="monotone" dataKey="completed_count" stroke={CHART_COLORS.teal} strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
                 </ChartContainer>
               ) : (
-                <EmptyState message="Sin actividad registrada en las últimas 8 semanas" />
+                <EmptyState message="Sin actividad registrada en los últimos 12 días" />
               )}
             </CardContent>
           </Card>

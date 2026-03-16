@@ -30,12 +30,14 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile?: (data: Partial<{ avatar_url: string }>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<LocalUser | null>(null);
+  const [profile, setProfile] = useState<LocalUser | null>(null);
   const [session, setSession] = useState<{ token: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       setUser(data.user);
+      setProfile(data.user);
       setSession({ token });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -121,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Update state
       setUser(data.user);
+      setProfile(data.user);
       setSession({ token: data.token });
 
       return { error: null };
@@ -170,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       localStorage.removeItem('taskflow_token');
       setUser(null);
+      setProfile(null);
       setSession(null);
     }
   };
@@ -218,10 +223,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === 'admin';
   const isProjectLeader = user?.role === 'project_leader' || isAdmin;
 
+  const updateProfile = (data: Partial<{ avatar_url: string }>) => {
+    setUser(prev => (prev ? { ...prev, ...data } : prev));
+    setProfile(prev => (prev ? { ...prev, ...data } : prev));
+  };
+
   const value = {
     user,
     session,
-    profile: user,
+    profile,
     roles,
     isLoading,
     isAdmin,
@@ -230,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshProfile,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

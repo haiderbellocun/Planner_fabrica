@@ -76,6 +76,19 @@ class ApiClient {
     });
     return this.handleResponse<T>(response);
   }
+
+  async postForm<T>(path: string, formData: FormData): Promise<T> {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    return this.handleResponse<T>(response);
+  }
 }
 
 // Export singleton instance

@@ -21,6 +21,7 @@ import reportsRoutes from './routes/reports.js';
 import leadersRoutes from './routes/leaders.js';
 import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
+import profileRoutes from './routes/profile.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 
@@ -113,6 +114,7 @@ app.use('/api/reports', apiLimiter, reportsRoutes);
 app.use('/api/leaders', apiLimiter, leadersRoutes);
 app.use('/api/chat', chatLimiter, chatRoutes);
 app.use('/api/admin', apiLimiter, adminUsersRoutes);
+app.use('/api/profile', profileRoutes);
 
 // 404 handler
 app.use((req, res) => {

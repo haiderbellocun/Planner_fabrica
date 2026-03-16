@@ -957,27 +957,27 @@ export const getProjectCategoriesSummary = async (req: AuthRequest, res: Respons
  */
 export const getTasksWeeklyTrend = async (req: AuthRequest, res: Response) => {
   try {
-    // Created per week
+    // Created per day (last 12 days)
     const createdRes = await query(`
       SELECT
-        DATE_TRUNC('week', created_at)::date AS week_start,
+        DATE_TRUNC('day', created_at)::date AS week_start,
         COUNT(*) AS created
       FROM public.tasks
-      WHERE created_at >= NOW() - INTERVAL '12 weeks'
-      GROUP BY DATE_TRUNC('week', created_at)::date
+      WHERE created_at >= NOW() - INTERVAL '12 days'
+      GROUP BY DATE_TRUNC('day', created_at)::date
       ORDER BY week_start
     `);
 
-    // Completed per week (using updated_at when status is completed)
+    // Completed per day (last 12 days)
     const completedRes = await query(`
       SELECT
-        DATE_TRUNC('week', updated_at)::date AS week_start,
+        DATE_TRUNC('day', updated_at)::date AS week_start,
         COUNT(*) AS completed
       FROM public.tasks t
       JOIN public.task_statuses ts ON ts.id = t.status_id
       WHERE ts.is_completed = true
-        AND updated_at >= NOW() - INTERVAL '12 weeks'
-      GROUP BY DATE_TRUNC('week', updated_at)::date
+        AND updated_at >= NOW() - INTERVAL '12 days'
+      GROUP BY DATE_TRUNC('day', updated_at)::date
       ORDER BY week_start
     `);
 
@@ -1097,7 +1097,7 @@ export const getWeeklyByCargo = async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(`
       SELECT
-        DATE_TRUNC('week', tsh.created_at)::date as week,
+        DATE_TRUNC('day', tsh.created_at)::date as week,
         p.cargo,
         COUNT(DISTINCT tsh.task_id) as completed_count
       FROM public.task_status_history tsh
@@ -1105,7 +1105,7 @@ export const getWeeklyByCargo = async (req: AuthRequest, res: Response) => {
         AND ts.is_completed = true
       JOIN public.tasks t ON t.id = tsh.task_id
       JOIN public.profiles p ON p.id = t.assignee_id
-      WHERE tsh.created_at >= NOW() - INTERVAL '8 weeks'
+      WHERE tsh.created_at >= NOW() - INTERVAL '12 days'
         AND p.cargo IS NOT NULL
       GROUP BY week, p.cargo
       ORDER BY week ASC
