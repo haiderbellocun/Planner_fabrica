@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import luminaGif from '@/assets/lumina.gif';
@@ -8,6 +8,7 @@ type ChatMessage = {
   from: 'lumina' | 'user';
   text: string;
   time: string;
+  isWelcome?: boolean;
 };
 
 function formatTime(d = new Date()) {
@@ -21,12 +22,15 @@ export function LuminaWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [briefLoaded, setBriefLoaded] = useState(false);
+  const [isBriefLoading, setIsBriefLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       from: 'lumina',
       text: 'Hola 👋 Soy Lumina. ¿En qué puedo ayudarte hoy sobre tus proyectos o tareas?',
       time: formatTime(),
+      isWelcome: true,
     },
   ]);
 
@@ -35,6 +39,11 @@ export function LuminaWidget() {
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || isSending) return;
+
+    const history = messages
+      .filter((m) => !m.isWelcome)
+      .slice(-8)
+      .map((m) => ({ from: m.from, text: m.text }));
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -50,6 +59,7 @@ export function LuminaWidget() {
     try {
       const result = await api.post<{ intent: string; answer: string }>('/api/chat', {
         message: trimmed,
+        history,
       });
 
       const luminaMessage: ChatMessage = {
@@ -59,7 +69,7 @@ export function LuminaWidget() {
         time: formatTime(),
       };
       setMessages((prev) => [...prev, luminaMessage]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const luminaMessage: ChatMessage = {
         id: `lumina-error-${Date.now()}`,
         from: 'lumina',
@@ -81,6 +91,42 @@ export function LuminaWidget() {
       sendMessage();
     }
   };
+
+  useEffect(() => {
+    if (!isOpen || briefLoaded) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const lastBriefDate = localStorage.getItem('lumina_last_brief_date');
+
+    if (lastBriefDate === today) {
+      setBriefLoaded(true);
+      return;
+    }
+
+    setIsBriefLoading(true);
+
+    api
+      .get<{ brief: string }>('/api/chat/daily-brief')
+      .then((result) => {
+        setMessages([
+          {
+            id: 'daily-brief',
+            from: 'lumina',
+            text: result.brief,
+            time: formatTime(),
+            isWelcome: true,
+          },
+        ]);
+        localStorage.setItem('lumina_last_brief_date', today);
+        setBriefLoaded(true);
+      })
+      .catch(() => {
+        setBriefLoaded(true);
+      })
+      .finally(() => {
+        setIsBriefLoading(false);
+      });
+  }, [isOpen, briefLoaded]);
 
   return (
     <div className="fixed bottom-4 right-4 z-40">
@@ -164,6 +210,17 @@ export function LuminaWidget() {
               <p className="text-xs text-slate-400 text-center mt-4">
                 Aún no hay mensajes. Escribe algo para comenzar.
               </p>
+            )}
+            {isBriefLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white text-slate-900 rounded-2xl rounded-bl-sm px-3 py-2 text-sm shadow-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

@@ -6,7 +6,8 @@ export interface ChatUserContext {
   id: string;
   profileId?: string;
   email: string;
-  role?: string;
+  role?: string | null;
+  history?: Array<{ from: 'user' | 'lumina'; text: string }>;
 }
 
 export interface ChatResult {
@@ -410,12 +411,15 @@ async function getUserProjectsOverview(profileId: string, role: string) {
      LIMIT 20`;
     params = [profileId];
   } else {
-    // Usuario regular: solo proyectos donde es miembro
+    // Usuario regular: proyectos donde es miembro O donde tiene tareas asignadas
     sql = `SELECT ${selectCols}
-     FROM public.project_members pm
-     JOIN public.projects pr ON pr.id = pm.project_id
+     FROM public.projects pr
      ${joins}
-     WHERE pm.user_id = $1
+     WHERE pr.id IN (
+       SELECT pm.project_id FROM public.project_members pm WHERE pm.user_id = $1
+       UNION
+       SELECT t2.project_id FROM public.tasks t2 WHERE t2.assignee_id = $1
+     )
      GROUP BY pr.id, pr.name, pr.key, pr.status
      ORDER BY pr.created_at DESC
      LIMIT 10`;
@@ -491,6 +495,66 @@ async function getMyUpcomingTasksList(profileId: string) {
     [profileId],
   );
   return result.rows;
+}
+
+export async function getDailyBriefContext(user: ChatUserContext): Promise<string> {
+  try {
+    const isPrivileged = user.role === 'admin' || user.role === 'project_leader';
+    const roleLabel =
+      user.role === 'admin'
+        ? 'Administrador'
+        : user.role === 'project_leader'
+          ? 'Project Leader'
+          : 'Usuario';
+
+    let contextJson: unknown = {};
+
+    if (user.role === 'admin') {
+      const overview = await getGlobalOverview();
+      contextJson = { type: 'daily_brief_admin', overview };
+    } else if (user.role === 'project_leader' && user.profileId) {
+      const [critical, summary] = await Promise.all([
+        getLeaderCriticalTasks(user.profileId),
+        getTeamSummary(user.profileId, 'project_leader'),
+      ]);
+      contextJson = { type: 'daily_brief_leader', critical, team_summary: summary };
+    } else if (user.profileId) {
+      const [today, summary] = await Promise.all([
+        getMyTodayPriorities(user.profileId),
+        getMyTasksSummary(user.profileId),
+      ]);
+      contextJson = { type: 'daily_brief_user', today, summary };
+    }
+
+    const prompt = `
+Eres Lumina, asistente de la Fábrica de Contenidos.
+El usuario acaba de abrir el chat. Salúdalo con su rol (${roleLabel}) y
+dale un resumen proactivo y directo de lo más urgente HOY, basado en los datos.
+
+REGLAS:
+- Saludo breve y cálido de máximo 1 línea.
+- Luego 2-4 puntos concretos con los datos más importantes.
+- Si no hay nada urgente, dilo positivamente ("todo al día").
+- Máximo 6 líneas en total.
+- Usa viñetas (•) para los puntos.
+- Traduce prioridades: urgent→URGENTE, high→alta, medium→media, low→baja.
+- Termina con una frase corta invitando a preguntar más detalles.
+- Responde en español.
+
+Usuario: ${user.email}
+Rol: ${roleLabel}
+
+Contexto (JSON):
+\`\`\`json
+${JSON.stringify(contextJson, null, 2)}
+\`\`\`
+`;
+
+    const answer = await generateChatAnswer(prompt, 400);
+    return answer;
+  } catch {
+    return '¡Hola! Soy Lumina. ¿En qué puedo ayudarte hoy?';
+  }
 }
 
 async function getMyTasksByProject(profileId: string, projectName: string) {
@@ -1194,6 +1258,15 @@ export async function handleChatMessage(message: string, user: ChatUserContext):
   const isPrivilegedUser = user.role === 'admin' || user.role === 'project_leader';
   const maxLines = isPrivilegedUser ? 10 : 6;
 
+  const historyBlock =
+    user.history && user.history.length > 0
+      ? '\n\nHISTORIAL RECIENTE DE LA CONVERSACIÓN (del más antiguo al más reciente):\n' +
+        user.history
+          .map((h) => `${h.from === 'user' ? 'Usuario' : 'Lumina'}: ${h.text}`)
+          .join('\n') +
+        '\n(Fin del historial — el mensaje actual del usuario está abajo en "Pregunta")'
+      : '';
+
   const systemInstructions = `
 Eres Lumina, asistente de la Fábrica de Contenidos. Respondes preguntas sobre proyectos y tareas.
 
@@ -1216,8 +1289,12 @@ REGLAS ESTRICTAS:
 - "Proyectos completados" = status = 'completed' O completed_tasks = total_tasks (y total_tasks > 0).
 
 Usuario: ${user.email}
-Rol: ${roleLabel}
-Pregunta: "${safeMessage}"
+Rol: ${roleLabel}${historyBlock}
+Pregunta actual: "${safeMessage}"
+IMPORTANTE: Si la pregunta actual hace referencia a algo del historial
+(ej: "esas", "las mismas", "el anterior", "cuáles son", "de esas cuántas"),
+úsalo para entender el contexto. El historial es solo contexto —
+responde SIEMPRE en base al JSON de contexto actual.
 
 Contexto (JSON):
 \`\`\`json
