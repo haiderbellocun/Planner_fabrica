@@ -1189,3 +1189,160 @@ export const getUnassignedMaterials = async (req: AuthRequest, res: Response) =>
   }
 };
 
+/**
+ * GET /api/reports/individual-performance
+ * Query params: project_id? (UUID), date_from? (ISO date), date_to? (ISO date)
+ * Returns per-collaborator: tasks completed, materials assignments rollup, asignaturas covered,
+ * estimated hours, real hours (from task_status_history), efficiency %, on-time rate
+ */
+export const getIndividualPerformance = async (req: AuthRequest, res: Response) => {
+  try {
+    const project_id = req.query.project_id as string | undefined;
+    const date_from = req.query.date_from as string | undefined;
+    const date_to = req.query.date_to as string | undefined;
+
+    const params: unknown[] = [];
+    let i = 1;
+
+    let projectFilter = '';
+    if (project_id) {
+      projectFilter = `AND t.project_id = $${i}::uuid`;
+      params.push(project_id);
+      i += 1;
+    }
+
+    let dateFilter = '';
+    if (date_from && date_to) {
+      dateFilter = `AND t.updated_at::date BETWEEN $${i}::date AND $${i + 1}::date`;
+      params.push(date_from, date_to);
+      i += 2;
+    } else if (date_from) {
+      dateFilter = `AND t.updated_at >= $${i}::date`;
+      params.push(date_from);
+      i += 1;
+    } else if (date_to) {
+      dateFilter = `AND t.updated_at::date <= $${i}::date`;
+      params.push(date_to);
+      i += 1;
+    }
+
+    const result = await query(
+      `WITH assignee_tasks_raw AS (
+        SELECT
+          tma.assignee_id AS profile_id,
+          t.id AS task_id,
+          ts_status.is_completed,
+          tma.horas_estimadas,
+          t.due_date,
+          t.updated_at AS completed_at,
+          mr.asignatura_id
+        FROM public.task_material_assignees tma
+        JOIN public.tasks t ON t.id = tma.task_id
+        JOIN public.task_statuses ts_status ON ts_status.id = t.status_id
+        LEFT JOIN public.materiales_requeridos mr ON mr.id = tma.material_id
+        WHERE 1=1 ${projectFilter} ${dateFilter}
+      ),
+      assignee_tasks AS (
+        SELECT
+          profile_id,
+          task_id,
+          BOOL_OR(is_completed) AS is_completed,
+          SUM(horas_estimadas) AS horas_estimadas,
+          MAX(due_date) AS due_date,
+          MAX(completed_at) AS completed_at
+        FROM assignee_tasks_raw
+        GROUP BY profile_id, task_id
+      ),
+      asignaturas_profile AS (
+        SELECT profile_id, COUNT(DISTINCT asignatura_id)::bigint AS asignaturas_cubiertas
+        FROM assignee_tasks_raw
+        WHERE asignatura_id IS NOT NULL
+        GROUP BY profile_id
+      ),
+      real_hours AS (
+        SELECT task_id, SUM(duration_seconds) / 3600.0 AS horas_reales
+        FROM public.task_status_history
+        WHERE duration_seconds IS NOT NULL
+        GROUP BY task_id
+      ),
+      ontime AS (
+        SELECT profile_id,
+          COUNT(*) FILTER (
+            WHERE is_completed AND due_date IS NOT NULL AND completed_at::date <= due_date
+          ) AS on_time,
+          COUNT(*) FILTER (WHERE is_completed AND due_date IS NOT NULL) AS with_due_date
+        FROM assignee_tasks
+        GROUP BY profile_id
+      )
+      SELECT
+        p.id,
+        p.full_name,
+        p.cargo,
+        p.avatar_url,
+        p.email,
+        COALESCE(agg.total_tareas, 0)::int AS total_tareas,
+        COALESCE(agg.tareas_completadas, 0)::int AS tareas_completadas,
+        COALESCE(agg.tareas_pendientes, 0)::int AS tareas_pendientes,
+        COALESCE(agg.asignaturas_cubiertas, 0)::int AS asignaturas_cubiertas,
+        COALESCE(agg.horas_estimadas_total, 0)::numeric AS horas_estimadas_total,
+        COALESCE(agg.horas_reales_total, 0)::numeric AS horas_reales_total,
+        agg.eficiencia_pct,
+        agg.puntualidad_pct
+      FROM public.profiles p
+      INNER JOIN (
+        SELECT DISTINCT user_id AS profile_id FROM public.user_roles
+      ) ur ON ur.profile_id = p.id
+      LEFT JOIN (
+        SELECT
+          at1.profile_id,
+          COUNT(DISTINCT at1.task_id) AS total_tareas,
+          COUNT(DISTINCT at1.task_id) FILTER (WHERE at1.is_completed) AS tareas_completadas,
+          COUNT(DISTINCT at1.task_id) FILTER (WHERE NOT at1.is_completed) AS tareas_pendientes,
+          COALESCE(MAX(ap.asignaturas_cubiertas), 0)::bigint AS asignaturas_cubiertas,
+          ROUND(COALESCE(SUM(at1.horas_estimadas), 0)::numeric, 1) AS horas_estimadas_total,
+          ROUND(COALESCE(SUM(rh.horas_reales), 0)::numeric, 1) AS horas_reales_total,
+          CASE
+            WHEN COALESCE(SUM(rh.horas_reales), 0) > 0
+            THEN ROUND((COALESCE(SUM(at1.horas_estimadas), 0) / NULLIF(SUM(rh.horas_reales), 0) * 100)::numeric, 0)
+            ELSE NULL
+          END AS eficiencia_pct,
+          CASE
+            WHEN COALESCE(MAX(ot.with_due_date), 0) > 0  
+            THEN ROUND((MAX(ot.on_time)::numeric / NULLIF(MAX(ot.with_due_date), 0) * 100), 0)
+            ELSE NULL
+          END AS puntualidad_pct
+        FROM assignee_tasks at1
+        LEFT JOIN real_hours rh ON rh.task_id = at1.task_id
+        LEFT JOIN asignaturas_profile ap ON ap.profile_id = at1.profile_id
+        LEFT JOIN ontime ot ON ot.profile_id = at1.profile_id
+        GROUP BY at1.profile_id, ot.on_time, ot.with_due_date
+      ) agg ON agg.profile_id = p.id
+      ORDER BY tareas_completadas DESC, p.full_name ASC`,
+      params
+    );
+
+    const rows = result.rows as Array<Record<string, unknown>>;
+
+    res.json(
+      rows.map((r) => ({
+        id: r.id as string,
+        full_name: r.full_name as string,
+        cargo: (r.cargo as string) ?? null,
+        avatar_url: (r.avatar_url as string) ?? null,
+        email: r.email as string,
+        total_tareas: parseInt(String(r.total_tareas), 10),
+        tareas_completadas: parseInt(String(r.tareas_completadas), 10),
+        tareas_pendientes: parseInt(String(r.tareas_pendientes), 10),
+        asignaturas_cubiertas: parseInt(String(r.asignaturas_cubiertas), 10),
+        horas_estimadas_total: parseFloat(String(r.horas_estimadas_total)),
+        horas_reales_total: parseFloat(String(r.horas_reales_total)),
+        eficiencia_pct: r.eficiencia_pct != null ? parseInt(String(r.eficiencia_pct), 10) : null,
+        puntualidad_pct: r.puntualidad_pct != null ? parseInt(String(r.puntualidad_pct), 10) : null,
+      }))
+    );
+  } catch (error) {
+    console.error('Individual performance report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+

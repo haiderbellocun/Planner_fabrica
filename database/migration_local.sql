@@ -196,8 +196,13 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     read BOOLEAN NOT NULL DEFAULT false,
+    read_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Asegura read_at en bases ya creadas sin esa columna
+ALTER TABLE public.notifications
+ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
 
 -- =====================
 -- INDEXES

@@ -18,6 +18,7 @@ import {
   getTeamByCargo,
   getWeeklyByCargo,
   getUnassignedMaterials,
+  getIndividualPerformance,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -42,5 +43,6 @@ router.get('/team-monthly-completion', getTeamMonthlyCompletion);
 router.get('/team-by-cargo', getTeamByCargo);
 router.get('/weekly-by-cargo', getWeeklyByCargo);
 router.get('/unassigned-materials', getUnassignedMaterials);
+router.get('/individual-performance', getIndividualPerformance);
 
 export default router;

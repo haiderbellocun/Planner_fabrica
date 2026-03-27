@@ -130,7 +130,10 @@ export default function NotificationsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => markAsRead.mutate(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead.mutate(notification.id);
+                          }}
                         >
                           <Check className="h-4 w-4" />
                         </Button>
@@ -139,7 +142,10 @@ export default function NotificationsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteNotification.mutate(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification.mutate(notification.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

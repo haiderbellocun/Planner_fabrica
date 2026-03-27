@@ -382,3 +382,42 @@ export function useReportUnassignedMaterials() {
     staleTime: STALE_TIME,
   });
 }
+
+// --- Individual Performance ---
+
+export interface IndividualPerformance {
+  id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  email: string;
+  total_tareas: number;
+  tareas_completadas: number;
+  tareas_pendientes: number;
+  asignaturas_cubiertas: number;
+  horas_estimadas_total: number;
+  horas_reales_total: number;
+  eficiencia_pct: number | null;
+  puntualidad_pct: number | null;
+}
+
+export interface IndividualPerformanceFilters {
+  project_id?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export function useReportIndividualPerformance(filters: IndividualPerformanceFilters = {}) {
+  return useQuery({
+    queryKey: ['report-individual-performance', filters],
+    queryFn: async (): Promise<IndividualPerformance[]> => {
+      const params = new URLSearchParams();
+      if (filters.project_id) params.set('project_id', filters.project_id);
+      if (filters.date_from) params.set('date_from', filters.date_from);
+      if (filters.date_to) params.set('date_to', filters.date_to);
+      const qs = params.toString();
+      return await api.get(`/api/reports/individual-performance${qs ? `?${qs}` : ''}`);
+    },
+    staleTime: STALE_TIME,
+  });
+}
