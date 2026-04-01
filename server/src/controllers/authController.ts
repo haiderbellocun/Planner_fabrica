@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { Secret, SignOptions } from 'jsonwebtoken';
+import type { Profile } from 'passport-google-oauth20';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 
@@ -142,4 +143,58 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 export const logout = async (req: AuthRequest, res: Response) => {
   // With JWT, logout is handled client-side by removing the token
   res.json({ message: 'Logged out successfully' });
+};
+
+export const googleCallback = async (
+  googleProfile: Profile,
+  done: (error: unknown, user?: { token: string }) => void
+) => {
+  try {
+    const email = googleProfile.emails?.[0]?.value;
+    if (!email) return done(new Error('NO_EMAIL'));
+
+    const userResult = await query(
+      'SELECT id, email, full_name, avatar_url, is_active FROM public.users WHERE email = $1',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return done(new Error('USER_NOT_FOUND'));
+    }
+
+    const user = userResult.rows[0];
+    if (!user.is_active) return done(new Error('ACCOUNT_DISABLED'));
+
+    const profileResult = await query(
+      `SELECT p.id AS profile_id, ur.role
+       FROM public.profiles p
+       LEFT JOIN public.user_roles ur ON ur.user_id = p.id
+       WHERE p.user_id = $1
+       LIMIT 1`,
+      [user.id]
+    );
+
+    const profileId = profileResult.rows[0]?.profile_id;
+    const role = profileResult.rows[0]?.role || 'user';
+    if (!profileId) return done(new Error('NO_PROFILE'));
+
+    await query('UPDATE public.users SET last_sign_in_at = NOW() WHERE id = $1', [user.id]);
+
+    if (!user.avatar_url && googleProfile.photos?.[0]?.value) {
+      await query('UPDATE public.users SET avatar_url = $1 WHERE id = $2', [
+        googleProfile.photos[0].value,
+        user.id,
+      ]);
+    }
+
+    const token = jwt.sign(
+      { id: user.id, profileId, email: user.email, role },
+      secret,
+      signOptions
+    );
+
+    done(null, { token });
+  } catch (error) {
+    done(error);
+  }
 };

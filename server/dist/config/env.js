@@ -19,6 +19,18 @@ const envSchema = z
         .string()
         .min(1, 'CORS_ORIGIN must be set')
         .default('http://localhost:5173'),
+    FRONTEND_URL: z.string().url().optional(),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    /** Full URL registered in Google Cloud Console (e.g. https://api.example.com/api/auth/google/callback) */
+    GOOGLE_CALLBACK_URL: z.string().url().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_MODEL: z.string().optional(),
 })
     .superRefine((env, ctx) => {
     const hasDatabaseUrl = !!env.DATABASE_URL;
@@ -36,7 +48,6 @@ if (!parsed.success) {
     // Show a clear error and fail fast on boot
     console.error('❌ Invalid environment configuration:');
     console.error(JSON.stringify(parsed.error.format(), null, 2));
-     
     process.exit(1);
 }
 export const env = parsed.data;

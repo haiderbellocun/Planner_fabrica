@@ -94,13 +94,21 @@ export const createAsignatura = async (req, res) => {
 export const createAsignaturaInPrograma = async (req, res) => {
     try {
         const { programaId } = req.params;
-        const { name, code, description, display_order, semestre } = req.body;
+        const { name, code, description, display_order, semestre, tipo_asignatura } = req.body;
         if (!name || name.trim() === '') {
             return res.status(400).json({ error: 'Name is required' });
         }
-        const result = await query(`INSERT INTO public.asignaturas (programa_id, name, code, description, display_order, semestre)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`, [programaId, name.trim(), code || null, description || null, display_order || 0, semestre || null]);
+        const result = await query(`INSERT INTO public.asignaturas (programa_id, name, code, description, display_order, semestre, tipo_asignatura)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`, [
+            programaId,
+            name.trim(),
+            code || null,
+            description || null,
+            display_order || 0,
+            semestre || null,
+            tipo_asignatura || null,
+        ]);
         res.status(201).json(result.rows[0]);
     }
     catch (error) {
@@ -115,7 +123,7 @@ export const createAsignaturaInPrograma = async (req, res) => {
 export const updateAsignatura = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, code, description, display_order, semestre } = req.body;
+        const { name, code, description, display_order, semestre, tipo_asignatura } = req.body;
         const updates = [];
         const values = [];
         let paramCount = 1;
@@ -138,6 +146,10 @@ export const updateAsignatura = async (req, res) => {
         if (semestre !== undefined) {
             updates.push(`semestre = $${paramCount++}`);
             values.push(semestre);
+        }
+        if (tipo_asignatura !== undefined) {
+            updates.push(`tipo_asignatura = $${paramCount++}`);
+            values.push(tipo_asignatura);
         }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields to update' });

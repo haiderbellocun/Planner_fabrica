@@ -28,6 +28,7 @@ interface AuthContextType {
   isProjectLeader: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signInWithToken: (token: string) => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile?: (data: Partial<{ avatar_url: string }>) => void;
@@ -101,6 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
+  }, []);
+
+  const signInWithToken = useCallback((token: string) => {
+    localStorage.setItem('taskflow_token', token);
+    window.location.assign(`${window.location.href.split('#')[0]}#/dashboard`);
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -238,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isProjectLeader,
     signIn,
     signUp,
+    signInWithToken,
     signOut,
     refreshProfile,
     updateProfile,

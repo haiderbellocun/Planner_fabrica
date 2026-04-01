@@ -635,13 +635,53 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
 
     const task = result.rows[0];
 
-    // Create notification if assignee changed
+    // Create notification + email if assignee changed
     if (assignee_id && assignee_id !== req.user?.profileId) {
       await query(
         `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
          VALUES ($1, $2, $3, 'task_assigned', 'Tarea asignada', $4)`,
         [assignee_id, task.project_id, task.id, `Se te ha asignado la tarea: ${task.title}`]
       );
+
+      try {
+        const assigneeResult = await query(
+          `SELECT p.full_name, u.email
+           FROM public.profiles p
+           JOIN public.users u ON u.id = p.user_id
+           WHERE p.id = $1`,
+          [assignee_id]
+        );
+        const projectResult = await query(
+          'SELECT name FROM public.projects WHERE id = $1',
+          [task.project_id]
+        );
+
+        const assignee = assigneeResult.rows[0];
+        const project = projectResult.rows[0];
+
+        if (assignee?.email) {
+          const frontendUrl = env.FRONTEND_URL ?? '';
+          const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
+
+          await sendTaskAssignedEmail({
+            to: assignee.email,
+            subject: `Tarea asignada en ${project?.name ?? 'un proyecto'}`,
+            html: [
+              `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">`,
+              `<h2 style="color: #0DD9D0;">Tarea asignada</h2>`,
+              `<p>Hola <strong>${assignee.full_name ?? ''}</strong>,</p>`,
+              `<p>Se te ha asignado una tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
+              `<p style="font-size: 18px;"><strong>${task.title}</strong></p>`,
+              task.due_date ? `<p>Fecha de vencimiento: <strong>${new Date(task.due_date).toLocaleDateString('es-CO')}</strong></p>` : '',
+              taskLink ? `<p><a href="${taskLink}" style="background:#0DD9D0;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Ver mis tareas</a></p>` : '',
+              `<p style="color:#666;font-size:12px;margin-top:24px;">Planner Fábrica - Sealab</p>`,
+              `</div>`,
+            ].join(''),
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending task reassignment email:', emailError);
+      }
     }
 
     res.json(task);

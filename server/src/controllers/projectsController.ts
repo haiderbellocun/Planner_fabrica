@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
+import { sendTaskAssignedEmail } from '../services/emailService.js';
 
 /**
  * GET /api/projects
@@ -295,6 +296,57 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
       // Commit transaction
       await query('COMMIT');
+
+      // Notify all project_leaders about the new project (fire and forget)
+      query(
+        `SELECT u.email, p.full_name
+         FROM public.user_roles ur
+         JOIN public.profiles p ON p.id = ur.user_id
+         JOIN public.users u ON u.id = p.user_id
+         WHERE ur.role = 'project_leader'
+           AND u.is_active = true`,
+        []
+      ).then(async (leadersResult) => {
+        const creatorName = req.user?.email ?? 'Un administrador';
+        for (const leader of leadersResult.rows) {
+          await sendTaskAssignedEmail({
+            to: leader.email,
+            subject: `Nuevo proyecto creado: ${project.name}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #0DD9D0;">Nuevo proyecto creado</h2>
+                <p>Hola <strong>${leader.full_name}</strong>,</p>
+                <p>Se ha creado un nuevo proyecto en la plataforma Planner Fábrica.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; background: #f5f5f5;">Proyecto</td>
+                    <td style="padding: 8px;">${project.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; background: #f5f5f5;">Clave</td>
+                    <td style="padding: 8px;">${project.key}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; background: #f5f5f5;">Tipo</td>
+                    <td style="padding: 8px;">${project.tipo_programa ?? 'No especificado'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; background: #f5f5f5;">Fecha fin</td>
+                    <td style="padding: 8px;">${project.end_date ? new Date(project.end_date).toLocaleDateString('es-CO') : 'No definida'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; font-weight: bold; background: #f5f5f5;">Creado por</td>
+                    <td style="padding: 8px;">${creatorName}</td>
+                  </tr>
+                </table>
+                <p style="color: #666; font-size: 12px;">Este es un mensaje automático de Planner Fábrica - Sealab.</p>
+              </div>
+            `,
+          });
+        }
+      }).catch((err) => {
+        console.error('Error sending project creation emails:', err);
+      });
 
       res.status(201).json(project);
     } catch (error) {

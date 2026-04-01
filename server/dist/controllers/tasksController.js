@@ -1,5 +1,6 @@
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
+import { sendTaskAssignedEmail } from '../services/emailService.js';
 /**
  * GET /api/projects/:projectId/tasks
  * List all tasks for a project with full details
@@ -19,36 +20,19 @@ export const listTasks = async (req, res) => {
             console.log('Is leader:', isLeader);
         }
         // Build WHERE clause based on user role
+        // Admins and project leaders deben ver todas las tareas del proyecto.
+        // Solo los usuarios normales tienen filtros de visibilidad.
         let whereClause = 't.project_id = $1';
         const params = [projectId];
-        // For project leaders (not admins), apply visibility filter
-        if (isLeader) {
-            // Leaders see:
-            // 1. Original tasks they created (parent_task_id IS NULL AND reporter_id = their id)
-            // 2. Copy tasks (level 2 ONLY) from other leaders — the copy's parent must be an original
-            // 3. User tasks they themselves assigned (reporter_id = their id AND assignee_id IS NOT NULL)
-            whereClause += ` AND (
-        (t.parent_task_id IS NULL AND t.reporter_id = $2)
-        OR
-        (t.parent_task_id IS NOT NULL AND t.reporter_id != $2
-         AND EXISTS (SELECT 1 FROM public.tasks pt WHERE pt.id = t.parent_task_id AND pt.parent_task_id IS NULL))
-        OR
-        (t.parent_task_id IS NOT NULL AND t.reporter_id = $2 AND t.assignee_id IS NOT NULL)
-      )`;
-            params.push(profileId);
+        if (userRole === 'admin' || isLeader) {
             if (env.NODE_ENV !== 'production') {
-                console.log('Visibility filter applied for leader');
-                console.log('WHERE clause:', whereClause);
-                console.log('Params:', params);
+                console.log('No visibility filter (admin/leader sees all)');
             }
         }
-        else if (userRole !== 'admin') {
-            // Normal users see:
-            // 1. Original tasks (parent_task_id IS NULL)
-            // 2. Any task (including copies) where they are directly assigned, or have tema/material assignments
+        else {
+            // Normal users: ONLY see tasks explicitly assigned to them, regardless of project category
             whereClause += ` AND (
-        t.parent_task_id IS NULL
-        OR t.assignee_id = $2
+        t.assignee_id = $2
         OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
         OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
       )`;
@@ -57,12 +41,6 @@ export const listTasks = async (req, res) => {
                 console.log('Visibility filter applied for normal user');
             }
         }
-        else {
-            if (env.NODE_ENV !== 'production') {
-                console.log('No visibility filter (admin sees all)');
-            }
-        }
-        // Admins see all tasks in the project (no additional filter)
         const result = await query(`SELECT
         t.*,
         ts.id as status_id, ts.name as status_name, ts.color as status_color,
@@ -329,7 +307,7 @@ export const getTask = async (req, res) => {
             // Create a map of material_id -> { assignee, horas_estimadas }
             const materialAssigneesMap = new Map();
             materialAssigneesResult.rows.forEach((assigneeRow) => {
-                materialAssigneesMap.set(assigneeRow.material_id, {
+                materialAssigneesMap.set(String(assigneeRow.material_id), {
                     assignee: {
                         id: assigneeRow.profile_id,
                         full_name: assigneeRow.full_name,
@@ -339,19 +317,38 @@ export const getTask = async (req, res) => {
                     horas_estimadas: assigneeRow.horas_estimadas ? parseFloat(assigneeRow.horas_estimadas) : null,
                 });
             });
-            const temasWithMateriales = await Promise.all(temasResult.rows.map(async (tema) => {
-                const materialesResult = await query(`SELECT mr.id, mr.descripcion,
-                    mt.id as material_type_id, mt.name as material_type_name, mt.icon as material_type_icon
-             FROM public.materiales_requeridos mr
-             JOIN public.material_types mt ON mt.id = mr.material_type_id
-             WHERE mr.tema_id = $1
-             ORDER BY mt.display_order ASC`, [tema.id]);
+            // Fetch all materiales for all temas in una sola consulta (evita N+1)
+            const temaIds = temasResult.rows.map((t) => t.id);
+            let materialesByTema = new Map();
+            if (temaIds.length > 0) {
+                const materialesResult = await query(`SELECT
+             mr.id,
+             mr.descripcion,
+             mr.tema_id,
+             mt.id  AS material_type_id,
+             mt.name AS material_type_name,
+             mt.icon AS material_type_icon
+           FROM public.materiales_requeridos mr
+           JOIN public.material_types mt ON mt.id = mr.material_type_id
+           WHERE mr.tema_id = ANY($1)
+           ORDER BY mr.tema_id ASC, mt.display_order ASC`, [temaIds]);
+                materialesByTema = new Map();
+                materialesResult.rows.forEach((m) => {
+                    const key = String(m.tema_id);
+                    if (!materialesByTema.has(key)) {
+                        materialesByTema.set(key, []);
+                    }
+                    materialesByTema.get(key).push(m);
+                });
+            }
+            const temasWithMateriales = temasResult.rows.map((tema) => {
+                const materialesForTema = materialesByTema.get(String(tema.id)) || [];
                 return {
                     id: tema.id,
                     title: tema.title,
                     assignee: temaAssigneesMap.get(tema.id) || null,
-                    materiales: materialesResult.rows.map((m) => {
-                        const materialData = materialAssigneesMap.get(m.id);
+                    materiales: materialesForTema.map((m) => {
+                        const materialData = materialAssigneesMap.get(String(m.id));
                         return {
                             id: m.id,
                             descripcion: m.descripcion,
@@ -365,7 +362,7 @@ export const getTask = async (req, res) => {
                         };
                     }),
                 };
-            }));
+            });
             task.temas_materiales = temasWithMateriales;
         }
         res.json(task);
@@ -421,10 +418,41 @@ export const createTask = async (req, res) => {
             asignatura_id || null,
         ]);
         const task = result.rows[0];
-        // Create notification if assigned to someone else
+        // Create notification + email if assigned to someone else
         if (assignee_id && assignee_id !== reporterId) {
             await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
          VALUES ($1, $2, $3, 'task_assigned', 'Nueva tarea asignada', $4)`, [assignee_id, projectId, task.id, `Se te ha asignado la tarea: ${title}`]);
+            try {
+                const assigneeResult = await query('SELECT full_name, email FROM public.profiles WHERE id = $1', [assignee_id]);
+                const projectResult = await query('SELECT name FROM public.projects WHERE id = $1', [projectId]);
+                const assignee = assigneeResult.rows[0];
+                const project = projectResult.rows[0];
+                if (assignee?.email) {
+                    const frontendUrl = env.FRONTEND_URL ?? '';
+                    const taskLink = frontendUrl ? `${frontendUrl}/#/my-tasks` : '';
+                    const subject = `Nueva tarea asignada en ${project?.name ?? 'un proyecto'}`;
+                    const htmlParts = [
+                        `<p>Hola ${assignee.full_name ?? ''},</p>`,
+                        `<p>Se te ha asignado una nueva tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
+                        `<p><strong>${title}</strong></p>`,
+                    ];
+                    if (due_date) {
+                        htmlParts.push(`<p>Fecha de vencimiento: <strong>${due_date}</strong></p>`);
+                    }
+                    if (taskLink) {
+                        htmlParts.push(`<p>Puedes verla en la aplicación aquí: <a href="${taskLink}">${taskLink}</a></p>`);
+                    }
+                    htmlParts.push('<p>Fábrica de Contenidos</p>');
+                    await sendTaskAssignedEmail({
+                        to: assignee.email,
+                        subject,
+                        html: htmlParts.join(''),
+                    });
+                }
+            }
+            catch (emailError) {
+                console.error('Error sending task assignment email:', emailError);
+            }
         }
         res.status(201).json(task);
     }
@@ -582,44 +610,6 @@ export const updateTaskStatus = async (req, res) => {
        WHERE id = $2
        RETURNING *`, [status_id, id]);
         const task = result.rows[0];
-        // If task is marked as "Finalizado" by a PROJECT LEADER or ADMIN,
-        // AND it's an ORIGINAL task (not a copy),
-        // create ONE copy for other leaders to assign to next person
-        if (newStatusName === 'Finalizado' && isAdminOrLeader && !task.parent_task_id) {
-            // Get default status (Sin iniciar)
-            const defaultStatusResult = await query('SELECT id FROM public.task_statuses WHERE is_default = true LIMIT 1');
-            if (defaultStatusResult.rows.length > 0) {
-                const defaultStatusId = defaultStatusResult.rows[0].id;
-                // Create new task (exact copy but without assignee)
-                const newTaskResult = await query(`INSERT INTO public.tasks
-           (project_id, title, description, priority, status_id, assignee_id, reporter_id, asignatura_id, material_requerido_id, due_date, tags, parent_task_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-           RETURNING *`, [
-                    task.project_id,
-                    task.title, // Mismo título
-                    task.description, // Misma descripción
-                    task.priority,
-                    defaultStatusId,
-                    null, // Sin asignar - los líderes deben asignar
-                    profileId, // El líder que finalizó crea la nueva tarea
-                    task.asignatura_id,
-                    task.material_requerido_id,
-                    task.due_date,
-                    task.tags || [],
-                    task.id // parent_task_id: referencia a la tarea original
-                ]);
-                const newTask = newTaskResult.rows[0];
-                // Notify all project leaders about new task to assign
-                const leadersResult = await query(`SELECT pm.user_id
-           FROM public.project_members pm
-           WHERE pm.project_id = $1 AND pm.role = 'leader'`, [task.project_id]);
-                // Send notification to each leader
-                for (const leader of leadersResult.rows) {
-                    await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
-             VALUES ($1, $2, $3, 'task_assigned', 'Nueva tarea para asignar', $4)`, [leader.user_id, task.project_id, newTask.id, `La tarea "${task.title}" fue finalizada. Asigne al siguiente responsable.`]);
-                }
-            }
-        }
         // Notify assignee
         if (task.assignee_id && task.assignee_id !== req.user?.profileId) {
             await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)

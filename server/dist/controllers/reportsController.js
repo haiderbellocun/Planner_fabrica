@@ -108,6 +108,13 @@ export const getProjectsProgress = async (req, res) => {
         COUNT(DISTINCT t.id) FILTER (WHERE ts.name = 'En proceso') as in_progress_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.name = 'En revisión') as in_review_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.name = 'Ajustes') as adjustment_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date < NOW() AND ts.is_completed = false
+        ) as overdue_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+            AND ts.is_completed = false
+        ) as due_soon_tasks,
         (
           SELECT COUNT(mr2.id)
           FROM public.materiales_requeridos mr2
@@ -136,6 +143,8 @@ export const getProjectsProgress = async (req, res) => {
             adjustment_tasks: parseInt(r.adjustment_tasks),
             total_materials: parseInt(r.total_materials),
             completed_materials: parseInt(r.completed_materials),
+            overdue_tasks: parseInt(r.overdue_tasks),
+            due_soon_tasks: parseInt(r.due_soon_tasks),
             completion_rate: parseInt(r.total_tasks) > 0
                 ? Math.round((parseInt(r.completed_tasks) / parseInt(r.total_tasks)) * 100)
                 : 0,
@@ -144,6 +153,110 @@ export const getProjectsProgress = async (req, res) => {
     }
     catch (error) {
         console.error('Projects progress error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/projects-timeline
+ * Per-project timeline estimation (start, target, estimated end)
+ */
+export const getProjectsTimeline = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        p.id, p.name, p.key,
+        MIN(t.created_at)::date as start_date,
+        MAX(t.due_date)::date as target_date,
+        COUNT(DISTINCT t.id) as total_tasks,
+        COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date < NOW() AND ts.is_completed = false
+        ) as overdue_tasks,
+        COALESCE(
+          ROUND(
+            SUM(tma.horas_estimadas) FILTER (WHERE ts.is_completed = false) /
+            NULLIF(COUNT(DISTINCT t.assignee_id) FILTER (WHERE ts.is_completed = false), 0) /
+            8.05
+          )::integer,
+          0
+        ) as estimated_days_remaining
+      FROM public.projects p
+      LEFT JOIN public.tasks t ON t.project_id = p.id
+      LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
+      LEFT JOIN public.task_material_assignees tma
+        ON tma.task_id = t.parent_task_id
+        AND tma.assignee_id = t.assignee_id
+        AND tma.material_id = t.material_requerido_id
+      GROUP BY p.id
+      HAVING COUNT(DISTINCT t.id) > 0
+      ORDER BY p.name
+    `);
+        const projects = result.rows.map(r => {
+            const totalTasks = parseInt(r.total_tasks);
+            const completedTasks = parseInt(r.completed_tasks);
+            const overdueTasks = parseInt(r.overdue_tasks);
+            const estimatedDaysRemaining = parseInt(r.estimated_days_remaining);
+            const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const startDate = r.start_date ? r.start_date.toISOString().split('T')[0] : null;
+            const targetDate = r.target_date ? r.target_date.toISOString().split('T')[0] : null;
+            let estimatedEndDate = null;
+            if (estimatedDaysRemaining > 0) {
+                const now = new Date();
+                const estimated = new Date(now.getTime() + estimatedDaysRemaining * 86400000);
+                estimatedEndDate = estimated.toISOString().split('T')[0];
+            }
+            return {
+                id: r.id,
+                name: r.name,
+                key: r.key,
+                start_date: startDate,
+                target_date: targetDate,
+                total_tasks: totalTasks,
+                completed_tasks: completedTasks,
+                overdue_tasks: overdueTasks,
+                estimated_days_remaining: estimatedDaysRemaining,
+                completion_rate: completionRate,
+                estimated_end_date: estimatedEndDate,
+            };
+        });
+        res.json(projects);
+    }
+    catch (error) {
+        console.error('Projects timeline error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/team-monthly-completion
+ * Completed tasks per collaborator per month (last 6 months)
+ */
+export const getTeamMonthlyCompletion = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        p.id as profile_id,
+        p.full_name,
+        DATE_TRUNC('month', tsh.created_at)::date as month,
+        COUNT(DISTINCT tsh.task_id) as completed_count
+      FROM public.task_status_history tsh
+      JOIN public.task_statuses ts ON ts.id = tsh.to_status_id
+        AND ts.is_completed = true
+      JOIN public.tasks t ON t.id = tsh.task_id
+      JOIN public.profiles p ON p.id = t.assignee_id
+      WHERE tsh.created_at >= NOW() - INTERVAL '6 months'
+      GROUP BY p.id, p.full_name, DATE_TRUNC('month', tsh.created_at)
+      ORDER BY month ASC, completed_count DESC
+    `);
+        const data = result.rows.map(r => ({
+            profile_id: r.profile_id,
+            full_name: r.full_name,
+            month: r.month.toISOString().split('T')[0],
+            completed_count: parseInt(r.completed_count),
+        }));
+        res.json(data);
+    }
+    catch (error) {
+        console.error('Team monthly completion error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -160,7 +273,7 @@ export const getTeamPerformance = async (req, res) => {
         COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.name = 'En proceso') as in_progress_tasks,
         COUNT(DISTINCT tma.id) as materials_assigned,
-        COALESCE(SUM(DISTINCT tma.horas_estimadas), 0) as total_horas_estimadas,
+        COALESCE(SUM(tma.horas_estimadas), 0) as total_horas_estimadas,
         COALESCE(actual.total_actual_hours, 0) as total_horas_reales
       FROM public.profiles p
       LEFT JOIN public.tasks t ON t.assignee_id = p.id
@@ -448,6 +561,261 @@ export const getTeamCapacity = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+/**
+ * GET /api/reports/user-mini-report/:userId
+ * Per-user diagnostic summary for the Equipo tab drawer:
+ * - Task counts by status and critical buckets (vencidas, hoy, sin estimación, alta prioridad)
+ * - Pending vs completed hours and weekly capacity
+ * - Top 5 tasks that require attention
+ */
+export const getUserMiniReport = async (req, res) => {
+    try {
+        const userId = (req.params.userId || req.query.userId || '').trim();
+        if (!userId) {
+            return res.status(400).json({ error: 'userId inválido' });
+        }
+        // Basic profile + capacity
+        const profileRes = await query(`
+        SELECT
+          id,
+          full_name,
+          cargo,
+          avatar_url,
+          email,
+          COALESCE(weekly_hours_capacity, 40.25) AS weekly_hours_capacity
+        FROM public.profiles
+        WHERE id = $1
+      `, [userId]);
+        if (profileRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        const profile = profileRes.rows[0];
+        // Aggregate metrics and status distribution for this user
+        const summaryRes = await query(`
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            t.title,
+            t.priority,
+            t.due_date,
+            t.created_at,
+            t.updated_at,
+            t.project_id,
+            ts.name AS status_name,
+            ts.is_completed,
+            COALESCE(tma.horas_estimadas, NULL) AS horas_estimadas
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          LEFT JOIN public.task_material_assignees tma
+            ON tma.task_id = t.parent_task_id
+            AND tma.assignee_id = t.assignee_id
+            AND tma.material_id = t.material_requerido_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          COUNT(*) AS total_tasks,
+          COUNT(*) FILTER (WHERE NOT is_completed) AS pending_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'En proceso') AS in_progress_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'En revisión') AS in_review_tasks,
+          COUNT(*) FILTER (WHERE status_name = 'Ajustes') AS adjustment_tasks,
+          COUNT(*) FILTER (WHERE is_completed) AS completed_tasks,
+          COUNT(*) FILTER (WHERE due_date < CURRENT_DATE AND NOT is_completed) AS overdue_tasks,
+          COUNT(*) FILTER (WHERE due_date = CURRENT_DATE AND NOT is_completed) AS today_tasks,
+          COUNT(*) FILTER (WHERE NOT is_completed AND horas_estimadas IS NULL) AS tasks_sin_estimacion,
+          COUNT(*) FILTER (WHERE NOT is_completed AND priority IN ('high', 'urgent')) AS high_priority_tasks,
+          COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed), 0) AS pending_horas,
+          COALESCE(SUM(horas_estimadas) FILTER (WHERE is_completed), 0) AS completed_horas
+        FROM user_tasks
+      `, [userId]);
+        const statusRes = await query(`
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            ts.name AS status_name,
+            ts.is_completed
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          status_name,
+          is_completed,
+          COUNT(*) AS count
+        FROM user_tasks
+        GROUP BY status_name, is_completed
+        ORDER BY status_name
+      `, [userId]);
+        const topTasksRes = await query(`
+        WITH user_tasks AS (
+          SELECT
+            t.id,
+            t.title,
+            t.priority,
+            t.due_date,
+            t.created_at,
+            ts.name AS status_name,
+            ts.is_completed,
+            COALESCE(tma.horas_estimadas, NULL) AS horas_estimadas,
+            p.id AS project_id,
+            p.name AS project_name,
+            p.key AS project_key
+          FROM public.tasks t
+          JOIN public.task_statuses ts ON ts.id = t.status_id
+          JOIN public.projects p ON p.id = t.project_id
+          LEFT JOIN public.task_material_assignees tma
+            ON tma.task_id = t.parent_task_id
+            AND tma.assignee_id = t.assignee_id
+            AND tma.material_id = t.material_requerido_id
+          WHERE t.assignee_id = $1
+        )
+        SELECT
+          id,
+          title,
+          priority,
+          due_date,
+          created_at,
+          status_name,
+          is_completed,
+          horas_estimadas,
+          project_id,
+          project_name,
+          project_key
+        FROM user_tasks
+        ORDER BY
+          CASE
+            WHEN NOT is_completed AND due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 1
+            WHEN NOT is_completed AND due_date = CURRENT_DATE THEN 2
+            WHEN NOT is_completed AND priority IN ('high', 'urgent') THEN 3
+            WHEN NOT is_completed AND horas_estimadas IS NULL THEN 4
+            ELSE 5
+          END,
+          COALESCE(due_date, CURRENT_DATE + INTERVAL '365 days'),
+          created_at DESC
+        LIMIT 5
+      `, [userId]);
+        const summary = summaryRes.rows[0] || {
+            total_tasks: 0,
+            pending_tasks: 0,
+            in_progress_tasks: 0,
+            in_review_tasks: 0,
+            adjustment_tasks: 0,
+            completed_tasks: 0,
+            overdue_tasks: 0,
+            today_tasks: 0,
+            tasks_sin_estimacion: 0,
+            high_priority_tasks: 0,
+            pending_horas: 0,
+            completed_horas: 0,
+        };
+        const totalTasks = Number(summary.total_tasks) || 0;
+        const pendingHoras = Number(summary.pending_horas) || 0;
+        const weeklyCapacity = Number(profile.weekly_hours_capacity) || 40.25;
+        const utilizationPct = weeklyCapacity > 0
+            ? Math.round((pendingHoras / weeklyCapacity) * 100)
+            : 0;
+        const capacityGapHours = Math.round((pendingHoras - weeklyCapacity) * 100) / 100;
+        const holguraHoras = capacityGapHours < 0 ? Math.abs(capacityGapHours) : 0;
+        // Health badge rules
+        const overdue = Number(summary.overdue_tasks) || 0;
+        const sinEstimacion = Number(summary.tasks_sin_estimacion) || 0;
+        let healthStatus = 'ok';
+        const reasons = [];
+        if (totalTasks === 0 || (pendingHoras === 0 && weeklyCapacity > 0)) {
+            healthStatus = 'no_load';
+        }
+        else if (utilizationPct > 100
+            || overdue >= 2
+            || (overdue > 0 && summary.high_priority_tasks > 0)) {
+            healthStatus = 'risk';
+        }
+        else if (overdue > 0
+            || sinEstimacion >= 3
+            || (utilizationPct >= 85 && utilizationPct <= 100)) {
+            healthStatus = 'attention';
+        }
+        if (overdue > 0)
+            reasons.push(`${overdue} tareas vencidas`);
+        if (summary.today_tasks > 0)
+            reasons.push(`${summary.today_tasks} vencen hoy`);
+        if (summary.high_priority_tasks > 0)
+            reasons.push(`${summary.high_priority_tasks} de alta prioridad`);
+        if (sinEstimacion > 0)
+            reasons.push(`${sinEstimacion} sin estimación`);
+        let healthLabel = 'OK';
+        if (healthStatus === 'attention')
+            healthLabel = 'Atención';
+        else if (healthStatus === 'risk')
+            healthLabel = 'Riesgo';
+        else if (healthStatus === 'no_load')
+            healthLabel = 'Sin carga';
+        let healthColor = 'emerald';
+        if (healthStatus === 'attention')
+            healthColor = 'amber';
+        else if (healthStatus === 'risk')
+            healthColor = 'red';
+        else if (healthStatus === 'no_load')
+            healthColor = 'slate';
+        const tasksByStatus = statusRes.rows.map(r => ({
+            status_name: r.status_name,
+            is_completed: Boolean(r.is_completed),
+            count: parseInt(r.count, 10),
+        }));
+        const topTasks = topTasksRes.rows.map(r => ({
+            id: r.id,
+            title: r.title,
+            priority: r.priority,
+            due_date: r.due_date,
+            created_at: r.created_at,
+            status_name: r.status_name,
+            is_completed: r.is_completed,
+            horas_estimadas: r.horas_estimadas != null ? Number(r.horas_estimadas) : null,
+            project: {
+                id: r.project_id,
+                name: r.project_name,
+                key: r.project_key,
+            },
+        }));
+        res.json({
+            user: {
+                id: profile.id,
+                full_name: profile.full_name,
+                cargo: profile.cargo,
+                avatar_url: profile.avatar_url,
+                email: profile.email,
+            },
+            summary: {
+                total_tasks: totalTasks,
+                pending_tasks: Number(summary.pending_tasks) || 0,
+                in_progress_tasks: Number(summary.in_progress_tasks) || 0,
+                in_review_tasks: Number(summary.in_review_tasks) || 0,
+                adjustment_tasks: Number(summary.adjustment_tasks) || 0,
+                completed_tasks: Number(summary.completed_tasks) || 0,
+                overdue_tasks: overdue,
+                today_tasks: Number(summary.today_tasks) || 0,
+                tasks_sin_estimacion: sinEstimacion,
+                high_priority_tasks: Number(summary.high_priority_tasks) || 0,
+                pending_horas: pendingHoras,
+                completed_horas: Number(summary.completed_horas) || 0,
+                weekly_hours_capacity: weeklyCapacity,
+                utilization_pct: utilizationPct,
+                capacity_gap_hours: capacityGapHours,
+                holgura_horas: holguraHoras,
+            },
+            health: {
+                status: healthStatus,
+                label: healthLabel,
+                color: healthColor,
+                reasons,
+            },
+            tasks_by_status: tasksByStatus,
+            top_tasks: topTasks,
+        });
+    }
+    catch (error) {
+        console.error('User mini report error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
 export const getWorkloadByCargo = async (req, res) => {
     try {
         const result = await query(`
@@ -457,7 +825,7 @@ export const getWorkloadByCargo = async (req, res) => {
         COUNT(DISTINCT t.id) as total_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
         COUNT(DISTINCT t.id) FILTER (WHERE NOT ts.is_completed AND t.id IS NOT NULL) as pending_tasks,
-        COALESCE(SUM(DISTINCT tma.horas_estimadas), 0) as total_horas_estimadas
+        COALESCE(SUM(tma.horas_estimadas), 0) as total_horas_estimadas
       FROM public.profiles p
       LEFT JOIN public.tasks t ON t.assignee_id = p.id
       LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
@@ -481,6 +849,375 @@ export const getWorkloadByCargo = async (req, res) => {
     }
     catch (error) {
         console.error('Workload by cargo error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/project-categories
+ * Summary by project category (académico / marketing / otros)
+ */
+export const getProjectCategoriesSummary = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        COALESCE(NULLIF(category, ''), 'sin_categoria') AS category,
+        COUNT(*) AS total_projects,
+        COUNT(t.id) AS total_tasks
+      FROM public.projects p
+      LEFT JOIN public.tasks t ON t.project_id = p.id
+      GROUP BY COALESCE(NULLIF(category, ''), 'sin_categoria')
+      ORDER BY 1
+    `);
+        const data = result.rows.map(r => ({
+            category: r.category,
+            total_projects: parseInt(r.total_projects),
+            total_tasks: parseInt(r.total_tasks),
+        }));
+        res.json(data);
+    }
+    catch (error) {
+        console.error('Project categories summary error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/tasks-weekly-trend
+ * Weekly trend of tasks created vs completed (last 12 weeks)
+ */
+export const getTasksWeeklyTrend = async (req, res) => {
+    try {
+        // Created per day (last 12 days)
+        const createdRes = await query(`
+      SELECT
+        DATE_TRUNC('day', created_at)::date AS week_start,
+        COUNT(*) AS created
+      FROM public.tasks
+      WHERE created_at >= NOW() - INTERVAL '12 days'
+      GROUP BY DATE_TRUNC('day', created_at)::date
+      ORDER BY week_start
+    `);
+        // Completed per day (last 12 days)
+        const completedRes = await query(`
+      SELECT
+        DATE_TRUNC('day', updated_at)::date AS week_start,
+        COUNT(*) AS completed
+      FROM public.tasks t
+      JOIN public.task_statuses ts ON ts.id = t.status_id
+      WHERE ts.is_completed = true
+        AND updated_at >= NOW() - INTERVAL '12 days'
+      GROUP BY DATE_TRUNC('day', updated_at)::date
+      ORDER BY week_start
+    `);
+        const map = new Map();
+        createdRes.rows.forEach(r => {
+            const week = r.week_start.toISOString().split('T')[0];
+            map.set(week, {
+                week,
+                created: parseInt(r.created),
+                completed: 0,
+            });
+        });
+        completedRes.rows.forEach(r => {
+            const week = r.week_start.toISOString().split('T')[0];
+            const existing = map.get(week) || { week, created: 0, completed: 0 };
+            existing.completed = parseInt(r.completed);
+            map.set(week, existing);
+        });
+        // Sort by week ascending
+        const data = Array.from(map.values()).sort((a, b) => a.week.localeCompare(b.week));
+        res.json(data);
+    }
+    catch (error) {
+        console.error('Tasks weekly trend error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/team-by-cargo
+ * Team members grouped by cargo with task counts and on-time rate
+ */
+export const getTeamByCargo = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        p.id, p.full_name, p.cargo, p.avatar_url,
+        COUNT(DISTINCT t.id) as total_tasks,
+        COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE ts.is_completed = false AND t.id IS NOT NULL
+        ) as active_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date < NOW() AND ts.is_completed = false
+        ) as overdue_tasks,
+        COUNT(tsh_adj.id) as ajustes_count,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date IS NOT NULL AND ts.is_completed = true
+            AND t.updated_at <= t.due_date
+        ) as on_time_tasks,
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE t.due_date IS NOT NULL AND ts.is_completed = true
+        ) as completadas_con_fecha
+      FROM public.profiles p
+      LEFT JOIN public.tasks t ON t.assignee_id = p.id
+      LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
+      LEFT JOIN public.task_status_history tsh_adj
+        ON tsh_adj.task_id = t.id
+        AND tsh_adj.to_status_id = (
+          SELECT id FROM public.task_statuses WHERE name = 'Ajustes' LIMIT 1
+        )
+      WHERE p.cargo IS NOT NULL
+      GROUP BY p.id
+      ORDER BY p.cargo ASC, completed_tasks DESC, total_tasks DESC
+    `);
+        const rows = result.rows;
+        res.json(rows.map((r) => {
+            const completadas = parseInt(r.completadas_con_fecha, 10);
+            const onTime = parseInt(r.on_time_tasks, 10);
+            return {
+                id: r.id,
+                full_name: r.full_name,
+                cargo: r.cargo,
+                avatar_url: r.avatar_url,
+                total_tasks: parseInt(r.total_tasks, 10),
+                completed_tasks: parseInt(r.completed_tasks, 10),
+                active_tasks: parseInt(r.active_tasks, 10),
+                overdue_tasks: parseInt(r.overdue_tasks, 10),
+                ajustes_count: parseInt(r.ajustes_count, 10),
+                on_time_tasks: onTime,
+                completadas_con_fecha: completadas,
+                is_active: parseInt(r.total_tasks, 10) > 0,
+                on_time_rate: completadas > 0 ? Math.round((onTime / completadas) * 100) : null,
+            };
+        }));
+    }
+    catch (error) {
+        console.error('Team by cargo error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/weekly-by-cargo
+ * Weekly completed task count per cargo (last 8 weeks)
+ */
+export const getWeeklyByCargo = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        DATE_TRUNC('day', tsh.created_at)::date as week,
+        p.cargo,
+        COUNT(DISTINCT tsh.task_id) as completed_count
+      FROM public.task_status_history tsh
+      JOIN public.task_statuses ts ON ts.id = tsh.to_status_id
+        AND ts.is_completed = true
+      JOIN public.tasks t ON t.id = tsh.task_id
+      JOIN public.profiles p ON p.id = t.assignee_id
+      WHERE tsh.created_at >= NOW() - INTERVAL '12 days'
+        AND p.cargo IS NOT NULL
+      GROUP BY week, p.cargo
+      ORDER BY week ASC
+    `);
+        const rows = result.rows;
+        res.json(rows.map((r) => ({
+            week: r.week.toISOString().split('T')[0],
+            cargo: r.cargo,
+            completed_count: parseInt(r.completed_count, 10),
+        })));
+    }
+    catch (error) {
+        console.error('Weekly by cargo error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/unassigned-materials
+ * Materiales requeridos that have no task_material_assignees
+ */
+export const getUnassignedMaterials = async (req, res) => {
+    try {
+        const result = await query(`
+      SELECT
+        mr.id, mr.cantidad, mt.name as material_type, mt.icon,
+        COALESCE(tm.title, a.name) as tema,
+        a.name as asignatura,
+        proj.name as project_name,
+        proj.key as project_key,
+        proj.id as project_id
+      FROM public.materiales_requeridos mr
+      JOIN public.material_types mt ON mt.id = mr.material_type_id
+      JOIN public.asignaturas a ON a.id = mr.asignatura_id
+      LEFT JOIN public.temas tm ON tm.id = mr.tema_id
+      LEFT JOIN public.projects proj ON proj.id = a.project_id
+      WHERE proj.id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM public.task_material_assignees tma
+          WHERE tma.material_id = mr.id
+        )
+      ORDER BY proj.name, mt.display_order, a.name
+      LIMIT 50
+    `);
+        const rows = result.rows;
+        res.json(rows.map((r) => ({
+            id: r.id,
+            cantidad: parseInt(r.cantidad, 10),
+            material_type: r.material_type,
+            icon: r.icon ?? '',
+            tema: r.tema,
+            asignatura: r.asignatura,
+            project_name: r.project_name,
+            project_key: r.project_key,
+            project_id: r.project_id,
+        })));
+    }
+    catch (error) {
+        console.error('Unassigned materials error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * GET /api/reports/individual-performance
+ * Query params: project_id? (UUID), date_from? (ISO date), date_to? (ISO date)
+ * Returns per-collaborator: tasks completed, materials assignments rollup, asignaturas covered,
+ * estimated hours, real hours (from task_status_history), efficiency %, on-time rate
+ */
+export const getIndividualPerformance = async (req, res) => {
+    try {
+        const project_id = req.query.project_id;
+        const date_from = req.query.date_from;
+        const date_to = req.query.date_to;
+        const params = [];
+        let i = 1;
+        let projectFilter = '';
+        if (project_id) {
+            projectFilter = `AND t.project_id = $${i}::uuid`;
+            params.push(project_id);
+            i += 1;
+        }
+        let dateFilter = '';
+        if (date_from && date_to) {
+            dateFilter = `AND t.updated_at::date BETWEEN $${i}::date AND $${i + 1}::date`;
+            params.push(date_from, date_to);
+            i += 2;
+        }
+        else if (date_from) {
+            dateFilter = `AND t.updated_at >= $${i}::date`;
+            params.push(date_from);
+            i += 1;
+        }
+        else if (date_to) {
+            dateFilter = `AND t.updated_at::date <= $${i}::date`;
+            params.push(date_to);
+            i += 1;
+        }
+        const result = await query(`WITH assignee_tasks_raw AS (
+        SELECT
+          tma.assignee_id AS profile_id,
+          t.id AS task_id,
+          ts_status.is_completed,
+          tma.horas_estimadas,
+          t.due_date,
+          t.updated_at AS completed_at,
+          mr.asignatura_id
+        FROM public.task_material_assignees tma
+        JOIN public.tasks t ON t.id = tma.task_id
+        JOIN public.task_statuses ts_status ON ts_status.id = t.status_id
+        LEFT JOIN public.materiales_requeridos mr ON mr.id = tma.material_id
+        WHERE 1=1 ${projectFilter} ${dateFilter}
+      ),
+      assignee_tasks AS (
+        SELECT
+          profile_id,
+          task_id,
+          BOOL_OR(is_completed) AS is_completed,
+          SUM(horas_estimadas) AS horas_estimadas,
+          MAX(due_date) AS due_date,
+          MAX(completed_at) AS completed_at
+        FROM assignee_tasks_raw
+        GROUP BY profile_id, task_id
+      ),
+      asignaturas_profile AS (
+        SELECT profile_id, COUNT(DISTINCT asignatura_id)::bigint AS asignaturas_cubiertas
+        FROM assignee_tasks_raw
+        WHERE asignatura_id IS NOT NULL
+        GROUP BY profile_id
+      ),
+      real_hours AS (
+        SELECT task_id, SUM(duration_seconds) / 3600.0 AS horas_reales
+        FROM public.task_status_history
+        WHERE duration_seconds IS NOT NULL
+        GROUP BY task_id
+      ),
+      ontime AS (
+        SELECT profile_id,
+          COUNT(*) FILTER (
+            WHERE is_completed AND due_date IS NOT NULL AND completed_at::date <= due_date
+          ) AS on_time,
+          COUNT(*) FILTER (WHERE is_completed AND due_date IS NOT NULL) AS with_due_date
+        FROM assignee_tasks
+        GROUP BY profile_id
+      )
+      SELECT
+        p.id,
+        p.full_name,
+        p.cargo,
+        p.avatar_url,
+        p.email,
+        COALESCE(agg.total_tareas, 0)::int AS total_tareas,
+        COALESCE(agg.tareas_completadas, 0)::int AS tareas_completadas,
+        COALESCE(agg.tareas_pendientes, 0)::int AS tareas_pendientes,
+        COALESCE(agg.asignaturas_cubiertas, 0)::int AS asignaturas_cubiertas,
+        COALESCE(agg.horas_estimadas_total, 0)::numeric AS horas_estimadas_total,
+        COALESCE(agg.horas_reales_total, 0)::numeric AS horas_reales_total,
+        agg.eficiencia_pct,
+        agg.puntualidad_pct
+      FROM public.profiles p
+      INNER JOIN (
+        SELECT DISTINCT user_id AS profile_id FROM public.user_roles
+      ) ur ON ur.profile_id = p.id
+      LEFT JOIN (
+        SELECT
+          at1.profile_id,
+          COUNT(DISTINCT at1.task_id) AS total_tareas,
+          COUNT(DISTINCT at1.task_id) FILTER (WHERE at1.is_completed) AS tareas_completadas,
+          COUNT(DISTINCT at1.task_id) FILTER (WHERE NOT at1.is_completed) AS tareas_pendientes,
+          COALESCE(MAX(ap.asignaturas_cubiertas), 0)::bigint AS asignaturas_cubiertas,
+          ROUND(COALESCE(SUM(at1.horas_estimadas), 0)::numeric, 1) AS horas_estimadas_total,
+          ROUND(COALESCE(SUM(rh.horas_reales), 0)::numeric, 1) AS horas_reales_total,
+          CASE
+            WHEN COALESCE(SUM(rh.horas_reales), 0) > 0
+            THEN ROUND((COALESCE(SUM(at1.horas_estimadas), 0) / NULLIF(SUM(rh.horas_reales), 0) * 100)::numeric, 0)
+            ELSE NULL
+          END AS eficiencia_pct,
+          CASE
+            WHEN COALESCE(MAX(ot.with_due_date), 0) > 0  
+            THEN ROUND((MAX(ot.on_time)::numeric / NULLIF(MAX(ot.with_due_date), 0) * 100), 0)
+            ELSE NULL
+          END AS puntualidad_pct
+        FROM assignee_tasks at1
+        LEFT JOIN real_hours rh ON rh.task_id = at1.task_id
+        LEFT JOIN asignaturas_profile ap ON ap.profile_id = at1.profile_id
+        LEFT JOIN ontime ot ON ot.profile_id = at1.profile_id
+        GROUP BY at1.profile_id, ot.on_time, ot.with_due_date
+      ) agg ON agg.profile_id = p.id
+      ORDER BY tareas_completadas DESC, p.full_name ASC`, params);
+        const rows = result.rows;
+        res.json(rows.map((r) => ({
+            id: r.id,
+            full_name: r.full_name,
+            cargo: r.cargo ?? null,
+            avatar_url: r.avatar_url ?? null,
+            email: r.email,
+            total_tareas: parseInt(String(r.total_tareas), 10),
+            tareas_completadas: parseInt(String(r.tareas_completadas), 10),
+            tareas_pendientes: parseInt(String(r.tareas_pendientes), 10),
+            asignaturas_cubiertas: parseInt(String(r.asignaturas_cubiertas), 10),
+            horas_estimadas_total: parseFloat(String(r.horas_estimadas_total)),
+            horas_reales_total: parseFloat(String(r.horas_reales_total)),
+            eficiencia_pct: r.eficiencia_pct != null ? parseInt(String(r.eficiencia_pct), 10) : null,
+            puntualidad_pct: r.puntualidad_pct != null ? parseInt(String(r.puntualidad_pct), 10) : null,
+        })));
+    }
+    catch (error) {
+        console.error('Individual performance report error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

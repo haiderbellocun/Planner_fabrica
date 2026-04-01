@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import {
   getTiemposEstimados,
   calcularTiempo,
@@ -10,21 +10,21 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(authMiddleware as unknown as RequestHandler);
 
 // GET /api/tiempos-estimados - List all timing rules (with optional filters)
-router.get('/', getTiemposEstimados);
+router.get('/', getTiemposEstimados as unknown as RequestHandler);
 
 // GET /api/tiempos-estimados/productos - List unique product names
-router.get('/productos', getProductos);
+router.get('/productos', getProductos as unknown as RequestHandler);
 
 // GET /api/tiempos-estimados/cargos - List unique cargo names
-router.get('/cargos', getCargos);
+router.get('/cargos', getCargos as unknown as RequestHandler);
 
 // GET /api/tiempos-estimados/calcular - Calculate estimated time
-router.get('/calcular', calcularTiempo);
+router.get('/calcular', calcularTiempo as unknown as RequestHandler);
 
 // GET /api/tiempos-estimados/tarea/:taskId - Calculate time for a specific task
-router.get('/tarea/:taskId', calcularTiempoTarea);
+router.get('/tarea/:taskId', calcularTiempoTarea as unknown as RequestHandler);
 
 export default router;

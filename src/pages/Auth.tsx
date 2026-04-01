@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiBaseUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutGrid, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
 import logo from '@/assets/LOGOS-07.png';
@@ -17,9 +18,14 @@ const loginSchema = z.object({
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const googleError = searchParams.get('google_error');
   const { signIn, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const apiOrigin =
+    (apiBaseUrl || '').replace(/\/$/, '') || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -78,10 +84,17 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
+            {(error || googleError) && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                  {error ||
+                    (googleError === 'not_found'
+                      ? 'Tu cuenta de Google no está registrada. Contacta al administrador.'
+                      : googleError === 'disabled'
+                        ? 'Tu cuenta está deshabilitada.'
+                        : 'Error al iniciar sesión con Google.')}
+                </AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
@@ -107,10 +120,36 @@ export default function AuthPage() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Iniciar Sesión
+            </Button>
+
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">o</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={!apiOrigin}
+              onClick={() => {
+                window.location.href = `${apiOrigin}/api/auth/google`;
+              }}
+            >
+              <img
+                src="https://www.google.com/favicon.ico"
+                alt="Google"
+                className="mr-2 h-4 w-4"
+              />
+              Continuar con Google
             </Button>
           </CardFooter>
         </form>

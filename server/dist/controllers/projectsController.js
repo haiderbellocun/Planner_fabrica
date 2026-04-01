@@ -53,36 +53,47 @@ export const listProjects = async (req, res) => {
          )
          ORDER BY p.id, p.created_at DESC`, [profileId]);
         }
-        // Get members for each project
-        const projects = await Promise.all(result.rows.map(async (project) => {
-            const membersResult = await query(`SELECT
-            pm.id, pm.project_id, pm.user_id, pm.role,
-            pm.can_view, pm.can_create, pm.can_edit, pm.can_assign, pm.joined_at,
-            p.id as profile_id, p.full_name, p.avatar_url, p.email
-           FROM public.project_members pm
-           JOIN public.profiles p ON p.id = pm.user_id
-           WHERE pm.project_id = $1
-           ORDER BY pm.joined_at ASC`, [project.id]);
-            return {
-                ...project,
-                members: membersResult.rows.map((m) => ({
-                    id: m.id,
-                    project_id: m.project_id,
-                    user_id: m.user_id,
-                    role: m.role,
-                    can_view: m.can_view,
-                    can_create: m.can_create,
-                    can_edit: m.can_edit,
-                    can_assign: m.can_assign,
-                    joined_at: m.joined_at,
-                    profile: {
-                        id: m.profile_id,
-                        full_name: m.full_name,
-                        avatar_url: m.avatar_url,
-                        email: m.email,
-                    },
-                })),
-            };
+        // Get members for all projects in a single query (avoid N+1)
+        const projectRows = result.rows;
+        if (projectRows.length === 0) {
+            return res.json([]);
+        }
+        const projectIds = projectRows.map((p) => p.id);
+        const membersResult = await query(`SELECT
+        pm.id, pm.project_id, pm.user_id, pm.role,
+        pm.can_view, pm.can_create, pm.can_edit, pm.can_assign, pm.joined_at,
+        p.id as profile_id, p.full_name, p.avatar_url, p.email
+       FROM public.project_members pm
+       JOIN public.profiles p ON p.id = pm.user_id
+       WHERE pm.project_id = ANY($1)
+       ORDER BY pm.project_id ASC, pm.joined_at ASC`, [projectIds]);
+        const membersByProject = new Map();
+        membersResult.rows.forEach((m) => {
+            const key = String(m.project_id);
+            if (!membersByProject.has(key)) {
+                membersByProject.set(key, []);
+            }
+            membersByProject.get(key).push({
+                id: m.id,
+                project_id: m.project_id,
+                user_id: m.user_id,
+                role: m.role,
+                can_view: m.can_view,
+                can_create: m.can_create,
+                can_edit: m.can_edit,
+                can_assign: m.can_assign,
+                joined_at: m.joined_at,
+                profile: {
+                    id: m.profile_id,
+                    full_name: m.full_name,
+                    avatar_url: m.avatar_url,
+                    email: m.email,
+                },
+            });
+        });
+        const projects = projectRows.map((project) => ({
+            ...project,
+            members: membersByProject.get(String(project.id)) || [],
         }));
         res.json(projects);
     }
@@ -164,15 +175,20 @@ export const getProject = async (req, res) => {
  */
 export const createProject = async (req, res) => {
     try {
-        const { name, description, key, start_date, end_date, tipo_programa, asignaturas } = req.body;
+        const { name, description, key, start_date, end_date, tipo_programa, asignaturas, category } = req.body;
         const profileId = req.user?.profileId;
+        if (!end_date) {
+            return res.status(400).json({
+                error: 'La fecha de finalización del proyecto es obligatoria',
+            });
+        }
         // Start transaction
         await query('BEGIN');
         try {
             // 1. Insert project
-            const projectResult = await query(`INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
-         RETURNING *`, [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date || null, tipo_programa || null]);
+            const projectResult = await query(`INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category)
+         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
+         RETURNING *`, [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date, tipo_programa || null, category || null]);
             const project = projectResult.rows[0];
             // 2. Add creator as project leader
             await query(`INSERT INTO public.project_members (project_id, user_id, role, can_view, can_create, can_edit, can_assign, invited_by)
@@ -228,6 +244,56 @@ export const createProject = async (req, res) => {
         if (error.code === '23505') { // Unique violation
             return res.status(400).json({ error: 'Project key already exists' });
         }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+/**
+ * POST /api/projects/:id/complete
+ * Mark project as completed (only if all tasks are completed)
+ */
+export const completeProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+        // 1) Ensure project exists
+        const projectResult = await query('SELECT id, status FROM public.projects WHERE id = $1', [id]);
+        if (projectResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+        const project = projectResult.rows[0];
+        if (project.status === 'completed') {
+            return res.status(400).json({ error: 'El proyecto ya está finalizado' });
+        }
+        // 2) Check task completion status for this project
+        const tasksResult = await query(`SELECT
+         COUNT(*) AS total_tasks,
+         COUNT(*) FILTER (WHERE ts.is_completed = true) AS completed_tasks
+       FROM public.tasks t
+       JOIN public.task_statuses ts ON ts.id = t.status_id
+       WHERE t.project_id = $1`, [id]);
+        const taskStats = tasksResult.rows[0] || { total_tasks: 0, completed_tasks: 0 };
+        const totalTasks = parseInt(taskStats.total_tasks, 10) || 0;
+        const completedTasks = parseInt(taskStats.completed_tasks, 10) || 0;
+        // If there are tasks, require all of them to be completed
+        if (totalTasks > 0 && completedTasks < totalTasks) {
+            return res.status(400).json({
+                error: 'No puedes finalizar el proyecto porque aún hay tareas abiertas',
+                details: {
+                    total_tasks: totalTasks,
+                    completed_tasks: completedTasks,
+                },
+            });
+        }
+        // 3) Mark project as completed
+        const updateResult = await query(`UPDATE public.projects
+       SET status = 'completed',
+           updated_at = NOW(),
+           completed_at = NOW()
+       WHERE id = $1
+       RETURNING *`, [id]);
+        res.json(updateResult.rows[0]);
+    }
+    catch (error) {
+        console.error('Complete project error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

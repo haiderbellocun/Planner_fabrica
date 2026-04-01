@@ -50,7 +50,7 @@ export const calcularTiempo = async (req, res) => {
             return res.status(400).json({ error: 'material_type_id and cargo are required' });
         }
         // Find matching tiempos - exact match first, then closest
-        let result = await query(`SELECT te.*, mt.name as material_type_name
+        const result = await query(`SELECT te.*, mt.name as material_type_name
        FROM public.tiempos_estimados te
        LEFT JOIN public.material_types mt ON mt.id = te.material_type_id
        WHERE te.material_type_id = $1 AND LOWER(te.cargo) = LOWER($2)

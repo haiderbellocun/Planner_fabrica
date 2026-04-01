@@ -63,53 +63,8 @@ export const login = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-export const register = async (req, res) => {
-    try {
-        const { email, password, full_name } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        // Check if user already exists
-        const existingUser = await query('SELECT id FROM public.users WHERE email = $1', [email]);
-        if (existingUser.rows.length > 0) {
-            return res.status(400).json({ error: 'Email already registered' });
-        }
-        // Hash password
-        const password_hash = await bcrypt.hash(password, 10);
-        // Insert user
-        const result = await query(`INSERT INTO public.users (email, password_hash, full_name, email_verified, is_active)
-       VALUES ($1, $2, $3, true, true)
-       RETURNING id, email, full_name, avatar_url`, [email, password_hash, full_name || email.split('@')[0]]);
-        const user = result.rows[0];
-        // Get profile ID (created automatically by trigger)
-        const profileResult = await query('SELECT id FROM public.profiles WHERE user_id = $1', [user.id]);
-        const profileId = profileResult.rows[0]?.id;
-        if (!profileId) {
-            return res.status(500).json({ error: 'Profile creation failed' });
-        }
-        // Generate JWT token with profileId (user role will be 'user' by default)
-        const token = jwt.sign({
-            id: user.id,
-            profileId: profileId,
-            email: user.email,
-            role: 'user',
-        }, secret, signOptions);
-        res.status(201).json({
-            user: {
-                id: user.id,
-                profileId: profileId,
-                email: user.email,
-                full_name: user.full_name,
-                avatar_url: user.avatar_url,
-                role: 'user',
-            },
-            token,
-        });
-    }
-    catch (error) {
-        console.error('Register error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+export const register = async (_req, res) => {
+    res.status(403).json({ error: 'Registro deshabilitado. Los usuarios son creados por un administrador.' });
 };
 export const getCurrentUser = async (req, res) => {
     try {
@@ -148,4 +103,39 @@ export const getCurrentUser = async (req, res) => {
 export const logout = async (req, res) => {
     // With JWT, logout is handled client-side by removing the token
     res.json({ message: 'Logged out successfully' });
+};
+export const googleCallback = async (googleProfile, done) => {
+    try {
+        const email = googleProfile.emails?.[0]?.value;
+        if (!email)
+            return done(new Error('NO_EMAIL'));
+        const userResult = await query('SELECT id, email, full_name, avatar_url, is_active FROM public.users WHERE email = $1', [email]);
+        if (userResult.rows.length === 0) {
+            return done(new Error('USER_NOT_FOUND'));
+        }
+        const user = userResult.rows[0];
+        if (!user.is_active)
+            return done(new Error('ACCOUNT_DISABLED'));
+        const profileResult = await query(`SELECT p.id AS profile_id, ur.role
+       FROM public.profiles p
+       LEFT JOIN public.user_roles ur ON ur.user_id = p.id
+       WHERE p.user_id = $1
+       LIMIT 1`, [user.id]);
+        const profileId = profileResult.rows[0]?.profile_id;
+        const role = profileResult.rows[0]?.role || 'user';
+        if (!profileId)
+            return done(new Error('NO_PROFILE'));
+        await query('UPDATE public.users SET last_sign_in_at = NOW() WHERE id = $1', [user.id]);
+        if (!user.avatar_url && googleProfile.photos?.[0]?.value) {
+            await query('UPDATE public.users SET avatar_url = $1 WHERE id = $2', [
+                googleProfile.photos[0].value,
+                user.id,
+            ]);
+        }
+        const token = jwt.sign({ id: user.id, profileId, email: user.email, role }, secret, signOptions);
+        done(null, { token });
+    }
+    catch (error) {
+        done(error);
+    }
 };

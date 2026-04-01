@@ -105,3 +105,16 @@ export const canCreateProjectMiddleware = (req, res, next) => {
     }
     next();
 };
+/**
+ * Middleware to restrict report endpoints to admin and project_leader only.
+ */
+export const reportsAccessMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const role = req.user.role;
+    if (role !== 'admin' && role !== 'project_leader') {
+        return res.status(403).json({ error: 'Solo administradores y líderes de proyecto pueden ver reportes' });
+    }
+    next();
+};

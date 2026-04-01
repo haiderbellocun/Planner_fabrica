@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Projects from "./pages/Projects";
@@ -33,6 +34,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
             <Route path="/projects" element={<AppLayout><Projects /></AppLayout>} />

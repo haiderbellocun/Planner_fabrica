@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
+import passport from 'passport';
 import authRoutes from './routes/auth.js';
 import projectsRoutes from './routes/projects.js';
 import tasksRoutes, { projectTasksRouter } from './routes/tasks.js';
+import chatRoutes from './routes/chat.js';
 import taskStatusesRoutes from './routes/taskStatuses.js';
 import profilesRoutes from './routes/profiles.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -17,7 +20,9 @@ import materialAssigneesRoutes from './routes/materialAssignees.js';
 import tiemposRoutes from './routes/tiempos.js';
 import reportsRoutes from './routes/reports.js';
 import leadersRoutes from './routes/leaders.js';
+import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
+import profileRoutes from './routes/profile.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 const app = express();
@@ -25,14 +30,47 @@ const PORT = env.PORT;
 // Health checks first (no middleware): GET /healthz, GET /readyz — must exist before any catch-all
 app.use(healthRoutes);
 // Middleware
+// Parse CORS_ORIGIN: supports comma-separated list or '*'
+const rawOrigin = env.CORS_ORIGIN.trim();
+const corsOrigin = rawOrigin === '*'
+    ? true // allow any — bracket avoids credentials conflict
+    : rawOrigin.includes(',')
+        ? rawOrigin.split(',').map(o => o.trim())
+        : rawOrigin;
 app.use(cors({
-    origin: env.CORS_ORIGIN,
-    credentials: true,
+    origin: corsOrigin,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: false, // JWT in Authorization header — no cookies needed
 }));
-app.use(express.json());
+// Handle OPTIONS preflight explicitly for all routes
+app.options('*', cors({ origin: corsOrigin, credentials: false }));
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
+// --- Rate limiting ---
+// 1) Chat: máximo 20 mensajes/hora por IP
+const chatLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Has superado el límite de mensajes del chat por hora.' },
+});
+// 2) API general: 100 peticiones/minuto por IP
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 // Serve static files (avatars)
-app.use('/avatars', express.static(path.join(process.cwd(), '..', 'public', 'avatars')));
+// In Docker (production) WORKDIR=/app so avatars are at /app/public/avatars.
+// In local dev the process runs from server/ so we go one level up.
+const avatarsPath = env.NODE_ENV === 'production'
+    ? path.join(process.cwd(), 'public', 'avatars')
+    : path.join(process.cwd(), '..', 'public', 'avatars');
+app.use('/avatars', express.static(avatarsPath));
 // Request logging middleware (dev only)
 app.use((req, res, next) => {
     if (env.NODE_ENV !== 'production') {
@@ -61,8 +99,11 @@ app.use('/api', temaAssigneesRoutes);
 app.use('/api/my-tasks', myTasksRoutes);
 app.use('/api', materialAssigneesRoutes);
 app.use('/api/tiempos-estimados', tiemposRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/leaders', leadersRoutes);
+app.use('/api/reports', apiLimiter, reportsRoutes);
+app.use('/api/leaders', apiLimiter, leadersRoutes);
+app.use('/api/chat', chatLimiter, chatRoutes);
+app.use('/api/admin', apiLimiter, adminUsersRoutes);
+app.use('/api/profile', profileRoutes);
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
