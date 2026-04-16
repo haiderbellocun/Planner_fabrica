@@ -24,15 +24,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAsignaturasByPrograma } from '@/hooks/useAsignaturas';
 import { useProgramas } from '@/hooks/useProgramas';
 import { useTemasWithMateriales } from '@/hooks/useTemas';
+import { useEpics } from '@/hooks/useEpics';
 import { Loader2 } from 'lucide-react';
 
 interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  tipoPrograma?: string | null;
 }
 
-export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
@@ -40,13 +42,16 @@ export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDi
   const [dueDate, setDueDate] = useState('');
   const [programaId, setProgramaId] = useState<string>('');
   const [asignaturaId, setAsignaturaId] = useState<string>('');
+  const [epicId, setEpicId] = useState<string>('');
 
   const { user } = useAuth();
   const { data: profiles = [], isLoading: profilesLoading, error: profilesError } = useProfiles();
   const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
   const { data: asignaturas = [], isLoading: asignaturasLoading } = useAsignaturasByPrograma(programaId || undefined);
   const { data: temasWithMateriales = [], isLoading: temasLoading } = useTemasWithMateriales(asignaturaId || undefined);
+  const { data: epics = [] } = useEpics(projectId);
   const createTask = useCreateTask();
+  const isDesarrolloProject = tipoPrograma === 'desarrollo';
 
   // Only admin and project_leader can assign tasks
   const canAssignTasks = user?.role === 'admin' || user?.role === 'project_leader';
@@ -62,6 +67,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDi
       assignee_id: canAssignTasks && assigneeId ? assigneeId : undefined,
       due_date: dueDate || undefined,
       asignatura_id: asignaturaId || undefined,
+      epic_id: isDesarrolloProject && epicId ? epicId : undefined,
     });
 
     // Reset form
@@ -72,6 +78,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDi
     setDueDate('');
     setProgramaId('');
     setAsignaturaId('');
+    setEpicId('');
     onOpenChange(false);
   };
 
@@ -241,6 +248,34 @@ export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDi
                       No hay temas con materiales en esta asignatura
                     </div>
                   )}
+                </div>
+              )}
+
+              {isDesarrolloProject && (
+                <div className="space-y-2">
+                  <Label htmlFor="epic">Épica (opcional)</Label>
+                  <Select
+                    value={epicId || 'none'}
+                    onValueChange={(v) => setEpicId(v === 'none' ? '' : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar épica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin épica</SelectItem>
+                      {epics.map((epic) => (
+                        <SelectItem key={epic.id} value={epic.id}>
+                          <span className="inline-flex items-center gap-2">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: epic.color }}
+                            />
+                            {epic.title}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>

@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProject, useCompleteProject } from '@/hooks/useProjects';
+import { useProject, useCompleteProject, useDeleteProject } from '@/hooks/useProjects';
 import { useTasks, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
+import { useEpics } from '@/hooks/useEpics';
+import { Epic } from '@/hooks/useEpics';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { ProgramaCardComplete } from '@/components/programas/ProgramaCardComplete';
 import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgramaDialog';
+import { EpicsPanel } from '@/components/epics/EpicsPanel';
+import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Pencil, Trash2 } from 'lucide-react';
+import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -44,31 +48,26 @@ const priorityConfig = {
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId);
   const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
-
-  if (import.meta.env.DEV) {
-    console.log('📊 ProjectDetail render:', {
-      projectId,
-      tasksCount: tasks.length,
-      tasksLoading,
-      userEmail: user?.email,
-      tasks: tasks.map(t => ({ title: t.title, status: t.status.name })),
-    });
-  }
+  const { data: epics = [] } = useEpics(projectId);
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
+  const [epicDialogOpen, setEpicDialogOpen] = useState(false);
+  const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
 
   const deletePrograma = useDeletePrograma(projectId || '');
   const completeProject = useCompleteProject();
+  const deleteProject = useDeleteProject();
 
   // Check if user can manage asignaturas (admin or project leader)
   const canManageAsignaturas =
@@ -78,6 +77,14 @@ export default function ProjectDetailPage() {
     );
 
   const canCompleteProject =
+    user?.role === 'admin' ||
+    project?.members?.some(
+      (member) => member.user_id === user?.profileId && member.role === 'leader'
+    );
+
+  const isDesarrolloProject = project?.tipo_programa === 'desarrollo';
+
+  const canManageEpics =
     user?.role === 'admin' ||
     project?.members?.some(
       (member) => member.user_id === user?.profileId && member.role === 'leader'
@@ -190,6 +197,23 @@ export default function ProjectDetailPage() {
           <Button variant="outline" size="icon">
             <Settings className="h-4 w-4" />
           </Button>
+          {user?.role === 'admin' && projectId && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              disabled={deleteProject.isPending}
+              onClick={() => {
+                if (!confirm(`¿Eliminar el proyecto "${project.name}"? Se eliminarán todas sus tareas, épicas y programas. Esta acción no se puede deshacer.`)) return;
+                deleteProject.mutate(projectId, {
+                  onSuccess: () => navigate('/projects'),
+                });
+              }}
+              title="Eliminar proyecto"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
           {project.status !== 'completed' && (
             <Button onClick={() => setCreateTaskOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -225,11 +249,14 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
             <TabsTrigger value="programas">Programas ({programas.length})</TabsTrigger>
+          )}
+          {isDesarrolloProject && (
+            <TabsTrigger value="epics">Épicas ({epics.length})</TabsTrigger>
           )}
         </TabsList>
 
@@ -379,6 +406,17 @@ export default function ProjectDetailPage() {
             </>
           )}
         </TabsContent>
+
+        {isDesarrolloProject && (
+          <TabsContent value="epics" className="space-y-4">
+            <EpicsPanel
+              projectId={projectId!}
+              canManage={canManageEpics ?? false}
+              tasks={tasks}
+              onTaskClick={handleTaskClick}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Dialogs */}
@@ -386,6 +424,7 @@ export default function ProjectDetailPage() {
         open={createTaskOpen}
         onOpenChange={setCreateTaskOpen}
         projectId={projectId!}
+        tipoPrograma={project.tipo_programa}
       />
 
       <TaskDetailSheet
@@ -402,6 +441,16 @@ export default function ProjectDetailPage() {
         onOpenChange={(open) => {
           setProgramaDialogOpen(open);
           if (!open) setSelectedPrograma(null);
+        }}
+      />
+
+      <CreateEpicDialog
+        projectId={projectId!}
+        epic={selectedEpic}
+        open={epicDialogOpen}
+        onOpenChange={(open) => {
+          setEpicDialogOpen(open);
+          if (!open) setSelectedEpic(null);
         }}
       />
     </div>

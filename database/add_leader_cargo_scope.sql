@@ -53,3 +53,4 @@ ON CONFLICT (leader_profile_id, cargo) DO NOTHING;
 COMMENT ON TABLE public.leader_cargo_scope IS 'Cargos (job titles) that each project_leader can see in Foco del equipo';
 
 COMMIT;
+

@@ -61,7 +61,7 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ProjectCategory = 'academico' | 'marketing' | 'otros';
+type ProjectCategory = 'academico' | 'marketing' | 'otros' | 'desarrollo';
 type WizardStep = 'category' | 'form';
 
 export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardProps) {
@@ -154,7 +154,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     }
 
     if (!category) {
-      toast.error('Selecciona el tipo de proyecto (Académico, Marketing u Otros).');
+      toast.error('Selecciona el tipo de proyecto (Académico, Marketing, Desarrollo u Otros).');
       return;
     }
 
@@ -181,25 +181,29 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     } else if (category === 'academico') {
       const extra = '\n[Proyecto Académico]';
       finalDescription = `${finalDescription}${extra}`;
+    } else if (category === 'desarrollo') {
+      const extra = '\n[Proyecto de Desarrollo]';
+      finalDescription = `${finalDescription}${extra}`;
     }
 
     setIsPending(true);
 
     try {
       // Crear proyecto
-      const projectResponse = await api.post('/api/projects', {
+      const projectResponse = await api.post<{ id: string }>('/api/projects', {
         name: name.trim(),
         key: key.trim(),
         description: finalDescription || null,
         end_date: endDate,
         category: category || null,
+        tipo_programa: category === 'desarrollo' ? 'desarrollo' : null,
       });
 
       const projectId = projectResponse.id;
 
       // Crear programas y su contenido
       for (const programa of programas) {
-        const programaResponse = await api.post(`/api/projects/${projectId}/programas`, {
+        const programaResponse = await api.post<{ id: string }>(`/api/projects/${projectId}/programas`, {
           name: programa.name,
           code: programa.code || null,
           description: programa.description || null,
@@ -210,7 +214,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
 
         // Crear asignaturas del programa
         for (const asignatura of programa.asignaturas) {
-          const asignaturaResponse = await api.post(`/api/programas/${programaId}/asignaturas`, {
+          const asignaturaResponse = await api.post<{ id: string }>(`/api/programas/${programaId}/asignaturas`, {
             name: asignatura.name,
             code: asignatura.code || null,
             description: asignatura.description || null,
@@ -222,7 +226,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
 
           // Crear temas de la asignatura
           for (const tema of asignatura.temas) {
-            const temaResponse = await api.post(`/api/asignaturas/${asignaturaId}/temas`, {
+            const temaResponse = await api.post<{ id: string }>(`/api/asignaturas/${asignaturaId}/temas`, {
               title: tema.title,
               description: tema.description || null,
             });
@@ -388,7 +392,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card
                 className={`cursor-pointer transition shadow-sm ${
                   category === 'academico' ? 'border-primary shadow-md' : ''
@@ -425,6 +429,23 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
 
               <Card
                 className={`cursor-pointer transition shadow-sm ${
+                  category === 'desarrollo' ? 'border-primary shadow-md' : ''
+                }`}
+                onClick={() => {
+                  setCategory('desarrollo');
+                  setStep('form');
+                }}
+              >
+                <CardHeader>
+                  <CardTitle className="text-base">Desarrollo</CardTitle>
+                  <CardDescription>
+                    Organiza tareas con épicas al estilo Jira.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card
+                className={`cursor-pointer transition shadow-sm ${
                   category === 'otros' ? 'border-primary shadow-md' : ''
                 }`}
                 onClick={() => {
@@ -448,6 +469,8 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
               <DialogDescription>
                 {category === 'academico'
                   ? 'Configura la estructura del proyecto: programas, asignaturas, temas y materiales.'
+                  : category === 'desarrollo'
+                  ? 'Configura el proyecto de desarrollo. Podrás crear épicas para organizar las tareas.'
                   : 'Configura la información del proyecto.'}
               </DialogDescription>
             </DialogHeader>

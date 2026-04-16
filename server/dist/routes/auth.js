@@ -44,9 +44,9 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
                         : msg === 'NO_PROFILE'
                             ? 'not_found'
                             : 'error';
-                return res.redirect(`${frontendOrigin}/#/auth?google_error=${errorCode}`);
+                return res.redirect(`${frontendOrigin}#/auth?google_error=${errorCode}`);
             }
-            return res.redirect(`${frontendOrigin}/#/auth/google/success?token=${encodeURIComponent(user.token)}`);
+            return res.redirect(`${frontendOrigin}#/auth/google/success?token=${encodeURIComponent(user.token)}`);
         })(req, res, next);
     });
 }

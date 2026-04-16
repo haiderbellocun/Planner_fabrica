@@ -86,6 +86,8 @@ export function useCreateTask() {
       assignee_id?: string;
       due_date?: string;
       tags?: string[];
+      asignatura_id?: string;
+      epic_id?: string;
     }) => {
       const task = await api.post<Task>(`/api/projects/${data.project_id}/tasks`, data);
       return task;

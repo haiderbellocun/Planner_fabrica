@@ -4,7 +4,7 @@ export type AppRole = 'admin' | 'project_leader' | 'user';
 export type ProjectRole = 'leader' | 'member';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type NotificationType = 'task_assigned' | 'project_member_added' | 'task_status_changed' | 'task_commented' | 'task_updated';
-export type TipoPrograma = 'profesional' | 'diplomado' | 'maestria' | 'doctorado';
+export type TipoPrograma = 'profesional' | 'diplomado' | 'maestria' | 'doctorado' | 'desarrollo';
 
 export interface Profile {
   id: string;
@@ -64,9 +64,25 @@ export interface ProjectMember {
   joined_at: string;
 }
 
+export interface Epic {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  color: string;
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  start_date: string | null;
+  end_date: string | null;
+  display_order: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   project_id: string;
+  epic_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;

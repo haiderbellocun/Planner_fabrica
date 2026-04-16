@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { TaskWithDetails, useTaskStatuses, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TaskStatus } from '@/types/database';
@@ -17,10 +17,20 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
   const { user } = useAuth();
   const { data: statuses = [], isLoading: statusesLoading } = useTaskStatuses();
   const updateTaskStatus = useUpdateTaskStatus();
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const topScrollContentRef = useRef<HTMLDivElement | null>(null);
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const syncingScroll = useRef(false);
 
-  const getTasksByStatus = (statusId: string) => {
-    return tasks.filter((task) => task.status_id === statusId);
-  };
+  const tasksByStatus = useMemo(() => {
+    const map = new Map<string, TaskWithDetails[]>();
+    for (const task of tasks) {
+      const list = map.get(task.status_id);
+      if (list) list.push(task);
+      else map.set(task.status_id, [task]);
+    }
+    return map;
+  }, [tasks]);
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -34,6 +44,49 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
     updateTaskStatus.mutate({ taskId: draggableId, statusId: newStatusId });
   };
 
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const topContent = topScrollContentRef.current;
+    const main = mainScrollRef.current;
+    if (!top || !topContent || !main) return;
+
+    const setTopContentWidth = () => {
+      topContent.style.width = `${main.scrollWidth}px`;
+    };
+
+    setTopContentWidth();
+
+    const ro = new ResizeObserver(() => {
+      setTopContentWidth();
+    });
+
+    ro.observe(main);
+    if (main.firstElementChild) ro.observe(main.firstElementChild);
+
+    const onTopScroll = () => {
+      if (syncingScroll.current) return;
+      syncingScroll.current = true;
+      main.scrollLeft = top.scrollLeft;
+      syncingScroll.current = false;
+    };
+
+    const onMainScroll = () => {
+      if (syncingScroll.current) return;
+      syncingScroll.current = true;
+      top.scrollLeft = main.scrollLeft;
+      syncingScroll.current = false;
+    };
+
+    top.addEventListener('scroll', onTopScroll, { passive: true });
+    main.addEventListener('scroll', onMainScroll, { passive: true });
+
+    return () => {
+      top.removeEventListener('scroll', onTopScroll);
+      main.removeEventListener('scroll', onMainScroll);
+      ro.disconnect();
+    };
+  }, [statuses.length]);
+
   if (statusesLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -44,17 +97,30 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] -mx-8 px-8 items-stretch">
-        {statuses.map((status) => (
-          <KanbanColumn
-            key={status.id}
-            status={status}
-            tasks={getTasksByStatus(status.id)}
-            projectKey={projectKey}
-            onTaskClick={onTaskClick}
-            userRole={user?.role}
-          />
-        ))}
+      <div className="-mx-8 px-8">
+        <div
+          ref={topScrollRef}
+          className="overflow-x-auto overflow-y-hidden h-3 mb-2"
+          aria-hidden="true"
+        >
+          <div ref={topScrollContentRef} className="h-3" />
+        </div>
+
+        <div
+          ref={mainScrollRef}
+          className="flex gap-4 overflow-x-auto pb-4 min-h-[500px] items-stretch"
+        >
+          {statuses.map((status) => (
+            <KanbanColumn
+              key={status.id}
+              status={status}
+              tasks={tasksByStatus.get(status.id) ?? []}
+              projectKey={projectKey}
+              onTaskClick={onTaskClick}
+              userRole={user?.role}
+            />
+          ))}
+        </div>
       </div>
     </DragDropContext>
   );

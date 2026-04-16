@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send } from 'lucide-react';
-import { useUpdateTask } from '@/hooks/useTasks';
+import { useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +59,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const { data: comments = [] } = useTaskComments(task?.id);
   const { user } = useAuth();
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
   const updateTemaAssignees = useUpdateTemaAssignees();
   const updateMaterialAssignees = useUpdateMaterialAssignees();
   const createComment = useCreateTaskComment(task?.id || '');
@@ -241,6 +242,23 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
             <Badge className={cn('text-xs', priorityInfo.className)}>
               {priorityInfo.label}
             </Badge>
+            {user?.role === 'admin' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
+                disabled={deleteTask.isPending}
+                title="Eliminar tarea"
+                onClick={() => {
+                  if (!confirm(`¿Eliminar la tarea "${taskData.title}"? Esta acción no se puede deshacer.`)) return;
+                  deleteTask.mutate({ taskId: taskData.id, projectId: taskData.project_id }, {
+                    onSuccess: () => onOpenChange(false),
+                  });
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <SheetTitle className="text-left">{taskData.title}</SheetTitle>
           <SheetDescription className="text-left">

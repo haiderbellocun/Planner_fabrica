@@ -43,6 +43,7 @@ export const listTasks = async (req, res) => {
         }
         const result = await query(`SELECT
         t.*,
+        t.epic_id,
         ts.id as status_id, ts.name as status_name, ts.color as status_color,
         ts.display_order as status_order, ts.is_completed as status_is_completed,
         assignee.id as assignee_id, assignee.full_name as assignee_name,
@@ -80,6 +81,7 @@ export const listTasks = async (req, res) => {
         const tasks = result.rows.map((row) => ({
             id: row.id,
             project_id: row.project_id,
+            epic_id: row.epic_id,
             title: row.title,
             description: row.description,
             priority: row.priority,
@@ -177,6 +179,7 @@ export const getTask = async (req, res) => {
         t.*,
         ts.id as status_id, ts.name as status_name, ts.color as status_color,
         ts.display_order as status_order, ts.is_completed as status_is_completed,
+        ep.id as epic_id_ref, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status,
         assignee.id as assignee_id, assignee.full_name as assignee_name,
         assignee.avatar_url as assignee_avatar, assignee.email as assignee_email, assignee.cargo as assignee_cargo,
         reporter.id as reporter_id, reporter.full_name as reporter_name,
@@ -188,6 +191,7 @@ export const getTask = async (req, res) => {
         prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
+       LEFT JOIN public.epics ep ON ep.id = t.epic_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
        LEFT JOIN public.profiles reporter ON reporter.id = t.reporter_id
        LEFT JOIN public.materiales_requeridos mr ON mr.id = t.material_requerido_id
@@ -203,6 +207,7 @@ export const getTask = async (req, res) => {
         const task = {
             id: row.id,
             project_id: row.project_id,
+            epic_id: row.epic_id,
             title: row.title,
             description: row.description,
             priority: row.priority,
@@ -218,6 +223,14 @@ export const getTask = async (req, res) => {
             material_requerido_id: row.material_requerido_id,
             asignatura_id: row.asignatura_id,
             parent_task_id: row.parent_task_id,
+            epic: row.epic_id_ref
+                ? {
+                    id: row.epic_id_ref,
+                    title: row.epic_title,
+                    color: row.epic_color,
+                    status: row.epic_status,
+                }
+                : null,
             status: {
                 id: row.status_id,
                 name: row.status_name,
@@ -379,7 +392,7 @@ export const getTask = async (req, res) => {
 export const createTask = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id } = req.body;
+        const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id } = req.body;
         const reporterId = req.user?.profileId;
         const userRole = req.user?.role;
         // Check permission: only admin and project_leader of THIS project can assign tasks
@@ -402,8 +415,8 @@ export const createTask = async (req, res) => {
         }
         const statusId = statusResult.rows[0].id;
         // Insert task
-        const result = await query(`INSERT INTO public.tasks (project_id, title, description, priority, status_id, assignee_id, reporter_id, due_date, tags, material_requerido_id, asignatura_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        const result = await query(`INSERT INTO public.tasks (project_id, title, description, priority, status_id, assignee_id, reporter_id, due_date, tags, material_requerido_id, asignatura_id, epic_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`, [
             projectId,
             title,
@@ -416,6 +429,7 @@ export const createTask = async (req, res) => {
             tags || [],
             material_requerido_id || null,
             asignatura_id || null,
+            epic_id || null,
         ]);
         const task = result.rows[0];
         // Create notification + email if assigned to someone else
@@ -468,7 +482,7 @@ export const createTask = async (req, res) => {
 export const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, priority, assignee_id, due_date, tags } = req.body;
+        const { title, description, priority, assignee_id, due_date, tags, epic_id } = req.body;
         const userRole = req.user?.role;
         const profileId = req.user?.profileId;
         // Check permission: only admin and project_leader of THIS project can change assignee
@@ -518,6 +532,10 @@ export const updateTask = async (req, res) => {
             updates.push(`tags = $${paramCount++}`);
             values.push(tags);
         }
+        if (epic_id !== undefined) {
+            updates.push(`epic_id = $${paramCount++}`);
+            values.push(epic_id);
+        }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields to update' });
         }
@@ -530,10 +548,41 @@ export const updateTask = async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
         const task = result.rows[0];
-        // Create notification if assignee changed
+        // Create notification + email if assignee changed
         if (assignee_id && assignee_id !== req.user?.profileId) {
             await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
          VALUES ($1, $2, $3, 'task_assigned', 'Tarea asignada', $4)`, [assignee_id, task.project_id, task.id, `Se te ha asignado la tarea: ${task.title}`]);
+            try {
+                const assigneeResult = await query(`SELECT p.full_name, u.email
+           FROM public.profiles p
+           JOIN public.users u ON u.id = p.user_id
+           WHERE p.id = $1`, [assignee_id]);
+                const projectResult = await query('SELECT name FROM public.projects WHERE id = $1', [task.project_id]);
+                const assignee = assigneeResult.rows[0];
+                const project = projectResult.rows[0];
+                if (assignee?.email) {
+                    const frontendUrl = env.FRONTEND_URL ?? '';
+                    const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
+                    await sendTaskAssignedEmail({
+                        to: assignee.email,
+                        subject: `Tarea asignada en ${project?.name ?? 'un proyecto'}`,
+                        html: [
+                            `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">`,
+                            `<h2 style="color: #0DD9D0;">Tarea asignada</h2>`,
+                            `<p>Hola <strong>${assignee.full_name ?? ''}</strong>,</p>`,
+                            `<p>Se te ha asignado una tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
+                            `<p style="font-size: 18px;"><strong>${task.title}</strong></p>`,
+                            task.due_date ? `<p>Fecha de vencimiento: <strong>${new Date(task.due_date).toLocaleDateString('es-CO')}</strong></p>` : '',
+                            taskLink ? `<p><a href="${taskLink}" style="background:#0DD9D0;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Ver mis tareas</a></p>` : '',
+                            `<p style="color:#666;font-size:12px;margin-top:24px;">Planner Fábrica - Sealab</p>`,
+                            `</div>`,
+                        ].join(''),
+                    });
+                }
+            }
+            catch (emailError) {
+                console.error('Error sending task reassignment email:', emailError);
+            }
         }
         res.json(task);
     }

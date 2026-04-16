@@ -23,6 +23,7 @@ import leadersRoutes from './routes/leaders.js';
 import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
 import profileRoutes from './routes/profile.js';
+import epicsRoutes from './routes/epics.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 const app = express();
@@ -85,6 +86,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 // Mount project tasks routes FIRST (more specific route)
 app.use('/api/projects/:projectId/tasks', projectTasksRouter);
+app.use('/api/projects/:projectId/epics', epicsRoutes);
 // Then mount other routes
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tasks', tasksRoutes);
