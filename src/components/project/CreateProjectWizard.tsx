@@ -73,6 +73,8 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
+  const [link, setLink] = useState('');
+  const [linkLabel, setLinkLabel] = useState('');
   const [endDate, setEndDate] = useState<string>('');
   const [category, setCategory] = useState<ProjectCategory | null>(null);
 
@@ -117,6 +119,8 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setName('');
     setKey('');
     setDescription('');
+    setLink('');
+    setLinkLabel('');
     setEndDate('');
     setCategory(null);
     setMarketingPiecesType('');
@@ -194,6 +198,8 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
         name: name.trim(),
         key: key.trim(),
         description: finalDescription || null,
+        link: link.trim() || null,
+        link_label: linkLabel.trim() || null,
         end_date: endDate,
         category: category || null,
         tipo_programa: category === 'desarrollo' ? 'desarrollo' : null,
@@ -554,6 +560,26 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
                   rows={4}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Enlace <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nombre (ej: Drive)"
+                    value={linkLabel}
+                    onChange={(e) => setLinkLabel(e.target.value)}
+                    className="w-40"
+                  />
+                  <Input
+                    type="url"
+                    placeholder="https://..."
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
               {/* Información sobre el tipo de proyecto + campos adicionales si aplica */}
               {category === 'academico' && (
                 <p className="text-xs text-muted-foreground pt-1">

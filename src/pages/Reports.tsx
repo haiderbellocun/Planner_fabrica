@@ -894,6 +894,7 @@ function TabEquipo() {
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cargoFilter, setCargoFilter] = useState<string>('all');
   const { data: userReport, isLoading: loadingUserReport } = useUserMiniReport(selectedUserId);
 
   if (isLoading || loadingCapacity) return <LoadingState />;
@@ -1065,9 +1066,49 @@ function TabEquipo() {
             </CardContent>
           </Card>
 
+          {/* Cargo filter */}
+          {(() => {
+            const cargos = Array.from(
+              new Set(capacity.members.map(m => m.cargo || 'Sin cargo'))
+            ).sort();
+            return (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs text-muted-foreground font-medium">Filtrar por cargo:</span>
+                <button
+                  onClick={() => setCargoFilter('all')}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    cargoFilter === 'all'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background border-border hover:bg-muted'
+                  }`}
+                >
+                  Todos ({capacity.members.length})
+                </button>
+                {cargos.map(cargo => {
+                  const count = capacity.members.filter(m => (m.cargo || 'Sin cargo') === cargo).length;
+                  return (
+                    <button
+                      key={cargo}
+                      onClick={() => setCargoFilter(cargoFilter === cargo ? 'all' : cargo)}
+                      className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                        cargoFilter === cargo
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background border-border hover:bg-muted'
+                      }`}
+                    >
+                      {cargo} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Capacity cards per person */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-            {capacity.members.map(member => {
+            {capacity.members.filter(m =>
+              cargoFilter === 'all' || (m.cargo || 'Sin cargo') === cargoFilter
+            ).map(member => {
               const isOverloaded = member.utilization_pct > 100;
               const barPct = Math.min(member.utilization_pct, 200) / 2; // Scale: 200% = full bar
 
@@ -1358,7 +1399,7 @@ function TabEquipo() {
               {userReport?.user.full_name || 'Detalle de colaborador'}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Resumen de carga, riesgos y tareas que requieren atención.
+              Resumen de carga, riesgos y tareas en curso.
             </DialogDescription>
           </DialogHeader>
 
@@ -1381,7 +1422,7 @@ function TabEquipo() {
                 {/* Alertas clave */}
                 <AlertasClave report={userReport} />
 
-                {/* Tareas que requieren atención */}
+                {/* Tareas en curso */}
                 <TareasCriticasList report={userReport} />
 
                 {/* Capacidad y planificación */}
@@ -1651,9 +1692,9 @@ function TareasCriticasList({ report }: { report: UserMiniReport }) {
   return (
     <Card className={CARD_CLASS}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Tareas que requieren atención</CardTitle>
+        <CardTitle className="text-sm">Tareas en curso</CardTitle>
         <CardDescription className="text-xs">
-          Hasta 5 tareas ordenadas por urgencia (vencidas, de hoy, alta prioridad, sin estimación).
+          Tareas actualmente en proceso, en revisión o en pausa.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">

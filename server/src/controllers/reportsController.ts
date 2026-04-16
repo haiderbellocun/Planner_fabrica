@@ -308,8 +308,8 @@ export const getTeamPerformance = async (req: AuthRequest, res: Response) => {
         WHERE tsh.duration_seconds IS NOT NULL
         GROUP BY t2.assignee_id
       ) actual ON actual.assignee_id = p.id
+      WHERE p.cargo IS NOT NULL
       GROUP BY p.id, p.full_name, p.cargo, p.avatar_url, p.email, actual.total_actual_hours
-      HAVING COUNT(DISTINCT t.id) > 0 OR COUNT(DISTINCT tma.id) > 0
       ORDER BY COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) DESC
     `);
 
@@ -513,8 +513,9 @@ export const getTeamCapacity = async (req: AuthRequest, res: Response) => {
         COALESCE(SUM(uth.horas_estimadas) FILTER (WHERE NOT uth.is_completed), 0) as pending_horas,
         COALESCE(SUM(uth.horas_estimadas) FILTER (WHERE uth.is_completed), 0) as completed_horas
       FROM public.profiles p
-      JOIN user_task_hours uth ON uth.assignee_id = p.id
-      GROUP BY p.id
+      LEFT JOIN user_task_hours uth ON uth.assignee_id = p.id
+      WHERE p.cargo IS NOT NULL
+      GROUP BY p.id, p.full_name, p.cargo, p.avatar_url, p.weekly_hours_capacity
       ORDER BY COALESCE(SUM(uth.horas_estimadas) FILTER (WHERE NOT uth.is_completed), 0) DESC
     `);
 
@@ -741,17 +742,18 @@ export const getUserMiniReport = async (req: AuthRequest, res: Response) => {
           project_name,
           project_key
         FROM user_tasks
+        WHERE NOT is_completed
+          AND status_name IN ('En proceso', 'En pausa', 'En revisión')
         ORDER BY
-          CASE
-            WHEN NOT is_completed AND due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 1
-            WHEN NOT is_completed AND due_date = CURRENT_DATE THEN 2
-            WHEN NOT is_completed AND priority IN ('high', 'urgent') THEN 3
-            WHEN NOT is_completed AND horas_estimadas IS NULL THEN 4
-            ELSE 5
+          CASE status_name
+            WHEN 'En proceso' THEN 1
+            WHEN 'En revisión' THEN 2
+            WHEN 'En pausa' THEN 3
+            ELSE 4
           END,
           COALESCE(due_date, CURRENT_DATE + INTERVAL '365 days'),
           created_at DESC
-        LIMIT 5
+        LIMIT 10
       `,
       [userId],
     );
@@ -1290,8 +1292,14 @@ export const getIndividualPerformance = async (req: AuthRequest, res: Response) 
         agg.puntualidad_pct
       FROM public.profiles p
       INNER JOIN (
-        SELECT DISTINCT user_id AS profile_id FROM public.user_roles
-      ) ur ON ur.profile_id = p.id
+        SELECT DISTINCT assignee_id AS profile_id
+        FROM public.task_material_assignees
+        WHERE assignee_id IS NOT NULL
+        UNION
+        SELECT DISTINCT assignee_id AS profile_id
+        FROM public.tasks
+        WHERE assignee_id IS NOT NULL
+      ) ever_active ON ever_active.profile_id = p.id
       LEFT JOIN (
         SELECT
           at1.profile_id,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProject, useCompleteProject, useDeleteProject } from '@/hooks/useProjects';
+import { useProject, useCompleteProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
 import { useTasks, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { useEpics } from '@/hooks/useEpics';
@@ -34,7 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,11 @@ export default function ProjectDetailPage() {
   const deletePrograma = useDeletePrograma(projectId || '');
   const completeProject = useCompleteProject();
   const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
+
+  const [editingLink, setEditingLink] = useState(false);
+  const [linkValue, setLinkValue] = useState('');
+  const [linkLabelValue, setLinkLabelValue] = useState('');
 
   // Check if user can manage asignaturas (admin or project leader)
   const canManageAsignaturas =
@@ -179,6 +185,89 @@ export default function ProjectDetailPage() {
             )}
           </div>
           <p className="page-description">{project.description || 'Sin descripción'}</p>
+
+          {/* Link del proyecto */}
+          <div className="flex items-center gap-2 mt-1">
+            {editingLink ? (
+              <>
+                <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Input
+                  className="h-7 text-sm w-36"
+                  placeholder="Nombre (ej: Drive)"
+                  value={linkLabelValue}
+                  onChange={(e) => setLinkLabelValue(e.target.value)}
+                />
+                <Input
+                  className="h-7 text-sm w-64"
+                  placeholder="https://..."
+                  value={linkValue}
+                  onChange={(e) => setLinkValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      updateProject.mutate({ id: projectId!, link: linkValue.trim() || null, link_label: linkLabelValue.trim() || null } as any);
+                      setEditingLink(false);
+                    }
+                    if (e.key === 'Escape') setEditingLink(false);
+                  }}
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-emerald-600"
+                  onClick={() => {
+                    updateProject.mutate({ id: projectId!, link: linkValue.trim() || null, link_label: linkLabelValue.trim() || null } as any);
+                    setEditingLink(false);
+                  }}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => setEditingLink(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            ) : project.link ? (
+              <>
+                <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm text-muted-foreground font-medium">
+                  {project.link_label || 'Enlace'}:
+                </span>
+                <a
+                  href={project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline truncate max-w-xs"
+                >
+                  {project.link}
+                </a>
+                {canManageAsignaturas && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    onClick={() => { setLinkValue(project.link || ''); setLinkLabelValue(project.link_label || ''); setEditingLink(true); }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
+              </>
+            ) : canManageAsignaturas ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-muted-foreground text-xs px-2"
+                onClick={() => { setLinkValue(''); setLinkLabelValue(''); setEditingLink(true); }}
+              >
+                <Link2 className="h-3 w-3 mr-1" />
+                Agregar enlace
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex -space-x-2 mr-2">

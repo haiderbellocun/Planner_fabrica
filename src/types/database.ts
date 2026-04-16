@@ -46,6 +46,8 @@ export interface Project {
   end_date: string | null;
   owner_id: string | null;
   tipo_programa: TipoPrograma | null;
+  link: string | null;
+  link_label: string | null;
   created_at: string;
   updated_at: string;
   completed_at?: string | null;
