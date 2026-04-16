@@ -83,7 +83,7 @@ export function AppSidebar() {
         <SidebarHeader className="border-b border-white/20 px-3 py-4">
           <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <img src="./logo.png" alt="FC" className="h-8 w-8 object-contain" />
+            <img src="./logo.png?v=2" alt="FC" className="h-8 w-8 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
