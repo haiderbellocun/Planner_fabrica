@@ -24,6 +24,7 @@ import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
 import profileRoutes from './routes/profile.js';
 import epicsRoutes from './routes/epics.js';
+import searchRoutes from './routes/search.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 
@@ -119,6 +120,7 @@ app.use('/api/leaders', apiLimiter, leadersRoutes);
 app.use('/api/chat', chatLimiter, chatRoutes);
 app.use('/api/admin', apiLimiter, adminUsersRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/search', apiLimiter, searchRoutes);
 
 // 404 handler
 app.use((req, res) => {

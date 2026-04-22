@@ -65,6 +65,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const createComment = useCreateTaskComment(task?.id || '');
   const deleteComment = useDeleteTaskComment(task?.id || '');
   const [newComment, setNewComment] = useState('');
+  const [editingDueDate, setEditingDueDate] = useState(false);
   const { data: tiempoTarea } = useTiempoTarea(task?.id);
 
   // Use full task data if available, otherwise fall back to prop
@@ -133,6 +134,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
 
   // Check if user can change assignee: admin or project leader of this specific project
   const canChangeAssignee = user?.role === 'admin' ||
+    user?.role === 'project_leader' ||
     project?.members?.some(
       (member) => member.user_id === user?.profileId && member.role === 'leader'
     );
@@ -325,18 +327,38 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
 
           {/* Dates */}
           <div className="flex flex-wrap gap-4 text-sm">
-            {taskData.due_date && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              {user?.role === 'admin' && editingDueDate ? (
+                <input
+                  type="date"
+                  className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground"
+                  defaultValue={taskData.due_date ? taskData.due_date.slice(0, 10) : ''}
+                  autoFocus
+                  onBlur={(e) => {
+                    setEditingDueDate(false);
+                    if (e.target.value) {
+                      updateTask.mutate({ id: taskData.id, projectId: taskData.project_id, due_date: e.target.value });
+                    }
+                  }}
+                  onKeyDown={(e) => e.key === 'Escape' && setEditingDueDate(false)}
+                />
+              ) : (
+                <span
+                  className={user?.role === 'admin' ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
+                  onClick={() => user?.role === 'admin' && setEditingDueDate(true)}
+                  title={user?.role === 'admin' ? 'Clic para editar fecha' : undefined}
+                >
                   Vence:{' '}
-                  {(() => {
-                    const d = parseDateOnly(taskData.due_date);
-                    return d ? format(d, 'd MMM yyyy', { locale: es }) : null;
-                  })()}
+                  {taskData.due_date
+                    ? (() => {
+                        const d = parseDateOnly(taskData.due_date);
+                        return d ? format(d, 'd MMM yyyy', { locale: es }) : 'Sin fecha';
+                      })()
+                    : 'Sin fecha'}
                 </span>
-              </div>
-            )}
+              )}
+            </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>

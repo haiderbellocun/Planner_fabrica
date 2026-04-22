@@ -18,8 +18,8 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
 
     let result;
 
-    if (userRole === 'admin') {
-      // Admins see ALL projects
+    if (userRole === 'admin' || userRole === 'project_leader') {
+      // Admins and project leaders see ALL projects
       result = await query(
         `SELECT
           p.*,
@@ -30,21 +30,6 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
          LEFT JOIN public.tasks t ON t.project_id = p.id
          GROUP BY p.id
          ORDER BY p.created_at DESC`
-      );
-    } else if (userRole === 'project_leader') {
-      // Project leaders see projects where they are members
-      result = await query(
-        `SELECT
-          p.*,
-          COUNT(DISTINCT pm.id) as members_count,
-          COUNT(DISTINCT t.id) as tasks_count
-         FROM public.projects p
-         JOIN public.project_members pm_user ON pm_user.project_id = p.id AND pm_user.user_id = $1
-         LEFT JOIN public.project_members pm ON pm.project_id = p.id
-         LEFT JOIN public.tasks t ON t.project_id = p.id
-         GROUP BY p.id
-         ORDER BY p.created_at DESC`,
-        [profileId]
       );
     } else {
       // Regular users see projects where they have assigned tasks

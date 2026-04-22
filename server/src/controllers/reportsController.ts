@@ -931,12 +931,20 @@ export const getProjectCategoriesSummary = async (req: AuthRequest, res: Respons
   try {
     const result = await query(`
       SELECT
-        COALESCE(NULLIF(category, ''), 'sin_categoria') AS category,
+        COALESCE(
+          NULLIF(p.category, ''),
+          CASE WHEN p.tipo_programa = 'desarrollo' THEN 'desarrollo' ELSE NULL END,
+          'sin_categoria'
+        ) AS category,
         COUNT(*) AS total_projects,
         COUNT(t.id) AS total_tasks
       FROM public.projects p
       LEFT JOIN public.tasks t ON t.project_id = p.id
-      GROUP BY COALESCE(NULLIF(category, ''), 'sin_categoria')
+      GROUP BY COALESCE(
+        NULLIF(p.category, ''),
+        CASE WHEN p.tipo_programa = 'desarrollo' THEN 'desarrollo' ELSE NULL END,
+        'sin_categoria'
+      )
       ORDER BY 1
     `);
 

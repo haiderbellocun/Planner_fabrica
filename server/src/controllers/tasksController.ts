@@ -35,7 +35,7 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
     let whereClause = 't.project_id = $1';
     const params: any[] = [projectId];
 
-    if (userRole === 'admin' || isLeader) {
+    if (userRole === 'admin' || userRole === 'project_leader' || isLeader) {
       if (env.NODE_ENV !== 'production') {
         console.log('No visibility filter (admin/leader sees all)');
       }
@@ -455,8 +455,8 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     // Check permission: only admin and project_leader of THIS project can assign tasks
     if (assignee_id) {
-      // Admins can always assign tasks
-      if (userRole !== 'admin') {
+      // Admins and project_leaders can always assign tasks
+      if (userRole !== 'admin' && userRole !== 'project_leader') {
         // Check if user is project leader for this specific project
         const leaderResult = await query(
           'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
@@ -580,8 +580,8 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
 
     // Check permission: only admin and project_leader of THIS project can change assignee
     if (assignee_id !== undefined) {
-      // Admins can always change assignee
-      if (userRole !== 'admin') {
+      // Admins and project_leaders can always change assignee
+      if (userRole !== 'admin' && userRole !== 'project_leader') {
         // Get task's project_id
         const taskResult = await query(
           'SELECT project_id FROM public.tasks WHERE id = $1',

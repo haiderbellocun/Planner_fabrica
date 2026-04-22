@@ -75,26 +75,17 @@ export default function ProjectDetailPage() {
   const [linkValue, setLinkValue] = useState('');
   const [linkLabelValue, setLinkLabelValue] = useState('');
 
-  // Check if user can manage asignaturas (admin or project leader)
-  const canManageAsignaturas =
+  const isLeader =
     user?.role === 'admin' ||
+    user?.role === 'project_leader' ||
     project?.members?.some(
       (member) => member.user_id === user?.profileId && member.role === 'leader'
     );
 
-  const canCompleteProject =
-    user?.role === 'admin' ||
-    project?.members?.some(
-      (member) => member.user_id === user?.profileId && member.role === 'leader'
-    );
-
+  const canManageAsignaturas = isLeader;
+  const canCompleteProject = isLeader;
   const isDesarrolloProject = project?.tipo_programa === 'desarrollo';
-
-  const canManageEpics =
-    user?.role === 'admin' ||
-    project?.members?.some(
-      (member) => member.user_id === user?.profileId && member.role === 'leader'
-    );
+  const canManageEpics = isLeader;
 
   const handleTaskClick = (task: TaskWithDetails) => {
     setSelectedTask(task);

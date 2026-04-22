@@ -205,6 +205,7 @@ function TabResumen() {
     if (c.category === 'academico') label = 'Académico';
     else if (c.category === 'marketing') label = 'Marketing';
     else if (c.category === 'otros') label = 'Otros';
+    else if (c.category === 'desarrollo') label = 'Desarrollo';
     return {
       ...c,
       label,
@@ -297,7 +298,7 @@ function TabResumen() {
         <Card className={CARD_CLASS}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Proyectos por tipo</CardTitle>
-            <CardDescription>Académico, Marketing y Otros</CardDescription>
+            <CardDescription>Académico, Marketing, Otros y Desarrollo</CardDescription>
           </CardHeader>
           <CardContent>
             {mappedCategories.length === 0 ? (
@@ -313,7 +314,9 @@ function TabResumen() {
                         ? CHART_COLORS.teal
                         : c.category === 'otros'
                           ? CHART_COLORS.yellow
-                          : CHART_COLORS.muted;
+                          : c.category === 'desarrollo'
+                            ? '#10b981'
+                            : CHART_COLORS.muted;
                   return (
                     <div key={c.category} className="flex flex-col items-center gap-1">
                       <div

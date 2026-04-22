@@ -31,7 +31,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
     const projectId = parentTask.project_id;
 
     // Check permission: only admin and project_leader can assign
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'project_leader') {
       const leaderResult = await query(
         'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
         [projectId, profileId]

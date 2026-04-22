@@ -18,8 +18,8 @@ export const projectMemberMiddleware = async (
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Admins have access to all projects
-    if (req.user.role === 'admin') {
+    // Admins and project leaders have access to all projects
+    if (req.user.role === 'admin' || req.user.role === 'project_leader') {
       return next();
     }
 
