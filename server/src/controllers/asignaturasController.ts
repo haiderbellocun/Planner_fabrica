@@ -158,7 +158,7 @@ export const createAsignaturaInPrograma = async (req: AuthRequest, res: Response
 export const updateAsignatura = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, code, description, display_order, semestre, tipo_asignatura } = req.body;
+    const { name, code, description, display_order, semestre, tipo_asignatura, maestro_id } = req.body;
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -187,6 +187,10 @@ export const updateAsignatura = async (req: AuthRequest, res: Response) => {
     if (tipo_asignatura !== undefined) {
       updates.push(`tipo_asignatura = $${paramCount++}`);
       values.push(tipo_asignatura);
+    }
+    if (maestro_id !== undefined) {
+      updates.push(`maestro_id = $${paramCount++}`);
+      values.push(maestro_id === '' ? null : maestro_id);
     }
 
     if (updates.length === 0) {

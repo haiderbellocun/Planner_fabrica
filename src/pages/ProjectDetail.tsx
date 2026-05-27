@@ -13,6 +13,7 @@ import { ProgramaCardComplete } from '@/components/programas/ProgramaCardComplet
 import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgramaDialog';
 import { EpicsPanel } from '@/components/epics/EpicsPanel';
 import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
+import { ChecklistTab } from '@/components/checklist/ChecklistTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -60,7 +61,7 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'checklist'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -329,12 +330,13 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'checklist')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
             <TabsTrigger value="programas">Programas ({programas.length})</TabsTrigger>
           )}
+          <TabsTrigger value="checklist">Checklist</TabsTrigger>
           {isDesarrolloProject && (
             <TabsTrigger value="epics">Épicas ({epics.length})</TabsTrigger>
           )}
@@ -485,6 +487,10 @@ export default function ProjectDetailPage() {
               </div>
             </>
           )}
+        </TabsContent>
+
+        <TabsContent value="checklist">
+          <ChecklistTab projectId={projectId!} />
         </TabsContent>
 
         {isDesarrolloProject && (

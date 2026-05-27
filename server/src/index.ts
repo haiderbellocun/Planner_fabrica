@@ -25,6 +25,8 @@ import healthRoutes from './routes/health.js';
 import profileRoutes from './routes/profile.js';
 import epicsRoutes from './routes/epics.js';
 import searchRoutes from './routes/search.js';
+import proximosProgramasRoutes from './routes/proximosProgramas.js';
+import checklistRoutes from './routes/checklist.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 
@@ -121,6 +123,9 @@ app.use('/api/chat', chatLimiter, chatRoutes);
 app.use('/api/admin', apiLimiter, adminUsersRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/search', apiLimiter, searchRoutes);
+app.use('/api/proximos-programas', proximosProgramasRoutes);
+app.use('/api/projects/:projectId/checklist', checklistRoutes);
+app.use('/api/checklist', checklistRoutes);
 
 // 404 handler
 app.use((req, res) => {

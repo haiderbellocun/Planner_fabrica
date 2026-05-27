@@ -19,6 +19,7 @@ import Reports from "./pages/Reports";
 import ProjectCalculator from "./pages/ProjectCalculator";
 import Settings from "./pages/Settings";
 import Flows from "./pages/Flows";
+import ProximosProgramas from "./pages/ProximosProgramas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
             <Route path="/calculator" element={<AppLayout><ProjectCalculator /></AppLayout>} />
             <Route path="/flows" element={<AppLayout><Flows /></AppLayout>} />
+            <Route path="/proximos-programas" element={<AppLayout><ProximosProgramas /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

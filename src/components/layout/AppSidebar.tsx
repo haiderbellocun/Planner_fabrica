@@ -26,6 +26,7 @@ import {
   Bell,
   User,
   GitBranch,
+  CalendarClock,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ const baseNavItemsWithReports = (showReports: boolean) =>
 
 const leaderNavItems = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
+  { title: 'Próximos Proyectos', url: '/proximos-programas', icon: CalendarClock },
 ];
 
 const adminFlowNavItems = [

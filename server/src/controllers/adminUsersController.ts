@@ -45,40 +45,38 @@ export const listUsers = async (req: AuthRequest, res: Response) => {
 
 /**
  * POST /api/admin/users
- * Crea un nuevo usuario + profile + rol
+ * Crea un nuevo usuario + profile + rol dentro de una transacción atómica
  */
 export const createUser = async (req: AuthRequest, res: Response) => {
+  if (!ensureAdminOrLeader(req, res)) return;
+
+  const { full_name, email, password, cargo, role } = req.body as {
+    full_name?: string;
+    email?: string;
+    password?: string;
+    cargo?: string | null;
+    role?: 'admin' | 'project_leader' | 'user';
+  };
+
+  if (!full_name || !email || !password) {
+    return res.status(400).json({ error: 'full_name, email y password son requeridos' });
+  }
+
+  // Solo un ADMIN puede asignar roles elevados
+  let normalizedRole: 'admin' | 'project_leader' | 'user' = 'user';
+  if (req.user?.role === 'admin') {
+    normalizedRole = role || 'user';
+  }
+
+  const existing = await query('SELECT id FROM public.users WHERE email = $1', [email]);
+  if (existing.rows.length > 0) {
+    return res.status(400).json({ error: 'Ya existe un usuario con ese correo' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  await query('BEGIN');
   try {
-    if (!ensureAdminOrLeader(req, res)) return;
-
-    const { full_name, email, password, cargo, role } = req.body as {
-      full_name?: string;
-      email?: string;
-      password?: string;
-      cargo?: string | null;
-      role?: 'admin' | 'project_leader' | 'user';
-    };
-
-    if (!full_name || !email || !password) {
-      return res.status(400).json({ error: 'full_name, email y password son requeridos' });
-    }
-
-    // Solo un ADMIN puede asignar roles elevados.
-    // Los project_leaders siempre crean usuarios normales.
-    let normalizedRole: 'admin' | 'project_leader' | 'user' = 'user';
-    if (req.user?.role === 'admin') {
-      normalizedRole = role || 'user';
-    }
-
-    // Verificar que no exista el correo
-    const existing = await query('SELECT id FROM public.users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Ya existe un usuario con ese correo' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Crear usuario
     const userResult = await query(
       `INSERT INTO public.users (email, full_name, password_hash, avatar_url, is_active)
        VALUES ($1, $2, $3, NULL, TRUE)
@@ -87,7 +85,6 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     );
     const newUser = userResult.rows[0];
 
-    // Crear perfil
     const profileResult = await query(
       `INSERT INTO public.profiles (user_id, full_name, avatar_url, email, cargo)
        VALUES ($1, $2, NULL, $3, $4)
@@ -96,12 +93,12 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     );
     const profileId = profileResult.rows[0].id;
 
-    // Asignar rol
     await query(
-      `INSERT INTO public.user_roles (user_id, role)
-       VALUES ($1, $2)`,
+      `INSERT INTO public.user_roles (user_id, role) VALUES ($1, $2)`,
       [profileId, normalizedRole]
     );
+
+    await query('COMMIT');
 
     res.status(201).json({
       id: newUser.id,
@@ -113,6 +110,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       is_active: true,
     });
   } catch (error) {
+    await query('ROLLBACK');
     console.error('Admin createUser error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

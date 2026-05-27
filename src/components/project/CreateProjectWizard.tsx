@@ -56,34 +56,42 @@ interface Programa {
   defaultMaterials?: Material[];
 }
 
+export interface CreateProjectWizardInitialData {
+  name?: string;
+  category?: 'academico' | 'marketing' | 'otros' | 'desarrollo';
+  end_date?: string;
+}
+
 interface CreateProjectWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: CreateProjectWizardInitialData;
+  onSuccess?: (projectId: string) => void;
 }
 
 type ProjectCategory = 'academico' | 'marketing' | 'otros' | 'desarrollo';
 type WizardStep = 'category' | 'form';
 
-export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardProps) {
+export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess }: CreateProjectWizardProps) {
   const queryClient = useQueryClient();
   const { data: materialTypes = [] } = useMaterialTypes();
   const [isPending, setIsPending] = useState(false);
 
   // Tab 1: Información Básica
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialData?.name ?? '');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [linkLabel, setLinkLabel] = useState('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [category, setCategory] = useState<ProjectCategory | null>(null);
+  const [endDate, setEndDate] = useState<string>(initialData?.end_date ?? '');
+  const [category, setCategory] = useState<ProjectCategory | null>(initialData?.category ?? null);
 
   // Información específica para proyectos de marketing
   const [marketingPiecesType, setMarketingPiecesType] = useState<'imagen' | 'video' | 'ambos' | ''>('');
   const [marketingFormat, setMarketingFormat] = useState<string>(''); // texto libre
   const [marketingVideoKind, setMarketingVideoKind] = useState<'promocional' | 'institucional' | ''>('');
 
-  const [step, setStep] = useState<WizardStep>('category');
+  const [step, setStep] = useState<WizardStep>(initialData?.category ? 'form' : 'category');
 
   // Tab 2: Programas
   const [programas, setProgramas] = useState<Programa[]>([]);
@@ -126,7 +134,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
     setMarketingPiecesType('');
     setMarketingFormat('');
     setMarketingVideoKind('');
-    setStep('category');
+    setStep(initialData?.category ? 'form' : 'category');
     setProgramas([]);
     setCurrentPrograma({
       name: '',
@@ -252,6 +260,7 @@ export function CreateProjectWizard({ open, onOpenChange }: CreateProjectWizardP
 
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Proyecto creado exitosamente');
+      onSuccess?.(projectId);
       resetForm();
       onOpenChange(false);
     } catch (error: any) {
