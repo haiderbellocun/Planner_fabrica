@@ -98,7 +98,15 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent
+        className="px-2 py-3"
+        style={!collapsed ? {
+          backgroundImage: 'linear-gradient(rgba(13,217,208,0.55), rgba(13,217,208,0.55)), url(/deco_coral.png)',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'bottom center',
+          backgroundSize: '100% auto',
+        } : undefined}
+      >
         <SidebarGroup>
           <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent>

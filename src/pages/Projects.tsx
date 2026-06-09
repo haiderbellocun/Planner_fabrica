@@ -91,7 +91,7 @@ export default function ProjectsPage() {
           {visibleProjects.map((project) => (
             <Link key={project.id} to={`/projects/${project.id}`}>
               <Card className="relative h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
-                <img src={projectsImg} alt="" className="absolute bottom-0 right-0 h-24 w-24 object-contain opacity-20 pointer-events-none z-0" />
+                <img src="/Logo_coordinador_de_fabrica.png" alt="" className="absolute bottom-0 right-0 h-32 w-32 object-contain opacity-40 pointer-events-none z-0" />
                 <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">

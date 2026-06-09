@@ -207,7 +207,15 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 relative">
+          <main
+            className="flex-1 relative"
+            style={{
+              backgroundImage: 'url(/bg_app.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'bottom center',
+              backgroundAttachment: 'local',
+            }}
+          >
             {children}
             <LuminaWidget />
           </main>

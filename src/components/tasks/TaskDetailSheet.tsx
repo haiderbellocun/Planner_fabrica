@@ -4,12 +4,12 @@ import { useUpdateTemaAssignees, TemaAssignment } from '@/hooks/useTemaAssignees
 import { useUpdateMaterialAssignees, MaterialAssignment } from '@/hooks/useMaterialAssignees';
 import { useTiempoTarea } from '@/hooks/useTiemposEstimados';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -234,41 +234,50 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
     : 0;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground font-mono">
-              {projectKey}-{taskData.task_number}
-            </span>
-            <Badge className={cn('text-xs', priorityInfo.className)}>
-              {priorityInfo.label}
-            </Badge>
-            {user?.role === 'admin' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
-                disabled={deleteTask.isPending}
-                title="Eliminar tarea"
-                onClick={() => {
-                  if (!confirm(`¿Eliminar la tarea "${taskData.title}"? Esta acción no se puede deshacer.`)) return;
-                  deleteTask.mutate({ taskId: taskData.id, projectId: taskData.project_id }, {
-                    onSuccess: () => onOpenChange(false),
-                  });
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <SheetTitle className="text-left">{taskData.title}</SheetTitle>
-          <SheetDescription className="text-left">
-            {taskData.description || 'Sin descripción'}
-          </SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl w-full p-0 overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '88vh' }}>
+        <div className="flex h-full" style={{ maxHeight: '88vh' }}>
+          {/* ── LEFT PANEL ── */}
+          <div
+            className="flex flex-col flex-1 overflow-hidden border-r border-border relative"
+            style={{
+              backgroundImage: 'url(/FONDO_3.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <div className="absolute inset-0 bg-white/80 pointer-events-none" />
+            {/* Task header */}
+            <div className="relative z-10 px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                  {projectKey}-{taskData.task_number}
+                </span>
+                <Badge className={cn('text-xs', priorityInfo.className)}>{priorityInfo.label}</Badge>
+                {user?.role === 'admin' && (
+                  <Button
+                    variant="ghost" size="icon"
+                    className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
+                    disabled={deleteTask.isPending}
+                    onClick={() => {
+                      if (!confirm(`¿Eliminar la tarea "${taskData.title}"?`)) return;
+                      deleteTask.mutate({ taskId: taskData.id, projectId: taskData.project_id }, { onSuccess: () => onOpenChange(false) });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <DialogTitle className="text-base font-bold text-foreground leading-snug">{taskData.title}</DialogTitle>
+              {taskData.description && (
+                <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                  {taskData.description}
+                </DialogDescription>
+              )}
+            </div>
 
-        <div className="mt-6 space-y-6">
+            {/* Scrollable details */}
+            <div className="relative z-10 flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Status and Assignee */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -371,8 +380,8 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
 
           {/* Current Status Time */}
           <div className="space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
               Estado Actual
             </h4>
             <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-primary/10 border border-primary/20">
@@ -608,196 +617,98 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
             </>
           )}
 
-          <Separator />
+            </div>{/* end scrollable details */}
+          </div>{/* end LEFT PANEL */}
 
-          {/* History Tabs */}
-          <Tabs defaultValue="history" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="history">Historial de Estados</TabsTrigger>
-              <TabsTrigger value="activity">Actividad</TabsTrigger>
-            </TabsList>
+          {/* ── RIGHT PANEL — activity + comments ── */}
+          <div className="w-72 flex-shrink-0 flex flex-col bg-slate-50/60">
+            {/* Activity feed */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Actividad</p>
 
-            <TabsContent value="history" className="mt-4 space-y-3">
-              {history.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Sin historial de cambios
-                </p>
-              ) : (
-                history.map((entry: any) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-start gap-3 py-2 px-3 rounded-lg bg-secondary/30"
-                  >
-                    <History className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {entry.from_status ? (
-                          <>
-                            <Badge variant="outline" className="text-xs">
-                              {entry.from_status.name}
-                            </Badge>
-                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Creada como</span>
-                        )}
-                        <Badge
-                          className="text-xs"
-                          style={{
-                            backgroundColor: `${entry.to_status?.color}20`,
-                            color: entry.to_status?.color,
-                            borderColor: entry.to_status?.color,
-                          }}
-                        >
-                          {entry.to_status?.name}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <span>
-                          {format(new Date(entry.started_at), "d MMM 'a las' HH:mm", { locale: es })}
-                        </span>
-                        {entry.duration_seconds && (
-                          <>
-                            <span>•</span>
-                            <span>Duración: {formatDurationSeconds(entry.duration_seconds)}</span>
-                          </>
-                        )}
-                      </div>
-                      {entry.changed_by_profile && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                          <span>Por: {entry.changed_by_profile.full_name || 'Usuario'}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </TabsContent>
+              {activity.length === 0 && comments.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Sin actividad</p>
+              ) : null}
 
-            <TabsContent value="activity" className="mt-4 space-y-3">
-              {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Sin actividad registrada
-                </p>
-              ) : (
-                activity.map((entry: any) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-start gap-3 py-2 px-3 rounded-lg bg-secondary/30"
-                  >
-                    <Avatar className="h-6 w-6 flex-shrink-0">
-                      <AvatarImage src={entry.performed_by_profile?.avatar_url} />
-                      <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                        {getInitials(entry.performed_by_profile?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">
-                        <span className="font-medium">
-                          {entry.performed_by_profile?.full_name || 'Usuario'}
-                        </span>{' '}
-                        <span className="text-muted-foreground">
-                          {entry.action === 'task_created' && 'creó la tarea'}
-                          {entry.action === 'status_changed' && (
-                            <>cambió el estado de "{entry.old_value}" a "{entry.new_value}"</>
-                          )}
-                          {entry.action === 'assigned' && 'asignó la tarea'}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: es })}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {/* Comentarios Section */}
-              <Separator className="my-4" />
-              <div className="space-y-3">
-                <h4 className="font-medium flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Comentarios
-                </h4>
-
-                {/* Comment input */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Escribe un comentario..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="min-h-[80px] resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                        e.preventDefault();
-                        handleAddComment();
-                      }
-                    }}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || createComment.isPending}
-                    >
-                      <Send className="h-3 w-3 mr-1" />
-                      Comentar
-                    </Button>
+              {activity.map((entry: any) => (
+                <div key={entry.id} className="flex items-start gap-2.5">
+                  <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
+                    <AvatarImage src={entry.performed_by_profile?.avatar_url} />
+                    <AvatarFallback className="text-[10px] bg-primary/80 text-white">
+                      {getInitials(entry.performed_by_profile?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs leading-snug">
+                      <span className="font-semibold text-foreground">{entry.performed_by_profile?.full_name || 'Usuario'}</span>{' '}
+                      <span className="text-muted-foreground">
+                        {entry.action === 'task_created' && 'creó la tarea'}
+                        {entry.action === 'status_changed' && <>cambió el estado de "{entry.old_value}" a "{entry.new_value}"</>}
+                        {entry.action === 'assigned' && 'asignó la tarea'}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: es })}
+                    </p>
                   </div>
                 </div>
+              ))}
 
-                {/* Comments list */}
-                {comments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No hay comentarios aún
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {comments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="flex items-start gap-3 py-2 px-3 rounded-lg bg-secondary/30"
-                      >
-                        <Avatar className="h-6 w-6 flex-shrink-0">
-                          <AvatarImage src={comment.user?.avatar_url} />
-                          <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                            {getInitials(comment.user?.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">
-                                {comment.user?.full_name || 'Usuario'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
-                              </p>
-                            </div>
-                            {(comment.user_id === user?.profileId || user?.role === 'admin') && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteComment(comment.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-sm mt-2 whitespace-pre-wrap break-words">
-                            {comment.comment}
-                          </p>
+              {comments.length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Comentarios</p>
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="flex items-start gap-2.5">
+                      <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
+                        <AvatarImage src={comment.user?.avatar_url} />
+                        <AvatarFallback className="text-[10px] bg-primary/80 text-white">
+                          {getInitials(comment.user?.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-foreground">{comment.user?.full_name || 'Usuario'}</p>
+                          {(comment.user_id === user?.profileId || user?.role === 'admin') && (
+                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteComment(comment.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
+                        </p>
+                        <p className="text-xs mt-1 whitespace-pre-wrap break-words text-foreground/80">{comment.comment}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+
+            {/* Comment input — pinned at bottom */}
+            <div className="border-t border-border bg-white px-4 py-3 flex-shrink-0">
+              <Textarea
+                placeholder="Escribe un comentario..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="min-h-[72px] resize-none text-sm bg-slate-50 border-slate-200"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddComment(); }
+                }}
+              />
+              <div className="flex justify-end mt-2">
+                <Button size="sm" className="rounded-xl" onClick={handleAddComment} disabled={!newComment.trim() || createComment.isPending}>
+                  <Send className="h-3 w-3 mr-1.5" />
+                  Comentar
+                </Button>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </SheetContent>
-    </Sheet>
+            </div>
+          </div>{/* end RIGHT PANEL */}
+
+        </div>{/* end flex row */}
+      </DialogContent>
+    </Dialog>
   );
 }

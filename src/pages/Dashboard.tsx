@@ -63,7 +63,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container relative">
+      {/* Ocean decorations */}
+      <img src="/deco_medusa.png" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
+      <img src="/deco_manta.png" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
+      <img src="/deco_cangrejo.png" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="/deco_estrella.png" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+
       {/* Welcome - Snapshot style */}
       <div className="page-header">
         <h1 className="page-title">
@@ -78,8 +84,9 @@ export default function DashboardPage() {
       <MyFocusToday />
       {/* Stats Cards — KPI recipe: rounded-2xl, shadow, icon badge */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 md:gap-8">
-        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src={projectsImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
+        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)] overflow-hidden">
+          <img src="/deco_foca.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
+          <img src="/deco_alga2.png" alt="" className="absolute left-0 bottom-0 h-24 w-auto object-contain opacity-40 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Proyectos
@@ -92,7 +99,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src={tasksImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
+          <img src="/deco_cangrejo.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Tareas Totales
@@ -105,7 +112,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src={notificationsImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
+          <img src="/deco_medusa.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Notificaciones
@@ -118,7 +125,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src={productivityImg} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-80 pointer-events-none" />
+          <img src="/deco_manta.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
             <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
               Productividad

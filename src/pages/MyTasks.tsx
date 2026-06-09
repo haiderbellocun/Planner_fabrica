@@ -14,10 +14,10 @@ import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
 
 const priorityConfig = {
-  low:    { label: 'Baja',    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  medium: { label: 'Media',   className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  high:   { label: 'Alta',    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  low:    { label: 'Baja',    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',       cardBg: 'bg-slate-50/70 border-slate-200' },
+  medium: { label: 'Media',   className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', cardBg: 'bg-teal-50/70 border-teal-200' },
+  high:   { label: 'Alta',    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', cardBg: 'bg-orange-50/70 border-orange-200' },
+  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',         cardBg: 'bg-red-50/70 border-red-200' },
 };
 
 const TASK_COLORS: Record<string, string> = {
@@ -79,8 +79,8 @@ export default function MyTasksPage() {
       <div
         onClick={() => handleTaskClick(task)}
         className={cn(
-          'p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors',
-          isOverdue && 'border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20'
+          'p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:brightness-95',
+          isOverdue ? 'border-red-300 bg-red-50/80' : priority.cardBg,
         )}
       >
         <div className="flex items-start justify-between gap-3">

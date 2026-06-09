@@ -68,14 +68,18 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full relative flex flex-col items-center justify-center p-4">
+    <div
+      className="min-h-screen w-full relative flex flex-col items-center justify-center p-4"
+      style={{ backgroundImage: 'url(/bg_login.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
+      <div className="absolute inset-0 bg-black/30" />
       <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-md">
       <div className="mb-8 text-center">
-        <img src={logo} alt="Fábrica de Contenido" className="h-[52px] md:h-16 w-auto object-contain mx-auto" />
-        <p className="text-muted-foreground mt-2">Planner Fabrica - Gestión de contenido</p>
+        <img src={logo} alt="Fábrica de Contenido" className="h-[52px] md:h-16 w-auto object-contain mx-auto drop-shadow-lg" />
+        <p className="text-white/80 mt-2 text-sm font-medium drop-shadow">Planner Fabrica - Gestión de contenido</p>
       </div>
 
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md backdrop-blur-sm bg-white/95 shadow-2xl border-white/20">
         <form onSubmit={handleLogin}>
           <CardHeader>
             <CardTitle>Bienvenido de vuelta</CardTitle>
@@ -155,8 +159,8 @@ export default function AuthPage() {
         </form>
       </Card>
 
-      <p className="mt-4 text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-primary underline">
+      <p className="mt-4 text-sm text-white/70">
+        <Link to="/" className="hover:text-white underline">
           Volver al inicio
         </Link>
       </p>

@@ -52,59 +52,54 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
   const cells = getMonthGrid(year, month);
   const todayKey = toKey(today);
 
-  // Index events by date key
   const byDate: Record<string, CalendarEvent[]> = {};
   for (const ev of events) {
     if (!byDate[ev.date]) byDate[ev.date] = [];
     byDate[ev.date].push(ev);
   }
 
-  // Split into weeks
   const weeks: (Date | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
   return (
-    <div className={cn(
-      'w-full rounded-2xl bg-white border border-slate-200 shadow-md overflow-hidden',
-      className
-    )}>
+    <div className={cn('w-full rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden', className)}>
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
+      <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <button
           onClick={prevMonth}
-          className="h-9 w-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+          className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <h2 className="text-2xl font-extrabold tracking-widest text-slate-700 select-none">
+        <h2 className="text-3xl font-black tracking-widest text-slate-800 select-none">
           {MONTH_NAMES[month]} {year}
         </h2>
 
         <button
           onClick={nextMonth}
-          className="h-9 w-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+          className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
       {/* ── Day-of-week row ── */}
-      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/60">
+      <div className="grid grid-cols-7 px-2 pb-1">
         {DOW.map((d) => (
-          <div key={d} className="py-2.5 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <div key={d} className="py-2 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
             {d}
           </div>
         ))}
       </div>
 
       {/* ── Weeks ── */}
-      <div className="divide-y divide-slate-100">
+      <div className="px-2 pb-4">
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 divide-x divide-slate-100">
+          <div key={wi} className="grid grid-cols-7">
             {week.map((day, di) => {
               if (!day) {
-                return <div key={`empty-${wi}-${di}`} className="min-h-[80px] bg-slate-50/40" />;
+                return <div key={`empty-${wi}-${di}`} className="h-14" />;
               }
 
               const key = toKey(day);
@@ -112,47 +107,41 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
               const dayEvents = byDate[key] ?? [];
 
               return (
-                <div
-                  key={key}
-                  className={cn(
-                    'min-h-[80px] p-2 flex flex-col gap-1',
-                    isToday && 'bg-blue-50/60',
-                  )}
-                >
+                <div key={key} className="h-14 flex flex-col items-center pt-1 gap-0.5">
                   {/* Day number */}
                   <span
                     className={cn(
-                      'self-start h-7 w-7 flex items-center justify-center rounded-full text-sm font-semibold',
+                      'h-8 w-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors',
                       isToday
-                        ? 'bg-blue-400 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100',
+                        ? 'ring-2 ring-blue-400 text-blue-500 bg-blue-50'
+                        : 'text-slate-700 hover:bg-slate-100 cursor-default',
                     )}
                   >
                     {day.getDate()}
                   </span>
 
-                  {/* Events */}
-                  <div className="flex flex-col gap-0.5 mt-0.5">
-                    {dayEvents.slice(0, 2).map((ev) => (
-                      <button
-                        key={ev.id}
-                        onClick={ev.onClick}
-                        title={ev.label}
-                        className={cn(
-                          'w-full text-left text-[11px] font-medium px-1.5 py-0.5 rounded-md truncate text-white leading-tight transition-opacity hover:opacity-80',
-                          ev.color ?? 'bg-primary',
-                          !ev.onClick && 'cursor-default',
-                        )}
-                      >
-                        {ev.label}
-                      </button>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <span className="text-[10px] text-slate-400 pl-1">
-                        +{dayEvents.length - 2} más
-                      </span>
-                    )}
-                  </div>
+                  {/* Event dots / chips */}
+                  {dayEvents.length > 0 && (
+                    <div className="flex flex-col items-center gap-0.5 w-full px-0.5">
+                      {dayEvents.slice(0, 1).map((ev) => (
+                        <button
+                          key={ev.id}
+                          onClick={ev.onClick}
+                          title={ev.label}
+                          className={cn(
+                            'w-full max-w-[90%] text-center text-[10px] font-medium px-1 py-0 rounded-md truncate text-white leading-tight transition-opacity hover:opacity-80',
+                            ev.color ?? 'bg-teal-500',
+                            !ev.onClick && 'cursor-default',
+                          )}
+                        >
+                          {ev.label}
+                        </button>
+                      ))}
+                      {dayEvents.length > 1 && (
+                        <span className="text-[9px] text-slate-400">+{dayEvents.length - 1}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
