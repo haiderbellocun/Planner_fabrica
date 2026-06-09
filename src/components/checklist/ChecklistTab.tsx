@@ -6,8 +6,10 @@ import {
   useUpdateChecklist,
   useAssignMaestro,
   calcEstadoFinal,
+  getCheckState,
   type ChecklistRow,
   type ChecklistUpdate,
+  type CheckState,
   type EstadoRevision,
   type GroupField,
 } from '@/hooks/useChecklist';
@@ -46,29 +48,69 @@ const FINAL_COLORS: Record<string, string> = {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function Checkbox({
-  checked,
-  onChange,
+/**
+ * Three-state checkbox:
+ *  - unchecked → plain white border
+ *  - blue      → non-admin user check (pending approval)
+ *  - green     → admin-approved check
+ *
+ * Click logic:
+ *  - unchecked: any user → send { field: true } (backend routes to user_checks or boolean col by role)
+ *  - blue:      admin  → send { field: true }  (promotes to green, clears user_checks)
+ *              non-admin → send { field: false } (unchecks own blue mark)
+ *  - green:     admin  → send { field: false } (unchecks)
+ *              non-admin → no action
+ */
+function ThreeStateCheckbox({
+  state,
+  field,
+  isAdmin,
+  onUpdate,
   disabled,
 }: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
+  state: CheckState;
+  field: string;
+  isAdmin: boolean;
+  onUpdate: (field: string, value: boolean) => void;
   disabled?: boolean;
 }) {
+  const handleClick = () => {
+    if (disabled) return;
+    if (state === 'unchecked') {
+      onUpdate(field, true);
+    } else if (state === 'blue') {
+      // Admin: approve (promote to green). Non-admin: uncheck.
+      onUpdate(field, isAdmin ? true : false);
+    } else {
+      // Green: only admin can uncheck.
+      if (isAdmin) onUpdate(field, false);
+    }
+  };
+
+  const isReadOnly = state === 'green' && !isAdmin;
+
   return (
     <button
       type="button"
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
+      disabled={disabled || isReadOnly}
+      onClick={handleClick}
+      title={
+        state === 'blue' && isAdmin
+          ? 'Aprobar (cambiar a verde)'
+          : state === 'green' && !isAdmin
+          ? 'Aprobado por admin'
+          : undefined
+      }
       className={cn(
         'h-5 w-5 rounded border-2 flex items-center justify-center transition-colors shrink-0',
-        checked
-          ? 'bg-teal-500 border-teal-500 text-white'
-          : 'border-slate-300 bg-white hover:border-teal-400',
-        disabled && 'opacity-50 cursor-not-allowed',
+        state === 'green'     && 'bg-teal-500 border-teal-500 text-white',
+        state === 'blue'      && 'bg-blue-500 border-blue-500 text-white',
+        state === 'unchecked' && 'border-slate-300 bg-white hover:border-teal-400',
+        (disabled || isReadOnly) && 'opacity-60 cursor-not-allowed',
+        state === 'blue' && isAdmin && !disabled && 'ring-2 ring-blue-300 ring-offset-1 hover:bg-teal-500 hover:border-teal-500',
       )}
     >
-      {checked && (
+      {state !== 'unchecked' && (
         <svg viewBox="0 0 12 10" className="h-3 w-3 fill-none stroke-white stroke-2">
           <polyline points="1,5 4,8 11,1" />
         </svg>
@@ -108,12 +150,14 @@ function StatusSelect({
 
 function ChecklistRowComponent({
   row,
+  isAdmin,
   onUpdate,
   onAssign,
   users,
   isPending,
 }: {
   row: ChecklistRow;
+  isAdmin: boolean;
   onUpdate: (asignaturaId: string, data: ChecklistUpdate) => void;
   onAssign: (asignaturaId: string, maestroId: string | null) => void;
   users: { profile_id: string | null; full_name: string }[];
@@ -124,6 +168,11 @@ function ChecklistRowComponent({
   const update = useCallback(
     (data: ChecklistUpdate) => onUpdate(row.asignatura_id, data),
     [onUpdate, row.asignatura_id],
+  );
+
+  const handleCheckField = useCallback(
+    (field: string, value: boolean) => update({ [field]: value } as ChecklistUpdate),
+    [update],
   );
 
   return (
@@ -186,26 +235,33 @@ function ChecklistRowComponent({
       </td>
 
       {/* G1 – G5 */}
-      {GROUPS.map((g) => (
-        GROUP_FIELDS.map(({ key }) => (
-          <td key={`g${g}_${key}`} className="px-1 py-2 text-center">
-            <div className="flex justify-center">
-              <Checkbox
-                checked={row[`g${g}_${key}`]}
-                onChange={(v) => update({ [`g${g}_${key}`]: v } as ChecklistUpdate)}
-                disabled={isPending}
-              />
-            </div>
-          </td>
-        ))
-      ))}
+      {GROUPS.map((g) =>
+        GROUP_FIELDS.map(({ key }) => {
+          const field = `g${g}_${key}`;
+          return (
+            <td key={field} className="px-1 py-2 text-center">
+              <div className="flex justify-center">
+                <ThreeStateCheckbox
+                  state={getCheckState(row, field)}
+                  field={field}
+                  isAdmin={isAdmin}
+                  onUpdate={handleCheckField}
+                  disabled={isPending}
+                />
+              </div>
+            </td>
+          );
+        })
+      )}
 
       {/* Carga completa */}
       <td className="px-1 py-2 text-center">
         <div className="flex justify-center">
-          <Checkbox
-            checked={row.carga_completa}
-            onChange={(v) => update({ carga_completa: v })}
+          <ThreeStateCheckbox
+            state={getCheckState(row, 'carga_completa')}
+            field="carga_completa"
+            isAdmin={isAdmin}
+            onUpdate={handleCheckField}
             disabled={isPending}
           />
         </div>
@@ -214,9 +270,11 @@ function ChecklistRowComponent({
       {/* Actividades Moodle */}
       <td className="px-1 py-2 text-center">
         <div className="flex justify-center">
-          <Checkbox
-            checked={row.actividades_moodle}
-            onChange={(v) => update({ actividades_moodle: v })}
+          <ThreeStateCheckbox
+            state={getCheckState(row, 'actividades_moodle')}
+            field="actividades_moodle"
+            isAdmin={isAdmin}
+            onUpdate={handleCheckField}
             disabled={isPending}
           />
         </div>
@@ -229,6 +287,32 @@ function ChecklistRowComponent({
         </span>
       </td>
     </tr>
+  );
+}
+
+// ─── Legend ────────────────────────────────────────────────────────────────────
+
+function CheckboxLegend({ isAdmin }: { isAdmin: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+      <span className="flex items-center gap-1.5">
+        <span className="h-4 w-4 rounded border-2 border-slate-300 bg-white inline-block" />
+        Sin marcar
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-4 w-4 rounded border-2 border-blue-500 bg-blue-500 inline-block" />
+        Marcado (pendiente aprobación)
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-4 w-4 rounded border-2 border-teal-500 bg-teal-500 inline-block" />
+        {isAdmin ? 'Aprobado (admin)' : 'Aprobado por admin'}
+      </span>
+      {isAdmin && (
+        <span className="text-slate-400 italic">
+          Haz clic en un chulo azul para aprobarlo (verde)
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -275,7 +359,6 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
     );
   }
 
-  // Stats rápidas
   const total = rows.length;
   const completas = rows.filter((r) => calcEstadoFinal(r) === 'Materia Completa').length;
   const enProceso = rows.filter((r) => calcEstadoFinal(r) === 'En proceso').length;
@@ -298,12 +381,14 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
         ))}
       </div>
 
+      {/* Legend */}
+      <CheckboxLegend isAdmin={!!isAdmin} />
+
       {/* Table */}
       <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              {/* Fixed cols */}
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 whitespace-nowrap sticky left-0 bg-slate-50 z-20 border-r border-slate-200 min-w-[110px]">
                 Programa
               </th>
@@ -315,7 +400,6 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
               <th className="px-2 py-2.5 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">Listo</th>
               <th className="px-2 py-2.5 text-center text-xs font-semibold text-slate-600">QA</th>
 
-              {/* G1-G5 headers */}
               {GROUPS.map((g) => (
                 <th
                   key={`g${g}`}
@@ -326,7 +410,6 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
                 </th>
               ))}
 
-              {/* Sub-headers row is a second <tr> below */}
               <th className="px-1 py-2.5 text-center text-xs font-semibold text-slate-600 border-l border-slate-200 whitespace-nowrap">
                 Carga<br />Completa
               </th>
@@ -337,7 +420,6 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
                 Estado Final
               </th>
             </tr>
-            {/* Sub-header for G fields */}
             <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] text-slate-500">
               <th colSpan={6} className="sticky left-0 bg-slate-50/80 z-20" />
               {GROUPS.map((g) =>
@@ -355,6 +437,7 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
               <ChecklistRowComponent
                 key={row.asignatura_id}
                 row={row}
+                isAdmin={!!isAdmin}
                 onUpdate={handleUpdate}
                 onAssign={handleAssign}
                 users={users}

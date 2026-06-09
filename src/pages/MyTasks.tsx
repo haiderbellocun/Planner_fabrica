@@ -1,21 +1,30 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMyTasks, useTaskStatuses, type MyTaskWithProject } from '@/hooks/useTasks';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, ListTodo, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Loader2, ListTodo, Clock, AlertTriangle, CheckCircle, CalendarDays } from 'lucide-react';
 import { format, isAfter, isBefore, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
 
 const priorityConfig = {
-  low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  medium: { label: 'Media', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  high: { label: 'Alta', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
+  low:    { label: 'Baja',    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+  medium: { label: 'Media',   className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  high:   { label: 'Alta',    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
   urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+};
+
+const TASK_COLORS: Record<string, string> = {
+  low:    'bg-gray-400',
+  medium: 'bg-amber-400',
+  high:   'bg-orange-500',
+  urgent: 'bg-red-500',
 };
 
 export default function MyTasksPage() {
@@ -24,7 +33,7 @@ export default function MyTasksPage() {
   const [selectedTask, setSelectedTask] = useState<MyTaskWithProject | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const pendingTasks = tasks.filter((t) => !t.status.is_completed);
+  const pendingTasks   = tasks.filter((t) => !t.status.is_completed);
   const completedTasks = tasks.filter((t) => t.status.is_completed);
   const today = new Date();
   const overdueTasks = pendingTasks.filter((t) => {
@@ -41,6 +50,17 @@ export default function MyTasksPage() {
     setSelectedTask(task);
     setDetailOpen(true);
   };
+
+  // Calendar events from pending tasks with due_date
+  const calendarEvents: CalendarEvent[] = pendingTasks
+    .filter((t) => !!parseDateOnly(t.due_date))
+    .map((t) => ({
+      id:    t.id,
+      date:  format(parseDateOnly(t.due_date)!, 'yyyy-MM-dd'),
+      label: `${t.title} · ${t.project.name}`,
+      color: TASK_COLORS[t.priority] ?? 'bg-primary',
+      onClick: () => handleTaskClick(t),
+    }));
 
   if (isLoading) {
     return (
@@ -74,9 +94,14 @@ export default function MyTasksPage() {
               </Badge>
             </div>
             <p className="font-medium truncate">{task.title}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Proyecto: {task.project.name}
-            </p>
+            {/* Project name as link */}
+            <Link
+              to={`/projects/${task.project.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1 font-medium"
+            >
+              {task.project.name}
+            </Link>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <Badge
@@ -102,9 +127,7 @@ export default function MyTasksPage() {
     <div className="page-container max-w-4xl">
       <div className="page-header">
         <h1 className="page-title">Mis Tareas</h1>
-        <p className="page-description">
-          Tareas asignadas a ti en todos los proyectos
-        </p>
+        <p className="page-description">Tareas asignadas a ti en todos los proyectos</p>
       </div>
 
       {/* Summary cards */}
@@ -141,84 +164,93 @@ export default function MyTasksPage() {
 
       <Tabs defaultValue="pending">
         <TabsList>
-          <TabsTrigger value="pending">
-            Pendientes ({pendingTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="overdue">
-            Vencidas ({overdueTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            Próximas ({upcomingTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Completadas ({completedTasks.length})
+          <TabsTrigger value="pending">Pendientes ({pendingTasks.length})</TabsTrigger>
+          <TabsTrigger value="overdue">Vencidas ({overdueTasks.length})</TabsTrigger>
+          <TabsTrigger value="upcoming">Próximas ({upcomingTasks.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completadas ({completedTasks.length})</TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Calendario
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-4">
           {pendingTasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                <p className="text-muted-foreground">No tienes tareas pendientes</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-8 text-center">
+              <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+              <p className="text-muted-foreground">No tienes tareas pendientes</p>
+            </CardContent></Card>
           ) : (
             <div className="space-y-2">
-              {pendingTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+              {pendingTasks.map((task) => <TaskCard key={task.id} task={task} />)}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="overdue" className="mt-4">
           {overdueTasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                <p className="text-muted-foreground">No tienes tareas vencidas</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-8 text-center">
+              <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+              <p className="text-muted-foreground">No tienes tareas vencidas</p>
+            </CardContent></Card>
           ) : (
             <div className="space-y-2">
-              {overdueTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+              {overdueTasks.map((task) => <TaskCard key={task.id} task={task} />)}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="upcoming" className="mt-4">
           {upcomingTasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No tienes tareas próximas a vencer (7 días)</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-8 text-center">
+              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No tienes tareas próximas a vencer (7 días)</p>
+            </CardContent></Card>
           ) : (
             <div className="space-y-2">
-              {upcomingTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+              {upcomingTasks.map((task) => <TaskCard key={task.id} task={task} />)}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="completed" className="mt-4">
           {completedTasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <ListTodo className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No has completado tareas aún</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-8 text-center">
+              <ListTodo className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No has completado tareas aún</p>
+            </CardContent></Card>
           ) : (
             <div className="space-y-2">
-              {completedTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+              {completedTasks.map((task) => <TaskCard key={task.id} task={task} />)}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-4">
+          {calendarEvents.length === 0 ? (
+            <Card><CardContent className="p-8 text-center">
+              <CalendarDays className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No hay tareas con fecha de vencimiento</p>
+            </CardContent></Card>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Haz clic en un día para ver las tareas. Los colores indican prioridad.
+              </p>
+              <div className="flex gap-3 text-xs flex-wrap">
+                {[
+                  { label: 'Baja', color: 'bg-gray-400' },
+                  { label: 'Media', color: 'bg-amber-400' },
+                  { label: 'Alta', color: 'bg-orange-500' },
+                  { label: 'Urgente', color: 'bg-red-500' },
+                ].map((l) => (
+                  <span key={l.label} className="flex items-center gap-1.5 text-slate-500">
+                    <span className={cn('h-2.5 w-2.5 rounded-full', l.color)} />
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+              <MiniCalendar events={calendarEvents} />
             </div>
           )}
         </TabsContent>

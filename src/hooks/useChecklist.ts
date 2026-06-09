@@ -22,6 +22,8 @@ export interface ChecklistRow {
   g5_inf: boolean; g5_vid: boolean; g5_pod: boolean; g5_glos: boolean; g5_fecha: boolean; g5_rev: boolean;
   carga_completa: boolean;
   actividades_moodle: boolean;
+  /** Non-admin user checks (blue). Key = field name, value = true if checked by a non-admin. */
+  user_checks: Record<string, boolean>;
   updated_at: string | null;
   updated_by_name: string | null;
 }
@@ -29,7 +31,7 @@ export interface ChecklistRow {
 export type ChecklistUpdate = Partial<Omit<ChecklistRow,
   'asignatura_id' | 'asignatura_name' | 'asignatura_code' | 'semestre' |
   'programa_id' | 'programa_name' | 'maestro_name' | 'checklist_id' |
-  'updated_at' | 'updated_by_name'
+  'updated_at' | 'updated_by_name' | 'user_checks'
 >>;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -37,18 +39,17 @@ export type ChecklistUpdate = Partial<Omit<ChecklistRow,
 const GROUP_KEYS = ['inf', 'vid', 'pod', 'glos', 'fecha', 'rev'] as const;
 export type GroupField = typeof GROUP_KEYS[number];
 
-export function getGroupChecks(row: ChecklistRow, g: 1 | 2 | 3 | 4 | 5): Record<GroupField, boolean> {
-  return {
-    inf:   row[`g${g}_inf`],
-    vid:   row[`g${g}_vid`],
-    pod:   row[`g${g}_pod`],
-    glos:  row[`g${g}_glos`],
-    fecha: row[`g${g}_fecha`],
-    rev:   row[`g${g}_rev`],
-  };
+export type CheckState = 'unchecked' | 'blue' | 'green';
+
+/** Returns the visual state of a boolean check field, considering both green (admin) and blue (user) checks. */
+export function getCheckState(row: ChecklistRow, field: string): CheckState {
+  if ((row as Record<string, unknown>)[field] === true) return 'green';
+  if (row.user_checks?.[field] === true) return 'blue';
+  return 'unchecked';
 }
 
 export function calcEstadoFinal(row: ChecklistRow): 'Sin iniciar' | 'En proceso' | 'Materia Completa' {
+  // "Materia Completa" requires all boolean columns TRUE (admin-approved green)
   const allGroupChecks = ([1, 2, 3, 4, 5] as const).every((g) =>
     GROUP_KEYS.every((k) => row[`g${g}_${k}`])
   );
@@ -60,10 +61,14 @@ export function calcEstadoFinal(row: ChecklistRow): 'Sin iniciar' | 'En proceso'
     row.qa_status === 'finalizado'
   ) return 'Materia Completa';
 
+  // "En proceso" counts blue checks too
+  const isAnyChecked = (field: string) =>
+    !!(row as Record<string, unknown>)[field] || !!row.user_checks?.[field];
+
   const anyChecked =
-    ([1, 2, 3, 4, 5] as const).some((g) => GROUP_KEYS.some((k) => row[`g${g}_${k}`])) ||
-    row.carga_completa ||
-    row.actividades_moodle ||
+    ([1, 2, 3, 4, 5] as const).some((g) => GROUP_KEYS.some((k) => isAnyChecked(`g${g}_${k}`))) ||
+    isAnyChecked('carga_completa') ||
+    isAnyChecked('actividades_moodle') ||
     row.listo_para_revisar !== 'sin_iniciar' ||
     row.qa_status !== 'sin_iniciar';
 

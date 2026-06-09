@@ -2,20 +2,19 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 
-const CHECKLIST_FIELDS = [
-  'listo_para_revisar', 'qa_status',
+const BOOL_CHECK_FIELDS = new Set([
   'g1_inf','g1_vid','g1_pod','g1_glos','g1_fecha','g1_rev',
   'g2_inf','g2_vid','g2_pod','g2_glos','g2_fecha','g2_rev',
   'g3_inf','g3_vid','g3_pod','g3_glos','g3_fecha','g3_rev',
   'g4_inf','g4_vid','g4_pod','g4_glos','g4_fecha','g4_rev',
   'g5_inf','g5_vid','g5_pod','g5_glos','g5_fecha','g5_rev',
   'carga_completa', 'actividades_moodle',
-] as const;
+]);
+
+const STATUS_FIELDS = new Set(['listo_para_revisar', 'qa_status']);
 
 /**
  * GET /api/projects/:projectId/checklist
- * Devuelve el checklist de todas las asignaturas del proyecto.
- * Si una asignatura aún no tiene fila en checklist la incluye con valores por defecto.
  */
 export const getProjectChecklist = async (req: AuthRequest, res: Response) => {
   try {
@@ -30,7 +29,6 @@ export const getProjectChecklist = async (req: AuthRequest, res: Response) => {
          pr.id            AS programa_id,
          pr.name          AS programa_name,
          p.full_name      AS maestro_name,
-         -- checklist columns (NULL when no row exists yet)
          cl.id            AS checklist_id,
          COALESCE(cl.listo_para_revisar, 'sin_iniciar') AS listo_para_revisar,
          COALESCE(cl.qa_status,          'sin_iniciar') AS qa_status,
@@ -66,6 +64,7 @@ export const getProjectChecklist = async (req: AuthRequest, res: Response) => {
          COALESCE(cl.g5_rev,   FALSE) AS g5_rev,
          COALESCE(cl.carga_completa,     FALSE) AS carga_completa,
          COALESCE(cl.actividades_moodle, FALSE) AS actividades_moodle,
+         COALESCE(cl.user_checks, '{}'::jsonb)  AS user_checks,
          cl.updated_at,
          upd.full_name AS updated_by_name
        FROM public.asignaturas a
@@ -87,39 +86,93 @@ export const getProjectChecklist = async (req: AuthRequest, res: Response) => {
 
 /**
  * PATCH /api/checklist/:asignaturaId
- * Upsert del checklist de una asignatura.
- * Acepta cualquier subconjunto de los campos del checklist.
+ *
+ * Role-aware upsert:
+ *  - Admin: boolean check fields → update column directly AND remove from user_checks
+ *  - Non-admin: boolean check fields → merge into user_checks JSONB
+ *  - Both: status fields (listo_para_revisar, qa_status) → update column directly
  */
 export const upsertChecklist = async (req: AuthRequest, res: Response) => {
   try {
     const { asignaturaId } = req.params;
     const profileId = req.user?.profileId;
+    const isAdmin = req.user?.role === 'admin';
     const body = req.body as Record<string, unknown>;
 
-    // Sólo acepta campos conocidos del checklist
-    const allowed = new Set<string>(CHECKLIST_FIELDS);
-    const updates: Record<string, unknown> = {};
+    // Separate incoming fields into direct column updates and user_checks updates
+    const directColUpdates: Record<string, unknown> = {};
+    const userChecksUpdate: Record<string, unknown> = {};
+
     for (const [k, v] of Object.entries(body)) {
-      if (allowed.has(k)) updates[k] = v;
+      if (STATUS_FIELDS.has(k)) {
+        directColUpdates[k] = v;
+      } else if (BOOL_CHECK_FIELDS.has(k)) {
+        if (isAdmin) {
+          directColUpdates[k] = v;
+        } else {
+          userChecksUpdate[k] = v;
+        }
+      }
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(directColUpdates).length === 0 && Object.keys(userChecksUpdate).length === 0) {
       return res.status(400).json({ error: 'No hay campos válidos para actualizar' });
     }
 
-    // Construir SET dinámico
-    const setClauses = Object.keys(updates).map((k, i) => `${k} = $${i + 2}`);
-    const values = [asignaturaId, ...Object.values(updates), profileId];
-    const updatedByIdx = values.length;
+    // Build dynamic INSERT … ON CONFLICT DO UPDATE
+    const params: unknown[] = [asignaturaId];
+    const insertCols: string[] = ['asignatura_id'];
+    const insertPlaceholders: string[] = ['$1'];
+    const updateSets: string[] = [];
 
-    const upsertSql = `
-      INSERT INTO public.asignatura_checklist (asignatura_id, ${Object.keys(updates).join(', ')}, updated_by)
-      VALUES ($1, ${Object.keys(updates).map((_, i) => `$${i + 2}`).join(', ')}, $${updatedByIdx})
-      ON CONFLICT (asignatura_id) DO UPDATE
-        SET ${setClauses.join(', ')}, updated_by = $${updatedByIdx}, updated_at = NOW()
+    // Direct column updates (status fields for all; bool fields for admin only)
+    for (const [k, v] of Object.entries(directColUpdates)) {
+      params.push(v);
+      const idx = params.length;
+      insertCols.push(k);
+      insertPlaceholders.push(`$${idx}`);
+      updateSets.push(`${k} = $${idx}`);
+    }
+
+    // Non-admin boolean checks → merge into user_checks
+    if (Object.keys(userChecksUpdate).length > 0) {
+      params.push(JSON.stringify(userChecksUpdate));
+      const jsonIdx = params.length;
+      insertCols.push('user_checks');
+      insertPlaceholders.push(`$${jsonIdx}::jsonb`);
+      // New row: user_checks = supplied value
+      // Existing row: user_checks = existing || supplied (merge)
+      updateSets.push(`user_checks = asignatura_checklist.user_checks || $${jsonIdx}::jsonb`);
+    }
+
+    // Admin approving bool fields → remove those keys from user_checks
+    if (isAdmin) {
+      const adminBoolKeys = Object.keys(directColUpdates).filter((k) => BOOL_CHECK_FIELDS.has(k));
+      if (adminBoolKeys.length > 0) {
+        const removeExpr = adminBoolKeys.reduce(
+          (expr, k) => `(${expr} - '${k}')`,
+          'asignatura_checklist.user_checks',
+        );
+        updateSets.push(`user_checks = ${removeExpr}`);
+      }
+    }
+
+    // updated_by
+    params.push(profileId);
+    const updByIdx = params.length;
+    insertCols.push('updated_by');
+    insertPlaceholders.push(`$${updByIdx}`);
+    updateSets.push(`updated_by = $${updByIdx}`);
+    updateSets.push(`updated_at = NOW()`);
+
+    const sql = `
+      INSERT INTO public.asignatura_checklist (${insertCols.join(', ')})
+      VALUES (${insertPlaceholders.join(', ')})
+      ON CONFLICT (asignatura_id) DO UPDATE SET
+        ${updateSets.join(',\n        ')}
       RETURNING *`;
 
-    const result = await query(upsertSql, values);
+    const result = await query(sql, params);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('upsertChecklist error:', error);

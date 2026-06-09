@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
+import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
 import {
   Sheet,
@@ -19,6 +20,8 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Search,
+  CalendarDays,
+  TableProperties,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -260,6 +263,8 @@ export default function ProximosProgramasPage() {
     setWizardSource(null);
   }, [wizardSource, updateMutation]);
 
+  const [view, setView] = useState<'table' | 'calendar'>('table');
+
   // Filters — completados ocultos por defecto
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState<EstadoPrograma | 'todos' | 'activos'>('activos');
@@ -392,7 +397,7 @@ export default function ProximosProgramasPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filters + view toggle */}
       <div className="flex flex-wrap gap-3 mb-4 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -432,10 +437,63 @@ export default function ProximosProgramasPage() {
             <SelectItem value="baja">Baja</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* View toggle */}
+        <div className="flex border rounded-lg overflow-hidden ml-auto">
+          <Button
+            variant={view === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            className="rounded-none gap-1.5 px-3"
+            onClick={() => setView('table')}
+          >
+            <TableProperties className="h-4 w-4" /> Tabla
+          </Button>
+          <Button
+            variant={view === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            className="rounded-none gap-1.5 px-3"
+            onClick={() => setView('calendar')}
+          >
+            <CalendarDays className="h-4 w-4" /> Calendario
+          </Button>
+        </div>
       </div>
 
+      {/* Calendar view */}
+      {view === 'calendar' && (() => {
+        const PRIORIDAD_COLORS: Record<string, string> = {
+          alta:  'bg-red-500',
+          media: 'bg-amber-400',
+          baja:  'bg-green-500',
+        };
+        const calEvents: CalendarEvent[] = filtered.map((p) => ({
+          id:    p.id,
+          date:  p.fecha_envio_curriculo.slice(0, 10),
+          label: `${p.escuela} · ${p.nivel_programa}`,
+          color: PRIORIDAD_COLORS[p.prioridad] ?? 'bg-primary',
+          onClick: () => openDetail(p),
+        }));
+        return (
+          <div className="space-y-3 mb-4">
+            <div className="flex gap-4 flex-wrap text-xs text-slate-500">
+              {[
+                { label: 'Alta prioridad',  color: 'bg-red-500'   },
+                { label: 'Media prioridad', color: 'bg-amber-400' },
+                { label: 'Baja prioridad',  color: 'bg-green-500' },
+              ].map((l) => (
+                <span key={l.label} className="flex items-center gap-1.5">
+                  <span className={cn('h-2.5 w-2.5 rounded-full', l.color)} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+            <MiniCalendar events={calEvents} />
+          </div>
+        );
+      })()}
+
       {/* Table */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+      {view === 'table' && <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -604,7 +662,7 @@ export default function ProximosProgramasPage() {
             </TableBody>
           </Table>
         )}
-      </div>
+      </div>}
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

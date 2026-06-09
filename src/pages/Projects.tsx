@@ -123,21 +123,6 @@ export default function ProjectsPage() {
                         <span>{project.members.length}</span>
                       </div>
                     </div>
-                    <div className="flex -space-x-2">
-                      {project.members.slice(0, 3).map((member) => (
-                        <Avatar key={member.id} className="h-7 w-7 border-2 border-card">
-                          <AvatarImage src={member.profile?.avatar_url || undefined} />
-                          <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                            {getInitials(member.profile?.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                      {project.members.length > 3 && (
-                        <div className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center text-[10px] font-medium border-2 border-card">
-                          +{project.members.length - 3}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </CardContent>
               </Card>

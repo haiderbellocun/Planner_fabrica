@@ -36,7 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X } from 'lucide-react';
+import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -260,18 +260,19 @@ export default function ProjectDetailPage() {
               </Button>
             ) : null}
           </div>
+
+          {/* Fecha de entrega */}
+          {project.end_date && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <CalendarCheck2 className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Fecha de entrega:</span>
+              <span className="text-xs font-medium text-foreground">
+                {format(new Date(project.end_date.slice(0, 10) + 'T00:00:00'), "d 'de' MMMM yyyy", { locale: es })}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex -space-x-2 mr-2">
-            {project.members.slice(0, 4).map((member) => (
-              <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
-                <AvatarImage src={member.profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                  {getInitials(member.profile?.full_name)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
           <Button variant="outline" size="icon">
             <Users className="h-4 w-4" />
           </Button>
