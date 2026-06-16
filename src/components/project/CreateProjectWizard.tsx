@@ -81,8 +81,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
   const [name, setName] = useState(initialData?.name ?? '');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
-  const [link, setLink] = useState('');
-  const [linkLabel, setLinkLabel] = useState('');
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([{ label: '', url: '' }]);
   const [endDate, setEndDate] = useState<string>(initialData?.end_date ?? '');
   const [category, setCategory] = useState<ProjectCategory | null>(initialData?.category ?? null);
 
@@ -127,8 +126,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
     setName('');
     setKey('');
     setDescription('');
-    setLink('');
-    setLinkLabel('');
+    setLinks([{ label: '', url: '' }]);
     setEndDate('');
     setCategory(null);
     setMarketingPiecesType('');
@@ -202,12 +200,15 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
 
     try {
       // Crear proyecto
+      const validLinks = links.filter(l => l.url.trim());
+      const serializedLink = validLinks.length === 0 ? null : JSON.stringify(validLinks);
+
       const projectResponse = await api.post<{ id: string }>('/api/projects', {
         name: name.trim(),
         key: key.trim(),
         description: finalDescription || null,
-        link: link.trim() || null,
-        link_label: linkLabel.trim() || null,
+        link: serializedLink,
+        link_label: null,
         end_date: endDate,
         category: category || null,
         tipo_programa: category === 'desarrollo' ? 'desarrollo' : null,
@@ -571,21 +572,44 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
               </div>
 
               <div className="space-y-2">
-                <Label>Enlace <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nombre (ej: Drive)"
-                    value={linkLabel}
-                    onChange={(e) => setLinkLabel(e.target.value)}
-                    className="w-40"
-                  />
-                  <Input
-                    type="url"
-                    placeholder="https://..."
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                    className="flex-1"
-                  />
+                <div className="flex items-center justify-between">
+                  <Label>Enlaces <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <button
+                    type="button"
+                    onClick={() => setLinks(prev => [...prev, { label: '', url: '' }])}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar enlace
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {links.map((lnk, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Nombre (ej: Drive)"
+                        value={lnk.label}
+                        onChange={(e) => setLinks(prev => prev.map((l, i) => i === idx ? { ...l, label: e.target.value } : l))}
+                        className="w-36"
+                      />
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={lnk.url}
+                        onChange={(e) => setLinks(prev => prev.map((l, i) => i === idx ? { ...l, url: e.target.value } : l))}
+                        className="flex-1"
+                      />
+                      {links.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLinks(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

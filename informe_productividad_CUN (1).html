@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Productividad Operacional — CUN</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F3EF;--sf:#FFFFFF;--sf2:#EEECEA;--sf3:#E4E2DD;
+  --brd:rgba(0,0,0,.08);--brd2:rgba(0,0,0,.14);
+  --tx:#18181A;--sec:#5A5957;--hint:#9B9997;
+  --A:#1564C0;--B:#1A7A4A;--C:#C05C0A;--D:#7C3ABA;--E:#B91C1C;
+  --sg:#1A7A4A;--sa:#C05C0A;--sr:#B91C1C;
+  --fin:#1A7A4A;--pro:#1564C0;--rev:#C05C0A;--pau:#6B7280;--sin:#9B9997;--adj:#7C3ABA;
+  --r6:6px;--r10:10px;--r14:14px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 0 0 .5px rgba(0,0,0,.07);
+}
+html{font-size:13px;line-height:1.5}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+/* HEADER */
+.hdr{background:var(--sf);border-bottom:1px solid var(--brd);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--sh)}
+.hdr-l{display:flex;align-items:center;gap:11px}
+.logo{width:34px;height:34px;border-radius:var(--r6);background:linear-gradient(135deg,var(--A),var(--D));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.hdr-title{font-size:14px;font-weight:700}
+.hdr-sub{font-size:10px;color:var(--sec)}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;background:#EBF5EE;color:var(--sg);font-weight:700;border:1px solid rgba(26,122,74,.2);display:flex;align-items:center;gap:5px}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--sg)}
+
+/* FILTER BAR */
+.fbar{background:var(--sf);border-bottom:1px solid var(--brd);padding:8px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flbl{font-size:10px;color:var(--hint);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+select{font-size:11px;padding:5px 22px 5px 8px;border:1px solid var(--brd2);border-radius:var(--r6);background:var(--sf);color:var(--tx);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
+.btn{font-size:11px;padding:5px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--brd2);background:var(--sf);color:var(--sec)}
+.btn:hover{background:var(--sf2)}
+
+/* PAGE */
+.page{padding:20px 24px;display:flex;flex-direction:column;gap:20px;max-width:1400px;margin:0 auto}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.sp2{grid-column:span 2}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--brd);border-radius:var(--r14);padding:16px 18px;box-shadow:var(--sh)}
+.ctit{font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px}
+.csub{font-size:10px;color:var(--sec);margin-bottom:12px}
+
+/* KPI */
+.kpi{background:var(--sf);border:1px solid var(--brd);border-radius:var(--r14);padding:14px 16px;box-shadow:var(--sh);border-top:3px solid var(--kc,var(--A))}
+.kpi-ico{font-size:20px;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.kpi-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sec);margin-top:4px}
+.kpi-ctx{font-size:10px;color:var(--hint);margin-top:2px}
+.kpi-sem{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-top:5px}
+.sem-g{background:#EBF5EE;color:var(--sg)}.sem-a{background:#FEF3E8;color:var(--sa)}.sem-r{background:#FEECEC;color:var(--sr)}
+
+/* PILL */
+.pill{display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:700;white-space:nowrap}
+.pg{background:#EBF5EE;color:var(--sg)}.pb{background:#EAF1FB;color:var(--A)}
+.pa{background:#FEF3E8;color:var(--sa)}.pr{background:#FEECEC;color:var(--sr)}
+.pp{background:#F3EAFE;color:var(--D)}.pgy{background:#F1EFE9;color:var(--sec)}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--sec)}
+.lsw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* TABLE */
+.tw{overflow-y:auto;border:1px solid var(--brd);border-radius:var(--r6)}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl thead th{position:sticky;top:0;background:var(--sf2);padding:6px 9px;color:var(--sec);font-weight:700;border-bottom:1px solid var(--brd);font-size:10px;cursor:pointer;white-space:nowrap;text-align:left}
+.tbl thead th:hover{color:var(--tx)}
+.tbl td{padding:6px 9px;border-bottom:1px solid var(--brd);color:var(--tx);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:#EAF1FB}
+.nr{text-align:right!important;font-variant-numeric:tabular-nums}
+
+/* SECTION HEADER */
+.sh{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.sh-tag{font-size:10px;font-weight:700;color:var(--A);background:#EAF1FB;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.sh-title{font-size:15px;font-weight:800;letter-spacing:-.02em}
+
+/* PHASE BAR */
+.pbar{display:flex;height:20px;border-radius:4px;overflow:hidden;gap:1px}
+.pseg{display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(255,255,255,.9);font-weight:700;overflow:hidden}
+
+/* SCORE RING */
+.sring-wrap{position:relative;width:48px;height:48px;flex-shrink:0}
+.sring-wrap svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.sring-val{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:800;line-height:1}
+
+/* ALERTS */
+.al{border-radius:var(--r6);padding:8px 12px;font-size:11px;margin-bottom:6px;line-height:1.5;border:1px solid transparent}
+.al-r{background:#FEECEC;border-color:#FBBDBD;color:#991B1B}
+.al-a{background:#FEF3E8;border-color:#FDBA74;color:#92400E}
+.al-g{background:#EBF5EE;border-color:#86EFAC;color:#166534}
+.al-b{background:#EAF1FB;border-color:#BFDBFE;color:#1E40AF}
+
+/* BULLET */
+.bullet-wrap{margin-bottom:9px}
+.bullet-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.bullet-track{position:relative;height:14px;background:var(--sf2);border-radius:3px;overflow:visible}
+.bullet-fill{position:absolute;left:0;top:2px;height:10px;border-radius:2px;transition:width .5s}
+.bullet-meta{position:absolute;left:85%;top:-4px;width:2px;height:22px;background:var(--tx);opacity:.35;border-radius:1px}
+
+/* TREND TOGGLE */
+.ttabs{display:flex;gap:3px}
+.ttab{font-size:10px;padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid var(--brd2);background:var(--sf);color:var(--sec);font-weight:600}
+.ttab.act{background:var(--A);color:#fff;border-color:var(--A)}
+
+/* PERSON SELECTOR */
+.person-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.ptab{font-size:11px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;border:1.5px solid var(--brd2);background:var(--sf);color:var(--sec);transition:all .15s}
+.ptab:hover{border-color:var(--brd2);background:var(--sf2)}
+.ptab.act{color:#fff;border-color:transparent}
+
+/* WF ROW */
+.wf{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)}
+.wf:last-child{border-bottom:none}
+.wf-lbl{font-size:11px;font-weight:600;min-width:118px;flex-shrink:0}
+.wf-bar{flex:1;height:18px;background:var(--sf2);border-radius:3px;overflow:hidden}
+.wf-fill{height:100%;display:flex;align-items:center;padding:0 7px;border-radius:3px}
+.wf-fv{font-size:9px;font-weight:700;color:rgba(255,255,255,.9)}
+.wf-n{font-size:11px;color:var(--sec);min-width:34px;text-align:right}
+
+/* IBANNER */
+.ibanner{background:linear-gradient(135deg,#EAF1FB,#F3EAFE);border:1px solid #BFDBFE;border-radius:var(--r6);padding:9px 13px;font-size:11px;color:#374151;margin-bottom:12px;line-height:1.5}
+
+/* SEARCH */
+.srch{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.srch input{flex:1;font-size:11px;padding:5px 9px;border:1px solid var(--brd2);border-radius:var(--r6);background:var(--sf);color:var(--tx)}
+
+/* FOOTER */
+.footer{font-size:10px;color:var(--hint);text-align:right;padding-top:10px;border-top:1px solid var(--brd)}
+
+/* ── SANKEY CANVAS ── */
+#sankey-canvas{display:block;width:100%;cursor:pointer}
+.sankey-tooltip{position:fixed;background:var(--tx);color:var(--sf);border-radius:var(--r6);padding:7px 12px;font-size:11px;pointer-events:none;z-index:300;display:none;line-height:1.5;box-shadow:var(--sh)}
+
+@media(max-width:860px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}.sp2{grid-column:1}.page,.hdr,.fbar{padding-left:14px;padding-right:14px}}
+
+.sk-sel{font-size:11px;padding:5px 22px 5px 8px;border:1px solid var(--brd2);border-radius:6px;background:var(--sf);color:var(--tx);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
+.sk-inp{font-size:11px;padding:5px 8px;border:1px solid var(--brd2);border-radius:6px;background:var(--sf);color:var(--tx);width:120px}
+.sk-inp:focus,.sk-sel:focus{outline:2px solid var(--A);outline-offset:1px}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="logo">📊</div>
+    <div>
+      <div class="hdr-title">Productividad Operacional — CUN</div>
+      <div class="hdr-sub">Dirección de Operaciones · Mar–Jun 2026 · Fuente: CamiTickets audit log</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="badge">Datos reales</div>
+    <span id="fInfo" style="font-size:10px;color:var(--hint)">305 tareas · 5 colaboradores</span>
+  </div>
+</header>
+
+<!-- FILTERS -->
+<div class="fbar">
+  <span class="flbl">Persona:</span>
+  <select id="fP" onchange="applyF()">
+    <option value="all">Todos</option>
+    <option value="Colaborador A">Colaborador A</option>
+    <option value="Colaborador B">Colaborador B</option>
+    <option value="Colaborador C">Colaborador C</option>
+    <option value="Colaborador D">Colaborador D</option>
+    <option value="Colaborador E">Colaborador E</option>
+  </select>
+  <span class="flbl">Estado:</span>
+  <select id="fS" onchange="applyF()">
+    <option value="all">Todos</option>
+    <option value="Finalizado">✅ Finalizado</option>
+    <option value="En proceso">🔄 En proceso</option>
+    <option value="En revisión">🔍 En revisión</option>
+    <option value="Sin iniciar">⭕ Sin iniciar</option>
+    <option value="En pausa">⏸ En pausa</option>
+  </select>
+  <span class="flbl">Duración:</span>
+  <select id="fD" onchange="applyF()">
+    <option value="all">Cualquiera</option>
+    <option value="fast">&lt;24h</option>
+    <option value="med">1–7 días</option>
+    <option value="slow">&gt;7 días</option>
+  </select>
+  <button class="btn" onclick="resetF()">↺ Resetear</button>
+</div>
+
+<div class="page">
+
+<!-- ① RESUMEN ─────────────────────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">① Resumen</span><div class="sh-title">Estado actual del equipo</div></div>
+  <div class="g5" id="kpiGrid" style="margin-bottom:14px"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctit">Composición de tareas por colaborador y estado</div>
+      <div class="csub">Barras apiladas 100% — cada segmento = % en ese estado</div>
+      <div class="legend" id="leg_comp"></div>
+      <div style="height:180px;position:relative"><canvas id="c_comp"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">% Cumplimiento vs. meta (85%)</div>
+      <div class="csub">Bullet chart · línea = meta · franjas = zonas bajo/riesgo/objetivo</div>
+      <div id="bullet" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div><div style="font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">⚠ Alertas</div><div id="alerts"></div></div>
+    <div><div style="font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">💡 Conclusiones</div><div id="insights"></div></div>
+  </div>
+</section>
+
+<!-- ② FLUJO DE ESTADOS (SANKEY) ────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">② Flujo de estados</span><div class="sh-title">¿Cómo recorren las tareas el proceso?</div></div>
+
+  <!-- Filtros propios del Sankey -->
+  <div style="background:var(--sf);border:1px solid var(--brd);border-radius:var(--r14);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)">
+    <span style="font-size:10px;font-weight:700;color:var(--A);background:#EAF1FB;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">🔍 Filtrar flujo</span>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex:1;gap:8px">
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px;color:var(--hint);font-weight:700">👤 Colaborador</span>
+        <select id="sk_actor" onchange="rebuildSankey()" class="sk-sel">
+          <option value="all">Todos</option>
+          <option value="Colaborador A">Colaborador A</option>
+          <option value="Colaborador B">Colaborador B</option>
+          <option value="Colaborador C">Colaborador C</option>
+          <option value="Colaborador D">Colaborador D</option>
+          <option value="Colaborador E">Colaborador E</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px;color:var(--hint);font-weight:700">📁 Proyecto</span>
+        <select id="sk_proj" onchange="rebuildSankey()" class="sk-sel">
+          <option value="all">Todos</option>
+          <option value="Proyecto Marzo">Proyecto Marzo</option>
+          <option value="Proyecto Abril">Proyecto Abril</option>
+          <option value="Proyecto Mayo">Proyecto Mayo</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px;color:var(--hint);font-weight:700">📋 Tarea (ID)</span>
+        <input type="text" id="sk_task" oninput="rebuildSankey()" placeholder="Ej: d0e07175" class="sk-inp">
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px;color:var(--hint);font-weight:700">🏁 Estado final</span>
+        <select id="sk_state" onchange="rebuildSankey()" class="sk-sel">
+          <option value="all">Cualquiera</option>
+          <option value="Finalizado">✅ Finalizado</option>
+          <option value="En proceso">🔄 En proceso</option>
+          <option value="En revisión">🔍 En revisión</option>
+          <option value="Sin iniciar">⭕ Sin iniciar</option>
+          <option value="En pausa">⏸ En pausa</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="resetSankeyFilters()" style="font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--brd2);background:var(--sf);color:var(--sec);flex-shrink:0">↺ Resetear</button>
+    <div id="sk_count" style="font-size:11px;font-weight:700;color:var(--A);white-space:nowrap;flex-shrink:0">259 tareas</div>
+  </div>
+
+  <div class="ibanner" id="ib_flow"></div>
+  <div class="card">
+    <div class="ctit">Diagrama de flujo — estados y volumen de transiciones</div>
+    <div class="csub">Grosor de flecha = volumen de tareas · número = tareas en esa transición · tiempo en nodo = promedio en ese estado · pasa el cursor para detalle</div>
+    <canvas id="sankey-canvas" height="300"></canvas>
+    <div class="sankey-tooltip" id="sk-tip"></div>
+  </div>
+  <div class="g3" style="margin-top:14px">
+    <div class="card">
+      <div class="ctit">Tiempo promedio por estado</div>
+      <div class="csub">Cuántas horas permanece una tarea en cada estado</div>
+      <div id="state_wf" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Tareas activas por estado (ahora)</div>
+      <div class="csub">Distribución actual del backlog abierto</div>
+      <div style="height:170px;position:relative"><canvas id="c_open"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Rutas principales detectadas</div>
+      <div class="csub">Caminos más frecuentes de inicio a cierre</div>
+      <div id="routes" style="margin-top:6px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ TIEMPOS POR FASE ──────────────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">③ Tiempos</span><div class="sh-title">¿Dónde se pierde el tiempo?</div></div>
+  <div class="ibanner" id="ib_t"></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ctit">Anatomía del ciclo por colaborador — composición de tiempo por fase</div>
+    <div class="csub">Tareas finalizadas · cada barra = 100% del tiempo total · segmentos proporcionales a cada fase</div>
+    <div id="phase_anat" style="margin-top:6px"></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctit">Espera · Proceso · Revisión por colaborador (horas promedio)</div>
+      <div class="csub">Barras agrupadas — eje Y desde 0 (manual §3.5)</div>
+      <div style="height:200px;position:relative"><canvas id="c_fases"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Tabla detallada de tiempos por colaborador</div>
+      <div class="csub">Espera · Proceso · Revisión · Rev→Fin · Total · solo tareas finalizadas</div>
+      <div class="tw" style="max-height:220px"><table class="tbl" id="t_fases"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ④ EQUIPO ────────────────────────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">④ Equipo</span><div class="sh-title">Rendimiento del equipo</div></div>
+  <div class="g5" id="actor_cards" style="margin-bottom:14px"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctit">Perfil multidimensional — radar 4 dimensiones</div>
+      <div class="csub">Cumplimiento · Velocidad · Calidad · Estabilidad · máx. 5 series (manual §2.7)</div>
+      <div style="height:250px;position:relative"><canvas id="c_radar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Curvas de aprendizaje — mejora o deterioro por iteración</div>
+      <div class="csub">Línea sólida = tiempo real · punteada = promedio móvil 5 tareas · eje X = N° de tarea finalizada</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="legend" id="leg_lc"></div>
+        <select id="lcSel" onchange="renderLC()" style="font-size:10px;padding:3px 18px 3px 6px;border:1px solid var(--brd2);border-radius:var(--r6);background:var(--sf);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%279%27 height=%279%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%236B7280%27 stroke-width=%272.5%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 5px center">
+          <option value="all">Todos</option>
+          <option value="Colaborador A">Col. A</option>
+          <option value="Colaborador B">Col. B</option>
+          <option value="Colaborador C">Col. C</option>
+        </select>
+      </div>
+      <div style="height:200px;position:relative"><canvas id="c_lc"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑤ DETALLE INDIVIDUAL ──────────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">⑤ Individual</span><div class="sh-title">Detalle por persona</div></div>
+  <div class="person-tabs" id="person_tabs"></div>
+  <div id="person_detail"></div>
+</section>
+
+<!-- ⑥ DETALLE POR TAREA ────────────────────────────────────── -->
+<section>
+  <div class="sh"><span class="sh-tag">⑥ Tareas</span><div class="sh-title">Registro completo</div></div>
+  <div class="card">
+    <div class="srch">
+      <input type="text" id="srch" placeholder="Buscar por ID o colaborador…" oninput="renderDet()">
+      <span style="font-size:10px;color:var(--hint)" id="detCnt"></span>
+    </div>
+    <div class="tw" style="max-height:380px">
+      <table class="tbl" id="t_det">
+        <thead><tr>
+          <th onclick="srtD('id')">ID</th><th onclick="srtD('a')">Colaborador</th><th onclick="srtD('s')">Estado</th>
+          <th class="nr" onclick="srtD('cre')">Creación</th><th class="nr" onclick="srtD('fin')">Cierre</th>
+          <th class="nr" onclick="srtD('h_wai')" title="Creación → primer En proceso">⏳ Espera</th>
+          <th class="nr" onclick="srtD('h_pro')" title="Tiempo en proceso">⚡ Proceso</th>
+          <th class="nr" onclick="srtD('h_rev')" title="Tiempo en revisión">🔍 Revisión</th>
+          <th class="nr" onclick="srtD('h_r2f')" title="Revisión → Finalizado">Rev→Fin</th>
+          <th class="nr" onclick="srtD('h_tot')">📐 Total</th>
+          <th class="nr" onclick="srtD('ret')">Dev.</th>
+          <th class="nr" onclick="srtD('chg')">Chg</th>
+          <th>Vel.</th>
+        </tr></thead>
+        <tbody id="tb_det"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="footer">Fuente: CamiTickets — studio_results_20260609 · 305 tareas · 1,000 eventos · CUN Dirección de Operaciones · Mar–Jun 2026</div>
+</div><!-- /page -->
+<script>
+const SUM={"total": 305, "finalized": 199, "in_proceso": 39, "in_revision": 40, "in_pausa": 12, "not_started": 13, "ajustes": 2, "with_returns": 2, "total_returns": 2, "avg_h_sin_iniciar": 25.11, "avg_h_proceso": 61.69, "avg_h_revision": 66.23, "avg_h_total": 122.73, "avg_h_wait": 15.67, "avg_h_exec": 111.88, "avg_h_rev_to_fin": 69.61, "med_h_total": 131.8};
+const AS={"Colaborador A": {"total": 160, "fin": 105, "in_proceso": 19, "in_revision": 20, "in_pausa": 6, "not_started": 8, "compliance": 65.6, "h_wai": 16.71, "h_pro": 69.09, "h_rev": 60.96, "h_r2f": 66.0, "h_tot": 130.08, "returns": 1, "avg_chg": 2.62, "score": 53.5, "sc_c": 65.6, "sc_s": 0.0, "sc_q": 99.4, "sc_st": 73.8}, "Colaborador B": {"total": 51, "fin": 46, "in_proceso": 0, "in_revision": 4, "in_pausa": 0, "not_started": 1, "compliance": 90.2, "h_wai": 8.04, "h_pro": 35.06, "h_rev": 80.11, "h_r2f": 81.22, "h_tot": 120.17, "returns": 0, "avg_chg": 2.94, "score": 65.4, "sc_c": 90.2, "sc_s": 7.6, "sc_q": 100.0, "sc_st": 70.6}, "Colaborador C": {"total": 40, "fin": 35, "in_proceso": 4, "in_revision": 1, "in_pausa": 0, "not_started": 0, "compliance": 87.5, "h_wai": 24.2, "h_pro": 83.39, "h_rev": 56.39, "h_r2f": 60.45, "h_tot": 118.88, "returns": 1, "avg_chg": 2.33, "score": 64.8, "sc_c": 87.5, "sc_s": 8.6, "sc_q": 97.5, "sc_st": 76.7}, "Colaborador D": {"total": 5, "fin": 5, "in_proceso": 0, "in_revision": 0, "in_pausa": 0, "not_started": 0, "compliance": 100.0, "h_wai": 2.04, "h_pro": 14.0, "h_rev": 82.44, "h_r2f": 96.33, "h_tot": 56.71, "returns": 0, "avg_chg": 2.8, "score": 84.1, "sc_c": 100.0, "sc_s": 56.4, "sc_q": 100.0, "sc_st": 72.0}, "Colaborador E": {"total": 3, "fin": 2, "in_proceso": 0, "in_revision": 0, "in_pausa": 0, "not_started": 1, "compliance": 66.7, "h_wai": 27.95, "h_pro": 0, "h_rev": 0.05, "h_r2f": 0.05, "h_tot": 28.0, "returns": 0, "avg_chg": 2.0, "score": 78.2, "sc_c": 66.7, "sc_s": 78.5, "sc_q": 100.0, "sc_st": 80.0}};
+const TASKS=[{"id": "d0e07175", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": 6.43, "h_pro": 18.4, "h_rev": 0, "h_r2f": null, "h_tot": 24.84, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "520c81a7", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 24.87, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "cf1d5650", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": 5.01, "h_pro": 18.4, "h_rev": 0, "h_r2f": null, "h_tot": 23.42, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "9cae06de", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": 4.99, "h_pro": 18.4, "h_rev": 0, "h_r2f": null, "h_tot": 23.39, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "4731cb3c", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": 4.96, "h_pro": 18.4, "h_rev": 0, "h_r2f": null, "h_tot": 23.36, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "be275a4f", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-03", "h_wai": 6.9, "h_pro": 18.4, "h_rev": 0, "h_r2f": null, "h_tot": 25.31, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "ca3adaf0", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-02", "fin": "2026-03-10", "h_wai": 8.0, "h_pro": 89.7, "h_rev": 0, "h_r2f": null, "h_tot": 196.88, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "a9717aa8", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-04-01", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 141.22, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["En revisi\u00f3n", "Finalizado"]]}, {"id": "9ea4c9b2", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-06", "h_wai": 7.23, "h_pro": 0.0, "h_rev": 68.3, "h_r2f": 68.27, "h_tot": 75.51, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "eb0b6b29", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-10", "h_wai": 2.52, "h_pro": 4.6, "h_rev": 164.4, "h_r2f": 164.45, "h_tot": 171.58, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "36ce201e", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-10", "h_wai": 4.33, "h_pro": 167.2, "h_rev": 0, "h_r2f": null, "h_tot": 171.55, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "735c81d3", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-10", "h_wai": 7.05, "h_pro": 0.0, "h_rev": 164.5, "h_r2f": 164.47, "h_tot": 171.53, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "5c91d7b7", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-10", "h_wai": 7.04, "h_pro": 0.0, "h_rev": 164.5, "h_r2f": 164.47, "h_tot": 171.51, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "bb546309", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-04-01", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 141.27, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["En revisi\u00f3n", "Finalizado"]]}, {"id": "249a8521", "a": "Colaborador D", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-10", "h_wai": 5.56, "h_pro": 0.0, "h_rev": 164.5, "h_r2f": 164.47, "h_tot": 170.03, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "2caedf61", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-25", "h_wai": 0.01, "h_pro": 186.0, "h_rev": 0.0, "h_r2f": 0.0, "h_tot": 524.77, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e877b523", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-25", "h_wai": 0.04, "h_pro": 0.0, "h_rev": 185.9, "h_r2f": 524.67, "h_tot": 524.71, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "04ba52dc", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-03", "fin": "2026-03-11", "h_wai": 0.02, "h_pro": 23.9, "h_rev": 162.1, "h_r2f": 162.05, "h_tot": 185.94, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "047eeefc", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-04", "h_wai": 0.62, "h_pro": 0.1, "h_rev": 4.9, "h_r2f": 4.86, "h_tot": 5.53, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "565978b7", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-05", "h_wai": 0.57, "h_pro": 6.6, "h_rev": 5.1, "h_r2f": 5.09, "h_tot": 12.24, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "9e75b386", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-04", "h_wai": 0.02, "h_pro": 0.0, "h_rev": 5.4, "h_r2f": 5.43, "h_tot": 5.46, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "cf8e67f7", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-04", "h_wai": 0.0, "h_pro": 0.0, "h_rev": 5.4, "h_r2f": 5.43, "h_tot": 5.44, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e3db7632", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-04", "h_wai": 0.04, "h_pro": 0.0, "h_rev": 5.4, "h_r2f": 5.38, "h_tot": 5.42, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "8c51f57d", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-05", "h_wai": 0.29, "h_pro": 1.7, "h_rev": 0.4, "h_r2f": 9.73, "h_tot": 11.74, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "792770ff", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-05", "h_wai": 0.61, "h_pro": 0.1, "h_rev": 11.0, "h_r2f": 11.03, "h_tot": 11.73, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "60748868", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-05", "h_wai": 2.89, "h_pro": 0.0, "h_rev": 8.8, "h_r2f": 8.82, "h_tot": 11.72, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "16175c6f", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 0.11, "h_pro": 3.3, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"]]}, {"id": "0bd65a0d", "a": "Colaborador C", "s": "En revisi\u00f3n", "cre": "2026-03-30", "fin": "", "h_wai": 0.57, "h_pro": 49.4, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "845911c2", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-04-01", "fin": "", "h_wai": 0.0, "h_pro": 4.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 4, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "59f4017f", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 0.33, "h_pro": 2.7, "h_rev": 0, "h_r2f": null, "h_tot": 3.08, "ret": 0, "chg": 4, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "b1bf14d3", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 0.48, "h_pro": 3.3, "h_rev": 5.5, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En pausa"]]}, {"id": "f9ee09ce", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 0.93, "h_pro": 2.8, "h_rev": 5.5, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En pausa"]]}, {"id": "c89a7a9d", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 0.36, "h_pro": 168.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"]]}, {"id": "898a62d0", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 5.31, "h_pro": 23.0, "h_rev": 140.1, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En pausa"]]}, {"id": "0d5cbfd2", "a": "Colaborador A", "s": "En pausa", "cre": "2026-03-04", "fin": "", "h_wai": 0.04, "h_pro": 47.0, "h_rev": 121.4, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En pausa"]]}, {"id": "6d6b57ec", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-06", "h_wai": 19.69, "h_pro": 29.8, "h_rev": 0, "h_r2f": null, "h_tot": 49.46, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "9a223938", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-10", "h_wai": 19.6, "h_pro": 96.3, "h_rev": 29.6, "h_r2f": 29.64, "h_tot": 145.56, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ad924b82", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-06", "h_wai": 19.25, "h_pro": 0.2, "h_rev": 29.7, "h_r2f": 29.71, "h_tot": 49.21, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "20cf556f", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-06", "h_wai": 19.17, "h_pro": 0.2, "h_rev": 29.7, "h_r2f": 29.71, "h_tot": 49.13, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "739cd957", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-11", "h_wai": 0.0, "h_pro": 166.2, "h_rev": 0, "h_r2f": null, "h_tot": 166.22, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "514c5a38", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-04", "fin": "2026-03-11", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 166.11, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "877d6f26", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-11", "h_wai": 11.67, "h_pro": 147.7, "h_rev": 0, "h_r2f": null, "h_tot": 159.39, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "b291207c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-11", "h_wai": 11.81, "h_pro": 123.8, "h_rev": 23.8, "h_r2f": 23.79, "h_tot": 159.35, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ac1bcdc8", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-11", "h_wai": 11.65, "h_pro": 4.5, "h_rev": 143.2, "h_r2f": 143.17, "h_tot": 159.31, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "202fd413", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-11", "h_wai": 0.99, "h_pro": 147.6, "h_rev": 0, "h_r2f": null, "h_tot": 148.62, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "f950465a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-11", "h_wai": 2.68, "h_pro": 2.4, "h_rev": 143.2, "h_r2f": 143.23, "h_tot": 148.34, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "d2cbc8ab", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-06", "h_wai": 23.86, "h_pro": 0.2, "h_rev": 2.8, "h_r2f": 2.78, "h_tot": 26.86, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "75307e92", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-06", "h_wai": 23.75, "h_pro": 3.1, "h_rev": 0, "h_r2f": null, "h_tot": 26.84, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "cdf41788", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-05", "fin": "2026-03-10", "h_wai": 23.6, "h_pro": 99.2, "h_rev": 0, "h_r2f": null, "h_tot": 122.77, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "c705b61f", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-04-22", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "e3272f79", "a": "Colaborador E", "s": "Sin iniciar", "cre": "2026-05-11", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Mayo", "tr": []}, {"id": "6aaae6a2", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-04-22", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "6f6407d0", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-04-22", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "b5489a45", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-06", "fin": "2026-03-06", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 2.4, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "071c7638", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-06", "fin": "2026-03-11", "h_wai": 95.16, "h_pro": 0.2, "h_rev": 27.5, "h_r2f": 27.48, "h_tot": 122.88, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "8e22aefd", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 0.33, "h_pro": 0.0, "h_rev": 0, "h_r2f": null, "h_tot": 3.08, "ret": 0, "chg": 3, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e4c8a71f", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 1.86, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "9fda518a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": null, "h_pro": 0, "h_rev": 0.0, "h_r2f": 0.01, "h_tot": 3.74, "ret": 0, "chg": 2, "proj": "Proyecto Abril", "tr": [["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "1d638874", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-04-01", "fin": "", "h_wai": 2.58, "h_pro": 1.2, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "81874698", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 0.83, "h_pro": 1.4, "h_rev": 0.7, "h_r2f": 0.65, "h_tot": 2.87, "ret": 0, "chg": 3, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "20b789a2", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 1.89, "h_pro": 1.9, "h_rev": 0, "h_r2f": null, "h_tot": 3.74, "ret": 0, "chg": 2, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "57b42f9c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 1.91, "h_pro": 0.4, "h_rev": 0.6, "h_r2f": 0.62, "h_tot": 2.92, "ret": 0, "chg": 3, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b99099c0", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 0.68, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["En revisi\u00f3n", "Finalizado"]]}, {"id": "85897323", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 26.91, "h_pro": 194.2, "h_rev": 0, "h_r2f": null, "h_tot": 221.27, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "3395d286", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 42.91, "h_pro": 178.2, "h_rev": 0, "h_r2f": null, "h_tot": 221.26, "ret": 0, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "9dacf336", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 27.22, "h_pro": 165.2, "h_rev": 28.7, "h_r2f": 28.66, "h_tot": 221.25, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4f9bcc20", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 26.91, "h_pro": 194.2, "h_rev": 0, "h_r2f": null, "h_tot": 221.25, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "9472f8fc", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 42.03, "h_pro": 124.6, "h_rev": 0.0, "h_r2f": 0.01, "h_tot": 166.79, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "a2855bb3", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 17.73, "h_pro": 144.7, "h_rev": 34.7, "h_r2f": 34.72, "h_tot": 221.23, "ret": 0, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "59880a6a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 26.85, "h_pro": 139.8, "h_rev": 0.0, "h_r2f": 0.0, "h_tot": 166.78, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "086ebdff", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 42.88, "h_pro": 119.1, "h_rev": 0, "h_r2f": null, "h_tot": 162.12, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "dfdae1bb", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 24.32, "h_pro": 196.7, "h_rev": 0, "h_r2f": null, "h_tot": 221.21, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "e4861ef2", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 221.2, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "91f5ee5a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 24.3, "h_pro": 196.7, "h_rev": 0, "h_r2f": null, "h_tot": 221.19, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "469e71d8", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 26.86, "h_pro": 100.7, "h_rev": 28.8, "h_r2f": 28.77, "h_tot": 221.18, "ret": 0, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "69abc48c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 26.8, "h_pro": 135.8, "h_rev": 4.0, "h_r2f": 4.02, "h_tot": 166.73, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "12dfb5b5", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 26.79, "h_pro": 139.8, "h_rev": 4.2, "h_r2f": 4.18, "h_tot": 170.91, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "0e814aa8", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 26.81, "h_pro": 139.1, "h_rev": 0.7, "h_r2f": 0.65, "h_tot": 166.72, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4479fdd5", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 17.65, "h_pro": 144.6, "h_rev": 34.8, "h_r2f": 34.8, "h_tot": 221.15, "ret": 0, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "7eef95f3", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 26.79, "h_pro": 165.4, "h_rev": 28.8, "h_r2f": 28.77, "h_tot": 221.13, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4b569d0a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 26.76, "h_pro": 142.2, "h_rev": 0.5, "h_r2f": 0.49, "h_tot": 170.87, "ret": 0, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ad86b717", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 27.31, "h_pro": 132.8, "h_rev": 0, "h_r2f": null, "h_tot": 162.03, "ret": 0, "chg": 6, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "e7f8672a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 24.22, "h_pro": 145.4, "h_rev": 1.1, "h_r2f": 1.05, "h_tot": 170.85, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f754791c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 26.74, "h_pro": 163.3, "h_rev": 27.5, "h_r2f": 27.51, "h_tot": 221.11, "ret": 0, "chg": 9, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "1a645d1b", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 18.25, "h_pro": 149.9, "h_rev": 2.5, "h_r2f": 2.48, "h_tot": 170.82, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f2174cbc", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-19", "h_wai": 48.81, "h_pro": 145.0, "h_rev": 27.1, "h_r2f": 27.07, "h_tot": 221.07, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "40717140", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-09", "fin": "2026-03-16", "h_wai": 23.5, "h_pro": 146.7, "h_rev": 0.5, "h_r2f": 0.48, "h_tot": 170.8, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "586f7050", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-11", "h_wai": 40.07, "h_pro": 0.0, "h_rev": 0.1, "h_r2f": 0.07, "h_tot": 40.21, "ret": 0, "chg": 6, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "Sin iniciar"], ["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4d323aba", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-11", "h_wai": 40.05, "h_pro": 0.0, "h_rev": 0.0, "h_r2f": 0.01, "h_tot": 40.07, "ret": 1, "chg": 8, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Ajustes"], ["Ajustes", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "734848cc", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 3.19, "h_pro": 207.8, "h_rev": 1.0, "h_r2f": 1.0, "h_tot": 211.96, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "3890270e", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 3.17, "h_pro": 187.1, "h_rev": 21.1, "h_r2f": 69.87, "h_tot": 211.94, "ret": 1, "chg": 7, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b7d99a36", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 2.74, "h_pro": 207.8, "h_rev": 1.0, "h_r2f": 1.0, "h_tot": 211.51, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "7518c193", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 1.78, "h_pro": 209.7, "h_rev": 0.0, "h_r2f": 0.0, "h_tot": 211.5, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "fa897592", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 2.73, "h_pro": 208.8, "h_rev": 0, "h_r2f": null, "h_tot": 211.5, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "2280eb41", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-10", "fin": "2026-03-19", "h_wai": 2.71, "h_pro": 208.8, "h_rev": 0, "h_r2f": null, "h_tot": 211.48, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "848be509", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-26", "h_wai": 0.05, "h_pro": 6.2, "h_rev": 0, "h_r2f": null, "h_tot": 365.63, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "868e0cc1", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-25", "h_wai": 0.32, "h_pro": 146.9, "h_rev": 190.4, "h_r2f": 190.43, "h_tot": 337.65, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "13e425bb", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-25", "h_wai": 0.43, "h_pro": 146.1, "h_rev": 191.1, "h_r2f": 191.08, "h_tot": 337.63, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "18216872", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-25", "h_wai": 0.37, "h_pro": 143.7, "h_rev": 193.5, "h_r2f": 193.52, "h_tot": 337.62, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "d7ac4c56", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-11", "h_wai": 0.05, "h_pro": 1.6, "h_rev": 2.1, "h_r2f": 2.12, "h_tot": 3.75, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "12369f4c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-19", "h_wai": 0.03, "h_pro": 175.9, "h_rev": 0, "h_r2f": null, "h_tot": 175.97, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "9940c3a5", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-11", "fin": "2026-03-20", "h_wai": 0.03, "h_pro": 26.3, "h_rev": 184.3, "h_r2f": 184.35, "h_tot": 210.66, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "7ca6bdab", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-26", "h_wai": 0.22, "h_pro": 29.8, "h_rev": 216.0, "h_r2f": 215.98, "h_tot": 246.11, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "6d84d858", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-26", "h_wai": 0.24, "h_pro": 5.7, "h_rev": 239.8, "h_r2f": 239.78, "h_tot": 246.09, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "33443d00", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-26", "h_wai": 0.06, "h_pro": 26.0, "h_rev": 215.6, "h_r2f": 215.6, "h_tot": 241.68, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "c425780c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-20", "h_wai": 1.88, "h_pro": 2.3, "h_rev": 88.7, "h_r2f": 88.74, "h_tot": 92.9, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "468bb5ee", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-20", "h_wai": 0.01, "h_pro": 45.3, "h_rev": 47.7, "h_r2f": 47.72, "h_tot": 93.04, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "c09a20ac", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-26", "h_wai": 0.03, "h_pro": 27.5, "h_rev": 214.0, "h_r2f": 214.03, "h_tot": 241.54, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "85062c10", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-20", "h_wai": 0.34, "h_pro": 18.2, "h_rev": 72.9, "h_r2f": 72.86, "h_tot": 91.38, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4e940e13", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-16", "fin": "2026-03-26", "h_wai": 0.01, "h_pro": 0.0, "h_rev": 239.8, "h_r2f": 239.8, "h_tot": 239.82, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "cc775456", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.34, "h_pro": 50.4, "h_rev": 117.7, "h_r2f": 168.85, "h_tot": 169.35, "ret": 0, "chg": 6, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Sin iniciar"], ["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "6244a998", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 2.39, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.18, "h_tot": 168.78, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e3864ac8", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 2.3, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.18, "h_tot": 168.68, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ab03dc93", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.42, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.18, "h_tot": 167.8, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "a7d4bf43", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.31, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.66, "ret": 0, "chg": 4, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "d2e26c31", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.27, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.62, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "5b9f3bf4", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.17, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.54, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "1e928fb3", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.12, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.5, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "8874aa09", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 1.08, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.45, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "448d7ebb", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.95, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.32, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "9546f7a3", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.9, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 167.27, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "8409c855", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.22, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 166.6, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f42dada9", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.12, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 166.5, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "29696460", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 0.01, "h_pro": 50.2, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 166.4, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "13b819ff", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-17", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 0.34, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "2e55ee80", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-17", "h_wai": 0.07, "h_pro": 0.2, "h_rev": 0, "h_r2f": null, "h_tot": 0.29, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "Finalizado"]]}, {"id": "8acc4e7a", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.59, "h_pro": 23.0, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.71, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "7ada4907", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.54, "h_pro": 23.0, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.66, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f9483696", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.68, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.56, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "3ad2e093", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.66, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.53, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "d92f9047", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.61, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.49, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "1dbce038", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 23.55, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 162.42, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "0c85ad38", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-20", "h_wai": 1.75, "h_pro": 23.8, "h_rev": 40.4, "h_r2f": 40.39, "h_tot": 65.96, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "9ca287bc", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.93, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.8, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "da3bd31b", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.68, "h_pro": 22.9, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.76, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "0139cb51", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.64, "h_pro": 22.9, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.72, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ee2588b9", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.84, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.69, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b46e2127", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.8, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.65, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "32ee5285", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-17", "fin": "2026-03-24", "h_wai": 22.72, "h_pro": 22.7, "h_rev": 116.2, "h_r2f": 116.16, "h_tot": 161.56, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b2694974", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-18", "fin": "2026-03-19", "h_wai": 0.66, "h_pro": 2.4, "h_rev": 7.4, "h_r2f": 7.42, "h_tot": 10.51, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "0bdd7d68", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-18", "fin": "2026-03-19", "h_wai": 0.67, "h_pro": 9.8, "h_rev": 0.0, "h_r2f": 0.0, "h_tot": 10.5, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "06a4e130", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-19", "fin": "2026-03-24", "h_wai": 0.06, "h_pro": 121.0, "h_rev": 0, "h_r2f": null, "h_tot": 121.11, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "7b1e25a8", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-19", "fin": "2026-03-24", "h_wai": 0.0, "h_pro": 121.0, "h_rev": 0, "h_r2f": null, "h_tot": 121.05, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "504a589e", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-19", "fin": "2026-03-24", "h_wai": 0.15, "h_pro": 120.7, "h_rev": 0, "h_r2f": null, "h_tot": 120.8, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "872eb29a", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-19", "fin": "2026-03-24", "h_wai": 0.15, "h_pro": 120.7, "h_rev": 0, "h_r2f": null, "h_tot": 120.79, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "3315f0eb", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-19", "fin": "2026-03-24", "h_wai": 0.14, "h_pro": 120.7, "h_rev": 0, "h_r2f": null, "h_tot": 120.78, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "397c8758", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 150.43, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "a669a658", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 0.41, "h_pro": 0.1, "h_rev": 149.7, "h_r2f": 149.74, "h_tot": 150.24, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f9c5d40f", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 1.85, "h_pro": 0.5, "h_rev": 147.6, "h_r2f": 147.57, "h_tot": 149.94, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "da499cf3", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 0.98, "h_pro": 0.4, "h_rev": 148.1, "h_r2f": 148.07, "h_tot": 149.41, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "1bdb1d2e", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 0.29, "h_pro": 1.2, "h_rev": 147.6, "h_r2f": 147.63, "h_tot": 149.11, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f97c24de", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 0.95, "h_pro": 130.8, "h_rev": 0, "h_r2f": null, "h_tot": 131.8, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "50b0d34d", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 1.38, "h_pro": 130.4, "h_rev": 0, "h_r2f": null, "h_tot": 131.79, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "681daadb", "a": "Colaborador E", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": 27.96, "h_pro": 0.0, "h_rev": 0.1, "h_r2f": 0.05, "h_tot": 28.01, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "57ca97d5", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-25", "h_wai": 4.87, "h_pro": 92.6, "h_rev": 8.9, "h_r2f": 8.93, "h_tot": 106.36, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e077d84c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 129.01, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "98a7fa66", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 129.0, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "0a8fb4ff", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-20", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 0.07, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "3e96dfdc", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 98.82, "h_pro": 30.1, "h_rev": 0, "h_r2f": null, "h_tot": 128.91, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "Finalizado"]]}, {"id": "be4544a0", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.6, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "2e333341", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": 114.54, "h_pro": 10.9, "h_rev": 0, "h_r2f": null, "h_tot": 125.48, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "Finalizado"]]}, {"id": "da66a5fd", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-24", "h_wai": 87.79, "h_pro": 0.0, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 87.81, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "14dbee59", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-24", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 87.8, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "9839ef1f", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.4, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "a73ea070", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.36, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "04fda448", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.34, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "cf34d8ce", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.33, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "484e47d2", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.3, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "10a803e3", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-20", "fin": "2026-03-26", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 125.01, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "a491ffb6", "a": "Colaborador D", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": 0.41, "h_pro": 28.0, "h_rev": 0, "h_r2f": null, "h_tot": 28.4, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "696c84d6", "a": "Colaborador D", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": null, "h_pro": 0, "h_rev": 0.0, "h_r2f": 0.0, "h_tot": 28.39, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "e0bd2795", "a": "Colaborador D", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 28.38, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "4f9cff47", "a": "Colaborador D", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": 0.15, "h_pro": 0.0, "h_rev": 0.4, "h_r2f": 28.2, "h_tot": 28.37, "ret": 0, "chg": 5, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "En revisi\u00f3n"], ["En revisi\u00f3n", "Ajustes"], ["Ajustes", "Finalizado"]]}, {"id": "b3e2ac92", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-24", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 0.08, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "734b0325", "a": "Colaborador E", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-25", "h_wai": 27.94, "h_pro": 0.0, "h_rev": 0.1, "h_r2f": 0.05, "h_tot": 27.99, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "a0942fda", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-30", "h_wai": 142.58, "h_pro": 0.0, "h_rev": 0.0, "h_r2f": 0.04, "h_tot": 142.62, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "bf0f968b", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-30", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 142.61, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "Finalizado"]]}, {"id": "b97abdc7", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-30", "h_wai": 142.5, "h_pro": 0.1, "h_rev": 0, "h_r2f": null, "h_tot": 142.6, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "2b8c4d00", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-30", "h_wai": 140.83, "h_pro": 1.7, "h_rev": 0, "h_r2f": null, "h_tot": 142.52, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "6257639a", "a": "Colaborador C", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-30", "h_wai": 142.5, "h_pro": 0.0, "h_rev": 0, "h_r2f": null, "h_tot": 142.51, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "3ff6c6dc", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-26", "h_wai": 22.44, "h_pro": 3.5, "h_rev": 18.3, "h_r2f": 18.29, "h_tot": 44.18, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "69a522fd", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-26", "h_wai": 20.36, "h_pro": 8.2, "h_rev": 15.6, "h_r2f": 15.62, "h_tot": 44.14, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "61ddf8e1", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-26", "h_wai": 22.31, "h_pro": 3.4, "h_rev": 18.3, "h_r2f": 18.34, "h_tot": 44.02, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b255ca9c", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-24", "fin": "2026-03-26", "h_wai": 2.01, "h_pro": 20.0, "h_rev": 22.0, "h_r2f": 22.0, "h_tot": 43.99, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "b159fc58", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.49, "h_pro": 3.2, "h_rev": 0.0, "h_r2f": 0.04, "h_tot": 3.69, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "eccd50de", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.27, "h_pro": 0.0, "h_rev": 3.4, "h_r2f": 3.4, "h_tot": 3.67, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "29dffb20", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.43, "h_pro": 3.2, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 3.66, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "c6f203f9", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.22, "h_pro": 0.0, "h_rev": 3.4, "h_r2f": 3.4, "h_tot": 3.62, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "a63d7271", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.2, "h_pro": 3.4, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 3.64, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "4886fa81", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 1.42, "h_pro": 2.2, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 3.62, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "fc3a6ad4", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 1.4, "h_pro": 2.2, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 3.61, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "63e407ad", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.16, "h_pro": 3.4, "h_rev": 0.0, "h_r2f": 0.02, "h_tot": 3.6, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "d25aa361", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 1.37, "h_pro": 2.2, "h_rev": 0.0, "h_r2f": 0.01, "h_tot": 3.56, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "7f16150b", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 1.35, "h_pro": 2.2, "h_rev": 0.0, "h_r2f": 0.01, "h_tot": 3.55, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "86ab727e", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.07, "h_pro": 0.0, "h_rev": 3.4, "h_r2f": 3.41, "h_tot": 3.48, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "18c94979", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 0.06, "h_pro": 0.0, "h_rev": 3.4, "h_r2f": 3.41, "h_tot": 3.48, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f65c60a1", "a": "Colaborador B", "s": "Finalizado", "cre": "2026-03-25", "fin": "2026-03-25", "h_wai": 1.28, "h_pro": 2.1, "h_rev": 0.0, "h_r2f": 0.04, "h_tot": 3.47, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "348d15d8", "a": "Colaborador A", "s": "Ajustes", "cre": "2026-03-26", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["En revisi\u00f3n", "Ajustes"]]}, {"id": "fc0e4f9c", "a": "Colaborador A", "s": "Ajustes", "cre": "2026-03-26", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["En revisi\u00f3n", "Ajustes"]]}, {"id": "1fe98b2b", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-04-01", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "b41938bd", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.17, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "f129e6a6", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-04-01", "fin": "2026-04-01", "h_wai": 2.0, "h_pro": 0.9, "h_rev": 0, "h_r2f": null, "h_tot": 2.91, "ret": 0, "chg": 2, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "ff245b94", "a": "Colaborador B", "s": "Sin iniciar", "cre": "2026-04-01", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "7dadf588", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.08, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "81bf01e9", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.07, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "ed12707c", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.01, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "83f13b40", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.14, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "16a8a8d8", "a": "Colaborador A", "s": "En proceso", "cre": "2026-04-01", "fin": "", "h_wai": 0.12, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Abril", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "0e3264af", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-04-01", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Abril", "tr": []}, {"id": "ec216a4a", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 12.03, "h_pro": 26.5, "h_rev": 72.4, "h_r2f": 72.39, "h_tot": 110.93, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "54c19dcc", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 107.93, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "84d77518", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 108.07, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "bbf50466", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 11.34, "h_pro": 23.9, "h_rev": 75.6, "h_r2f": 75.6, "h_tot": 110.87, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "fbbdb704", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 13.84, "h_pro": 29.5, "h_rev": 67.1, "h_r2f": 67.06, "h_tot": 110.45, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "459e7172", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": 110.47, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "2dd4058c", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 11.17, "h_pro": 95.4, "h_rev": 3.8, "h_r2f": 3.79, "h_tot": 110.39, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "fc4cf795", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 15.3, "h_pro": 28.1, "h_rev": 0, "h_r2f": null, "h_tot": 110.39, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En pausa"], ["En pausa", "Finalizado"]]}, {"id": "8438ee2d", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 14.5, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "0d141028", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.9, "h_pro": 99.5, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "efab68bd", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.71, "h_pro": 99.7, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "f81649af", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 11.59, "h_pro": 31.7, "h_rev": 67.0, "h_r2f": 67.04, "h_tot": 110.31, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"], ["En revisi\u00f3n", "Finalizado"]]}, {"id": "f46962e1", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 11.18, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "c88abeee", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 10.68, "h_pro": 99.6, "h_rev": 0, "h_r2f": null, "h_tot": 110.27, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "84198861", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 0.04, "h_pro": 11.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "02ff274f", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 0.02, "h_pro": 11.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "a4a78def", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.58, "h_pro": 0.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "55e16173", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.02, "h_pro": 32.5, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "8bc9f82a", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.3, "h_pro": 2.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "7f533dc7", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 9.99, "h_pro": 24.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "85e9bbf7", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.27, "h_pro": 30.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "fa00c7c6", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.09, "h_pro": 0.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "d296b0d3", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 10.09, "h_pro": 30.4, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "67f46846", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 40.86, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "94ff067f", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-03-26", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Marzo", "tr": []}, {"id": "49fd2723", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 14.28, "h_pro": 23.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "0e60ea7b", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 37.05, "h_pro": 4.6, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "1e108b6b", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 37.04, "h_pro": 70.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "a828b853", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 37.03, "h_pro": 72.7, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "e65deb45", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 37.27, "h_pro": 69.6, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "06d0feec", "a": "Colaborador A", "s": "Finalizado", "cre": "2026-03-26", "fin": "2026-03-30", "h_wai": 106.86, "h_pro": 3.0, "h_rev": 0, "h_r2f": null, "h_tot": 109.88, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Finalizado"]]}, {"id": "3c31097c", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 13.99, "h_pro": 92.5, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "403b3f03", "a": "Colaborador A", "s": "En revisi\u00f3n", "cre": "2026-03-26", "fin": "", "h_wai": 34.38, "h_pro": 72.1, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "fc1c7166", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 95.97, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "dd2c3929", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 95.85, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "0c1103bb", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 93.51, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "8ad6ad47", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-03-26", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Marzo", "tr": []}, {"id": "940d39c9", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-26", "fin": "", "h_wai": 2.48, "h_pro": 87.9, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 3, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "Sin iniciar"], ["Sin iniciar", "En proceso"]]}, {"id": "764f9145", "a": "Colaborador B", "s": "En revisi\u00f3n", "cre": "2026-03-27", "fin": "", "h_wai": 0.11, "h_pro": 71.3, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "c43b2f1a", "a": "Colaborador B", "s": "En revisi\u00f3n", "cre": "2026-03-27", "fin": "", "h_wai": 0.13, "h_pro": 71.0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "8dd6a8fe", "a": "Colaborador B", "s": "En revisi\u00f3n", "cre": "2026-03-27", "fin": "", "h_wai": 0.11, "h_pro": 70.9, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "6bbe1976", "a": "Colaborador B", "s": "En revisi\u00f3n", "cre": "2026-03-27", "fin": "", "h_wai": 0.05, "h_pro": 70.9, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 2, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"], ["En proceso", "En revisi\u00f3n"]]}, {"id": "420c4b97", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 1.46, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "df4f978c", "a": "Colaborador A", "s": "Sin iniciar", "cre": "2026-03-30", "fin": "", "h_wai": null, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 0, "proj": "Proyecto Marzo", "tr": []}, {"id": "2fc47394", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 1.13, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "b8962da8", "a": "Colaborador A", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 1.06, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "fc6d57cc", "a": "Colaborador C", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 0.56, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "6b627ff6", "a": "Colaborador C", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 0.54, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "de567705", "a": "Colaborador C", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 0.53, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}, {"id": "2d909d8d", "a": "Colaborador C", "s": "En proceso", "cre": "2026-03-30", "fin": "", "h_wai": 0.52, "h_pro": 0, "h_rev": 0, "h_r2f": null, "h_tot": null, "ret": 0, "chg": 1, "proj": "Proyecto Marzo", "tr": [["Sin iniciar", "En proceso"]]}];
+const LC={"Colaborador A": [{"seq": 1, "h": 5.4, "date": "2026-03-04", "ma": 5.4}, {"seq": 2, "h": 5.4, "date": "2026-03-04", "ma": 5.4}, {"seq": 3, "h": 5.5, "date": "2026-03-04", "ma": 5.4}, {"seq": 4, "h": 5.5, "date": "2026-03-04", "ma": 5.5}, {"seq": 5, "h": 11.7, "date": "2026-03-05", "ma": 6.7}, {"seq": 6, "h": 11.7, "date": "2026-03-05", "ma": 8.0}, {"seq": 7, "h": 12.2, "date": "2026-03-05", "ma": 9.3}, {"seq": 8, "h": 11.7, "date": "2026-03-05", "ma": 10.6}, {"seq": 9, "h": 2.4, "date": "2026-03-06", "ma": 9.9}, {"seq": 10, "h": 40.1, "date": "2026-03-11", "ma": 15.6}, {"seq": 11, "h": 40.2, "date": "2026-03-11", "ma": 21.3}, {"seq": 12, "h": 185.9, "date": "2026-03-11", "ma": 56.1}, {"seq": 13, "h": 148.6, "date": "2026-03-11", "ma": 83.4}, {"seq": 14, "h": 166.2, "date": "2026-03-11", "ma": 116.2}, {"seq": 15, "h": 159.4, "date": "2026-03-11", "ma": 140.1}, {"seq": 16, "h": 166.1, "date": "2026-03-11", "ma": 165.2}, {"seq": 17, "h": 159.3, "date": "2026-03-11", "ma": 159.9}, {"seq": 18, "h": 159.3, "date": "2026-03-11", "ma": 162.1}, {"seq": 19, "h": 148.3, "date": "2026-03-11", "ma": 158.5}, {"seq": 20, "h": 3.8, "date": "2026-03-11", "ma": 127.4}, {"seq": 21, "h": 122.9, "date": "2026-03-11", "ma": 118.7}, {"seq": 22, "h": 162.1, "date": "2026-03-16", "ma": 119.3}, {"seq": 23, "h": 162.0, "date": "2026-03-16", "ma": 119.8}, {"seq": 24, "h": 166.7, "date": "2026-03-16", "ma": 123.5}, {"seq": 25, "h": 166.8, "date": "2026-03-16", "ma": 156.1}, {"seq": 26, "h": 166.8, "date": "2026-03-16", "ma": 164.9}, {"seq": 27, "h": 166.7, "date": "2026-03-16", "ma": 165.8}, {"seq": 28, "h": 170.8, "date": "2026-03-16", "ma": 167.6}, {"seq": 29, "h": 170.8, "date": "2026-03-16", "ma": 168.4}, {"seq": 30, "h": 170.8, "date": "2026-03-16", "ma": 169.2}, {"seq": 31, "h": 170.9, "date": "2026-03-16", "ma": 170.0}, {"seq": 32, "h": 170.9, "date": "2026-03-16", "ma": 170.8}, {"seq": 33, "h": 0.3, "date": "2026-03-17", "ma": 136.7}, {"seq": 34, "h": 0.3, "date": "2026-03-17", "ma": 102.6}, {"seq": 35, "h": 10.5, "date": "2026-03-19", "ma": 70.6}, {"seq": 36, "h": 10.5, "date": "2026-03-19", "ma": 38.5}, {"seq": 37, "h": 221.2, "date": "2026-03-19", "ma": 48.6}, {"seq": 38, "h": 221.2, "date": "2026-03-19", "ma": 92.7}, {"seq": 39, "h": 221.1, "date": "2026-03-19", "ma": 136.9}, {"seq": 40, "h": 221.1, "date": "2026-03-19", "ma": 179.0}, {"seq": 41, "h": 221.1, "date": "2026-03-19", "ma": 221.1}, {"seq": 42, "h": 221.2, "date": "2026-03-19", "ma": 221.1}, {"seq": 43, "h": 221.2, "date": "2026-03-19", "ma": 221.1}, {"seq": 44, "h": 221.2, "date": "2026-03-19", "ma": 221.2}, {"seq": 45, "h": 221.2, "date": "2026-03-19", "ma": 221.2}, {"seq": 46, "h": 221.2, "date": "2026-03-19", "ma": 221.2}, {"seq": 47, "h": 221.2, "date": "2026-03-19", "ma": 221.2}, {"seq": 48, "h": 221.3, "date": "2026-03-19", "ma": 221.2}, {"seq": 49, "h": 221.3, "date": "2026-03-19", "ma": 221.2}, {"seq": 50, "h": 176.0, "date": "2026-03-19", "ma": 212.2}, {"seq": 51, "h": 210.7, "date": "2026-03-20", "ma": 210.1}, {"seq": 52, "h": 92.9, "date": "2026-03-20", "ma": 184.4}, {"seq": 53, "h": 91.4, "date": "2026-03-20", "ma": 158.5}, {"seq": 54, "h": 66.0, "date": "2026-03-20", "ma": 127.4}, {"seq": 55, "h": 93.0, "date": "2026-03-20", "ma": 110.8}, {"seq": 56, "h": 0.1, "date": "2026-03-20", "ma": 68.7}, {"seq": 57, "h": 87.8, "date": "2026-03-24", "ma": 67.7}, {"seq": 58, "h": 87.8, "date": "2026-03-24", "ma": 66.9}, {"seq": 59, "h": 0.1, "date": "2026-03-24", "ma": 53.8}, {"seq": 60, "h": 106.4, "date": "2026-03-25", "ma": 56.4}, {"seq": 61, "h": 524.7, "date": "2026-03-25", "ma": 161.4}, {"seq": 62, "h": 524.8, "date": "2026-03-25", "ma": 248.8}, {"seq": 63, "h": 125.0, "date": "2026-03-26", "ma": 256.2}, {"seq": 64, "h": 125.3, "date": "2026-03-26", "ma": 281.2}, {"seq": 65, "h": 125.3, "date": "2026-03-26", "ma": 285.0}, {"seq": 66, "h": 125.3, "date": "2026-03-26", "ma": 205.1}, {"seq": 67, "h": 125.4, "date": "2026-03-26", "ma": 125.3}, {"seq": 68, "h": 125.4, "date": "2026-03-26", "ma": 125.3}, {"seq": 69, "h": 125.5, "date": "2026-03-26", "ma": 125.4}, {"seq": 70, "h": 125.6, "date": "2026-03-26", "ma": 125.4}, {"seq": 71, "h": 128.9, "date": "2026-03-26", "ma": 126.2}, {"seq": 72, "h": 129.0, "date": "2026-03-26", "ma": 126.9}, {"seq": 73, "h": 129.0, "date": "2026-03-26", "ma": 127.6}, {"seq": 74, "h": 131.8, "date": "2026-03-26", "ma": 128.9}, {"seq": 75, "h": 131.8, "date": "2026-03-26", "ma": 130.1}, {"seq": 76, "h": 150.4, "date": "2026-03-26", "ma": 134.4}, {"seq": 77, "h": 149.1, "date": "2026-03-26", "ma": 138.4}, {"seq": 78, "h": 149.4, "date": "2026-03-26", "ma": 142.5}, {"seq": 79, "h": 149.9, "date": "2026-03-26", "ma": 146.1}, {"seq": 80, "h": 150.2, "date": "2026-03-26", "ma": 149.8}, {"seq": 81, "h": 239.8, "date": "2026-03-26", "ma": 167.7}, {"seq": 82, "h": 241.7, "date": "2026-03-26", "ma": 186.2}, {"seq": 83, "h": 246.1, "date": "2026-03-26", "ma": 205.5}, {"seq": 84, "h": 246.1, "date": "2026-03-26", "ma": 224.8}, {"seq": 85, "h": 241.5, "date": "2026-03-26", "ma": 243.0}, {"seq": 86, "h": 365.6, "date": "2026-03-26", "ma": 268.2}, {"seq": 87, "h": 110.3, "date": "2026-03-30", "ma": 241.9}, {"seq": 88, "h": 110.9, "date": "2026-03-30", "ma": 214.9}, {"seq": 89, "h": 110.9, "date": "2026-03-30", "ma": 187.8}, {"seq": 90, "h": 110.5, "date": "2026-03-30", "ma": 161.6}, {"seq": 91, "h": 110.4, "date": "2026-03-30", "ma": 110.6}, {"seq": 92, "h": 110.4, "date": "2026-03-30", "ma": 110.6}, {"seq": 93, "h": 110.5, "date": "2026-03-30", "ma": 110.5}, {"seq": 94, "h": 110.3, "date": "2026-03-30", "ma": 110.4}, {"seq": 95, "h": 109.9, "date": "2026-03-30", "ma": 110.3}, {"seq": 96, "h": 141.2, "date": "2026-04-01", "ma": 116.5}, {"seq": 97, "h": 141.3, "date": "2026-04-01", "ma": 122.6}, {"seq": 98, "h": 3.1, "date": "2026-04-01", "ma": 101.2}, {"seq": 99, "h": 3.1, "date": "2026-04-01", "ma": 79.7}, {"seq": 100, "h": 0.7, "date": "2026-04-01", "ma": 57.9}, {"seq": 101, "h": 2.9, "date": "2026-04-01", "ma": 30.2}, {"seq": 102, "h": 2.9, "date": "2026-04-01", "ma": 2.5}, {"seq": 103, "h": 2.9, "date": "2026-04-01", "ma": 2.5}, {"seq": 104, "h": 3.7, "date": "2026-04-01", "ma": 2.6}, {"seq": 105, "h": 3.7, "date": "2026-04-01", "ma": 3.2}], "Colaborador B": [{"seq": 1, "h": 161.6, "date": "2026-03-24", "ma": 161.6}, {"seq": 2, "h": 161.7, "date": "2026-03-24", "ma": 161.6}, {"seq": 3, "h": 161.7, "date": "2026-03-24", "ma": 161.7}, {"seq": 4, "h": 161.7, "date": "2026-03-24", "ma": 161.7}, {"seq": 5, "h": 161.8, "date": "2026-03-24", "ma": 161.7}, {"seq": 6, "h": 161.8, "date": "2026-03-24", "ma": 161.7}, {"seq": 7, "h": 162.4, "date": "2026-03-24", "ma": 161.9}, {"seq": 8, "h": 162.5, "date": "2026-03-24", "ma": 162.0}, {"seq": 9, "h": 162.5, "date": "2026-03-24", "ma": 162.2}, {"seq": 10, "h": 162.6, "date": "2026-03-24", "ma": 162.4}, {"seq": 11, "h": 162.7, "date": "2026-03-24", "ma": 162.5}, {"seq": 12, "h": 162.7, "date": "2026-03-24", "ma": 162.6}, {"seq": 13, "h": 166.4, "date": "2026-03-24", "ma": 163.4}, {"seq": 14, "h": 166.5, "date": "2026-03-24", "ma": 164.2}, {"seq": 15, "h": 166.6, "date": "2026-03-24", "ma": 165.0}, {"seq": 16, "h": 167.3, "date": "2026-03-24", "ma": 165.9}, {"seq": 17, "h": 167.3, "date": "2026-03-24", "ma": 166.8}, {"seq": 18, "h": 167.4, "date": "2026-03-24", "ma": 167.0}, {"seq": 19, "h": 167.5, "date": "2026-03-24", "ma": 167.2}, {"seq": 20, "h": 167.5, "date": "2026-03-24", "ma": 167.4}, {"seq": 21, "h": 167.6, "date": "2026-03-24", "ma": 167.5}, {"seq": 22, "h": 167.7, "date": "2026-03-24", "ma": 167.5}, {"seq": 23, "h": 167.8, "date": "2026-03-24", "ma": 167.6}, {"seq": 24, "h": 168.7, "date": "2026-03-24", "ma": 167.9}, {"seq": 25, "h": 168.8, "date": "2026-03-24", "ma": 168.1}, {"seq": 26, "h": 169.3, "date": "2026-03-24", "ma": 168.5}, {"seq": 27, "h": 337.6, "date": "2026-03-25", "ma": 202.4}, {"seq": 28, "h": 337.6, "date": "2026-03-25", "ma": 236.4}, {"seq": 29, "h": 337.6, "date": "2026-03-25", "ma": 270.2}, {"seq": 30, "h": 3.5, "date": "2026-03-25", "ma": 237.1}, {"seq": 31, "h": 3.5, "date": "2026-03-25", "ma": 204.0}, {"seq": 32, "h": 3.5, "date": "2026-03-25", "ma": 137.1}, {"seq": 33, "h": 3.6, "date": "2026-03-25", "ma": 70.3}, {"seq": 34, "h": 3.7, "date": "2026-03-25", "ma": 3.6}, {"seq": 35, "h": 3.7, "date": "2026-03-25", "ma": 3.6}, {"seq": 36, "h": 3.5, "date": "2026-03-25", "ma": 3.6}, {"seq": 37, "h": 3.6, "date": "2026-03-25", "ma": 3.6}, {"seq": 38, "h": 3.6, "date": "2026-03-25", "ma": 3.6}, {"seq": 39, "h": 3.6, "date": "2026-03-25", "ma": 3.6}, {"seq": 40, "h": 3.6, "date": "2026-03-25", "ma": 3.6}, {"seq": 41, "h": 3.6, "date": "2026-03-25", "ma": 3.6}, {"seq": 42, "h": 3.7, "date": "2026-03-25", "ma": 3.6}, {"seq": 43, "h": 44.0, "date": "2026-03-26", "ma": 11.7}, {"seq": 44, "h": 44.0, "date": "2026-03-26", "ma": 19.8}, {"seq": 45, "h": 44.1, "date": "2026-03-26", "ma": 27.9}, {"seq": 46, "h": 44.2, "date": "2026-03-26", "ma": 36.0}], "Colaborador C": [{"seq": 1, "h": 23.4, "date": "2026-03-03", "ma": 23.4}, {"seq": 2, "h": 23.4, "date": "2026-03-03", "ma": 23.4}, {"seq": 3, "h": 23.4, "date": "2026-03-03", "ma": 23.4}, {"seq": 4, "h": 24.8, "date": "2026-03-03", "ma": 23.8}, {"seq": 5, "h": 25.3, "date": "2026-03-03", "ma": 24.1}, {"seq": 6, "h": 24.9, "date": "2026-03-03", "ma": 24.4}, {"seq": 7, "h": 49.5, "date": "2026-03-06", "ma": 29.6}, {"seq": 8, "h": 75.5, "date": "2026-03-06", "ma": 40.0}, {"seq": 9, "h": 26.9, "date": "2026-03-06", "ma": 40.4}, {"seq": 10, "h": 49.1, "date": "2026-03-06", "ma": 45.2}, {"seq": 11, "h": 49.2, "date": "2026-03-06", "ma": 50.0}, {"seq": 12, "h": 26.8, "date": "2026-03-06", "ma": 45.5}, {"seq": 13, "h": 171.6, "date": "2026-03-10", "ma": 64.7}, {"seq": 14, "h": 171.6, "date": "2026-03-10", "ma": 93.7}, {"seq": 15, "h": 145.6, "date": "2026-03-10", "ma": 113.0}, {"seq": 16, "h": 171.5, "date": "2026-03-10", "ma": 137.4}, {"seq": 17, "h": 171.5, "date": "2026-03-10", "ma": 166.4}, {"seq": 18, "h": 196.9, "date": "2026-03-10", "ma": 171.4}, {"seq": 19, "h": 122.8, "date": "2026-03-10", "ma": 161.7}, {"seq": 20, "h": 211.5, "date": "2026-03-19", "ma": 174.8}, {"seq": 21, "h": 211.5, "date": "2026-03-19", "ma": 182.8}, {"seq": 22, "h": 211.9, "date": "2026-03-19", "ma": 190.9}, {"seq": 23, "h": 212.0, "date": "2026-03-19", "ma": 193.9}, {"seq": 24, "h": 211.5, "date": "2026-03-19", "ma": 211.7}, {"seq": 25, "h": 211.5, "date": "2026-03-19", "ma": 211.7}, {"seq": 26, "h": 120.8, "date": "2026-03-24", "ma": 193.5}, {"seq": 27, "h": 120.8, "date": "2026-03-24", "ma": 175.3}, {"seq": 28, "h": 120.8, "date": "2026-03-24", "ma": 157.1}, {"seq": 29, "h": 121.0, "date": "2026-03-24", "ma": 139.0}, {"seq": 30, "h": 121.1, "date": "2026-03-24", "ma": 120.9}, {"seq": 31, "h": 142.5, "date": "2026-03-30", "ma": 125.2}, {"seq": 32, "h": 142.5, "date": "2026-03-30", "ma": 129.6}, {"seq": 33, "h": 142.6, "date": "2026-03-30", "ma": 133.9}, {"seq": 34, "h": 142.6, "date": "2026-03-30", "ma": 138.3}, {"seq": 35, "h": 142.6, "date": "2026-03-30", "ma": 142.6}], "Colaborador D": [{"seq": 1, "h": 170.0, "date": "2026-03-10", "ma": 170.0}, {"seq": 2, "h": 28.4, "date": "2026-03-25", "ma": 99.2}, {"seq": 3, "h": 28.4, "date": "2026-03-25", "ma": 75.6}, {"seq": 4, "h": 28.4, "date": "2026-03-25", "ma": 63.8}, {"seq": 5, "h": 28.4, "date": "2026-03-25", "ma": 56.7}], "Colaborador E": [{"seq": 1, "h": 28.0, "date": "2026-03-25", "ma": 28.0}, {"seq": 2, "h": 28.0, "date": "2026-03-25", "ma": 28.0}]};
+const ACTORS=["Colaborador A", "Colaborador B", "Colaborador C", "Colaborador D", "Colaborador E"];
+const PROJECTS=["Proyecto Marzo", "Proyecto Abril", "Proyecto Mayo"];
+const DISTS={"wait": {"<8h": 98, "8\u201324h": 37, "3\u20137d": 9, "1\u20133d": 23}, "exec": {"8\u201324h": 15, "1\u20132sem": 29, "1\u20133d": 10, "3\u20137d": 70, ">2sem": 6, "<8h": 37}, "rev2fin": {"1\u20133d": 18, "3\u20137d": 40, "<8h": 46, ">2sem": 1, "8\u201324h": 9, "1\u20132sem": 10}, "total": {"1\u20133d": 21, "8\u201324h": 9, "1\u20132sem": 41, "3\u20137d": 85, ">2sem": 6, "<8h": 31}};
+const BO=["<8h", "8\u201324h", "1\u20133d", "3\u20137d", "1\u20132sem", ">2sem"];// ── CONSTANTS ─────────────────────────────────────────────────────
+const AC={'Colaborador A':'#1564C0','Colaborador B':'#1A7A4A','Colaborador C':'#C05C0A','Colaborador D':'#7C3ABA','Colaborador E':'#B91C1C'};
+const SC_={'Sin iniciar':'#9B9997','En proceso':'#1564C0','En revisión':'#C05C0A','En pausa':'#6B7280','Ajustes':'#7C3ABA','Finalizado':'#1A7A4A'};
+const SE_={'Sin iniciar':'⭕','En proceso':'🔄','En revisión':'🔍','En pausa':'⏸','Ajustes':'✏️','Finalizado':'✅'};
+const SP_={'Finalizado':'pg','En proceso':'pb','En revisión':'pa','Sin iniciar':'pgy','En pausa':'pp','Ajustes':'pp'};
+let CHARTS={}, FT=[...TASKS], detSort={col:'h_tot',dir:'desc'}, curPerson='Colaborador A', tMode='d';
+const H=(n,d=1)=>{if(n===null||n===undefined||n==='')return'—';n=+n;if(n<1)return Math.round(n*60)+'m';if(n<48)return n.toFixed(d)+'h';return(n/24).toFixed(1)+'d';};
+const P=(a,b)=>b>0?Math.round(a/b*100):0;
+const AVG=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const DC=id=>{if(CHARTS[id]){try{CHARTS[id].destroy()}catch(e){}delete CHARTS[id];}};
+const sn=a=>a.replace('Colaborador ','Col. ');
+const GRD={color:'rgba(0,0,0,.06)'},TF={color:'#6B7280',font:{size:10}};
+
+// ── GLOBAL FILTERS ────────────────────────────────────────────────
+function applyF(){
+  const fp=document.getElementById('fP').value,fs=document.getElementById('fS').value,fd=document.getElementById('fD').value;
+  FT=TASKS.filter(t=>{
+    if(fp!=='all'&&t.a!==fp)return false;if(fs!=='all'&&t.s!==fs)return false;
+    if(fd==='fast'&&(t.h_tot||999)>=24)return false;
+    if(fd==='med'&&((t.h_tot||0)<24||(t.h_tot||0)>=168))return false;
+    if(fd==='slow'&&(t.h_tot||0)<168)return false;
+    return true;
+  });
+  document.getElementById('fInfo').textContent=FT.length+' de '+TASKS.length+' tareas';
+  buildAll();
+}
+function resetF(){['fP','fS','fD'].forEach(id=>document.getElementById(id).value='all');FT=[...TASKS];document.getElementById('fInfo').textContent='305 tareas · 5 colaboradores';buildAll();}
+
+// ── SANKEY FILTER HELPERS ─────────────────────────────────────────
+function getSankeyTasks(){
+  const fa=document.getElementById('sk_actor').value;
+  const fp=document.getElementById('sk_proj').value;
+  const ft_=document.getElementById('sk_task').value.toLowerCase().trim();
+  const fs=document.getElementById('sk_state').value;
+  return TASKS.filter(t=>{
+    if(fa!=='all'&&t.a!==fa)return false;
+    if(fp!=='all'&&t.proj!==fp)return false;
+    if(ft_&&!t.id.toLowerCase().includes(ft_))return false;
+    if(fs!=='all'&&t.s!==fs)return false;
+    return true;
+  });
+}
+function resetSankeyFilters(){
+  ['sk_actor','sk_proj','sk_state'].forEach(id=>document.getElementById(id).value='all');
+  document.getElementById('sk_task').value='';
+  rebuildSankey();
+}
+function rebuildSankey(){buildS2();}
+
+// Compute transition counts from filtered task set
+function computeTransitions(tasks){
+  const counts={};
+  tasks.forEach(t=>{
+    (t.tr||[]).forEach(([f,to])=>{
+      const k=f+'|||'+to;
+      counts[k]=(counts[k]||0)+1;
+    });
+  });
+  return counts;
+}
+
+// ── S1 RESUMEN ────────────────────────────────────────────────────
+function buildS1(){
+  const ft=FT,fin=ft.filter(t=>t.s==='Finalizado');
+  const inRev=ft.filter(t=>t.s==='En revisión').length;
+  const avgTot=AVG(fin.filter(t=>t.h_tot).map(t=>t.h_tot));
+  const avgWai=AVG(fin.filter(t=>t.h_wai!=null).map(t=>t.h_wai));
+  const cp=P(fin.length,ft.length);
+  const kpis=[
+    {ico:'📋',val:ft.length,lbl:'TAREAS TOTALES',ctx:'en el período',kc:'var(--A)',sem:null},
+    {ico:'✅',val:fin.length,lbl:'FINALIZADAS',ctx:cp+'% del total',kc:'var(--B)',sem:cp>=85?'sem-g':cp>=60?'sem-a':'sem-r',semL:cp>=85?'En plazo':cp>=60?'En riesgo':'Crítico'},
+    {ico:'🔍',val:inRev,lbl:'EN REVISIÓN',ctx:'cuello de botella',kc:'var(--C)',sem:inRev>15?'sem-r':'sem-a',semL:inRev>15?'Crítico':'Atención'},
+    {ico:'⏳',val:H(avgWai),lbl:'ESPERA PROMEDIO',ctx:'creación → inicio',kc:'var(--C)',sem:null},
+    {ico:'📐',val:H(avgTot),lbl:'TIEMPO TOTAL PROM.',ctx:'creación → cierre',kc:'var(--D)',sem:null},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map(k=>`<div class="kpi" style="--kc:${k.kc}"><div class="kpi-ico">${k.ico}</div><div class="kpi-val">${k.val}</div><div class="kpi-lbl">${k.lbl}</div><div class="kpi-ctx">${k.ctx}</div>${k.sem?`<div class="kpi-sem ${k.sem}">${k.semL}</div>`:''}</div>`).join('');
+
+  DC('comp');
+  const actors=ACTORS.filter(a=>ft.some(t=>t.a===a));
+  const sts=['Finalizado','En proceso','En revisión','En pausa','Sin iniciar'];
+  document.getElementById('leg_comp').innerHTML=sts.map(s=>`<div class="li"><div class="lsw" style="background:${SC_[s]}"></div>${SE_[s]} ${s}</div>`).join('');
+  CHARTS.comp=new Chart(document.getElementById('c_comp'),{type:'bar',
+    data:{labels:actors.map(sn),datasets:sts.map(s=>({label:s,data:actors.map(a=>{const at=ft.filter(t=>t.a===a);return P(at.filter(t=>t.s===s).length,at.length);}),backgroundColor:SC_[s],borderRadius:0}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+'%'}}},scales:{x:{stacked:true,ticks:TF,grid:{display:false},border:{display:false}},y:{stacked:true,max:100,grid:GRD,ticks:{...TF,callback:v=>v+'%'},border:{display:false}}}}});
+
+  document.getElementById('bullet').innerHTML=ACTORS.filter(a=>AS[a]).sort((a,b)=>AS[b].compliance-AS[a].compliance).map(a=>{
+    const p=AS[a].compliance,zC=p>=85?'var(--sg)':p>=60?'var(--sa)':'var(--sr)';
+    return `<div class="bullet-wrap"><div class="bullet-lbl"><span style="font-weight:700;color:${AC[a]}">${sn(a)}</span><span style="color:${zC};font-weight:700">${p}%</span></div>
+    <div class="bullet-track"><div style="position:absolute;left:0;top:0;height:100%;width:60%;background:rgba(185,28,28,.08);border-radius:3px 0 0 3px"></div><div style="position:absolute;left:60%;top:0;height:100%;width:25%;background:rgba(192,92,10,.08)"></div><div style="position:absolute;left:85%;top:0;height:100%;width:15%;background:rgba(26,122,74,.08);border-radius:0 3px 3px 0"></div>
+    <div class="bullet-fill" style="width:${p}%;background:${zC}"></div><div class="bullet-meta"></div></div></div>`;
+  }).join('');
+
+  const als=[],ins=[];
+  if(inRev>15)als.push({t:'r',m:`🚨 ${inRev} tareas en "En revisión" — cuello de botella principal (66h prom).`});
+  ACTORS.forEach(a=>{if(AS[a].compliance<60)als.push({t:'r',m:`🚨 ${a}: ${AS[a].compliance}% cumplimiento.`});if(AS[a].total>80)als.push({t:'a',m:`⚠ ${a} gestiona ${AS[a].total} tareas — posible sobrecarga.`});});
+  if(!als.length)als.push({t:'g',m:'✅ Sin alertas críticas.'});
+  const ss=ACTORS.filter(a=>AS[a]).sort((a,b)=>AS[b].score-AS[a].score);
+  ins.push({m:`🏆 <strong>${ss[0]}</strong> lidera: score ${Math.round(AS[ss[0]].score)}/100 · ${AS[ss[0]].compliance}% cumplimiento.`});
+  ins.push({m:`📉 <strong>${ss[ss.length-1]}</strong> score más bajo: ${Math.round(AS[ss[ss.length-1]].score)}/100.`});
+  const fastA=ACTORS.filter(a=>AS[a]?.h_tot).sort((a,b)=>AS[a].h_tot-AS[b].h_tot)[0];
+  ins.push({m:`⚡ <strong>${fastA}</strong> más veloz: ${H(AS[fastA].h_tot)} prom. de cierre.`});
+  ins.push({m:`🔍 "En revisión" = mayor cuello: 66h avg. SLA ≤48h reduciría el ciclo ~25%.`});
+  const cl={r:'al-r',a:'al-a',g:'al-g'};
+  document.getElementById('alerts').innerHTML=als.slice(0,3).map(x=>`<div class="al ${cl[x.t]}">${x.m}</div>`).join('');
+  document.getElementById('insights').innerHTML=ins.map(x=>`<div class="al al-b">${x.m}</div>`).join('');
+}
+
+// ── S2 SANKEY (DINÁMICO) ─────────────────────────────────────────
+function buildS2(){
+  const skTasks=getSankeyTasks();
+  const n=skTasks.length;
+  document.getElementById('sk_count').textContent=n+' tarea'+(n!==1?'s':'');
+
+  // Compute dynamic transition counts
+  const trCounts=computeTransitions(skTasks);
+
+  // Build dynamic node task counts (how many passed through)
+  const nodeCounts={sin:0,pro:0,rev:0,pau:0,adj:0,fin:0};
+  const stateKey={'Sin iniciar':'sin','En proceso':'pro','En revisión':'rev','En pausa':'pau','Ajustes':'adj','Finalizado':'fin'};
+  skTasks.forEach(t=>{
+    const visited=new Set(['sin']); // all start at sin iniciar
+    (t.tr||[]).forEach(([f,to])=>{visited.add(stateKey[to]||'?');});
+    visited.forEach(s=>{if(nodeCounts[s]!==undefined)nodeCounts[s]++;});
+  });
+
+  // State avg times (static — from full dataset)
+  const stateAvgTimes={'Sin iniciar':25.1,'En proceso':61.7,'En revisión':66.2,'En pausa':44.7,'Ajustes':6.2,'Finalizado':0};
+
+  // Update insight banner
+  const mainCount=trCounts['Sin iniciar|||En proceso']||0;
+  const revCount=trCounts['En proceso|||En revisión']||0;
+  const finCount=trCounts['En revisión|||Finalizado']||0;
+  document.getElementById('ib_flow').innerHTML=`📌 <strong>Flujo principal</strong>: Sin iniciar → En proceso (${mainCount}) → En revisión (${revCount}) → Finalizado (${finCount}). Solo <strong>${(trCounts['En revisión|||En proceso']||0)+(trCounts['Ajustes|||En proceso']||0)} devoluciones reales</strong>. ${skTasks.filter(t=>t.s!=='Finalizado').length} tareas aún abiertas de ${n} analizadas.`;
+
+  // Draw sankey with dynamic data
+  buildSankey(trCounts, nodeCounts, stateAvgTimes, n);
+
+  // State avg waterfall (static)
+  const GSA=[['En revisión',66.2],['En proceso',57.9],['En pausa',44.7],['Sin iniciar',24.2],['Ajustes',6.2]];
+  const maxS=GSA[0][1];
+  document.getElementById('state_wf').innerHTML=GSA.map(([s,v])=>`
+    <div class="wf"><div class="wf-lbl" style="color:${SC_[s]}">${SE_[s]||''} ${s}</div>
+    <div class="wf-bar"><div class="wf-fill" style="width:${Math.round(v/maxS*100)}%;background:${SC_[s]}22;border-left:3px solid ${SC_[s]}"><span class="wf-fv" style="color:${SC_[s]}">${v}h</span></div></div>
+    <div class="wf-n" style="color:${SC_[s]};font-weight:700">${v}h</div></div>`).join('');
+
+  // Open tasks bar
+  DC('open');
+  const openStates=['En revisión','En proceso','Sin iniciar','En pausa','Ajustes'];
+  const openVals=openStates.map(s=>skTasks.filter(t=>t.s===s).length);
+  CHARTS.open=new Chart(document.getElementById('c_open'),{type:'bar',
+    data:{labels:openStates.map(s=>SE_[s]+' '+s),datasets:[{data:openVals,backgroundColor:openStates.map(s=>SC_[s]+'CC'),borderRadius:5,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.x+' tareas'}}},
+      scales:{x:{ticks:TF,grid:GRD,border:{display:false},min:0},y:{ticks:{...TF,font:{size:10}},grid:{display:false},border:{display:false}}}}});
+
+  // Routes
+  const total=Math.max(n,1);
+  const rA=trCounts['En proceso|||En revisión']||0;
+  const rB=(trCounts['En proceso|||Finalizado']||0);
+  const rC=(trCounts['En proceso|||En pausa']||0);
+  const rD=(trCounts['Sin iniciar|||Finalizado']||0);
+  const rE=(trCounts['En revisión|||Ajustes']||0);
+  document.getElementById('routes').innerHTML=[
+    {label:'Ruta A — Normal',detail:'Sin iniciar → Proceso → Revisión → Fin',val:rA,c:'var(--B)'},
+    {label:'Ruta B — Directa',detail:'Sin iniciar → Proceso → Finalizado',val:rB,c:'var(--A)'},
+    {label:'Ruta C — Con pausa',detail:'Proceso → Pausa → Proceso → … → Fin',val:rC,c:'var(--pau)'},
+    {label:'Ruta D — Sin proceso',detail:'Sin iniciar → Finalizado directo',val:rD,c:'var(--hint)'},
+    {label:'Ruta E — Ajustes',detail:'… → Revisión → Ajustes → Finalizado',val:rE,c:'var(--D)'},
+  ].map(r=>{const pct=Math.round(r.val/total*100);return `<div style="margin-bottom:9px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:700;color:${r.c}">${r.label}</span><span style="font-weight:700;color:${r.c}">${r.val} tareas (${pct}%)</span></div>
+    <div style="font-size:10px;color:var(--sec);margin-bottom:3px">${r.detail}</div>
+    <div style="height:5px;background:var(--sf2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(pct*2,100)}%;background:${r.c};border-radius:3px;transition:width .5s ease"></div></div>
+  </div>`;}).join('');
+}
+
+// ── SANKEY CANVAS RENDERER ────────────────────────────────────────
+function buildSankey(trCounts={}, nodeCounts={}, stateAvgTimes={}, totalTasks=259){
+  const canvas=document.getElementById('sankey-canvas');
+  const tip=document.getElementById('sk-tip');
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.parentElement.clientWidth||800, H_=300;
+  canvas.width=W*dpr; canvas.height=H_*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H_+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  // Default counts if no data passed
+  if(!Object.keys(trCounts).length){
+    trCounts={'Sin iniciar|||En proceso':236,'En proceso|||En revisión':169,'En revisión|||Finalizado':133,'En proceso|||En pausa':51,'En pausa|||En proceso':49,'En proceso|||Finalizado':30,'Sin iniciar|||Finalizado':22,'En pausa|||Finalizado':7,'En revisión|||Ajustes':5,'Ajustes|||Finalizado':7,'En revisión|||En proceso':1,'Ajustes|||En proceso':1};
+    nodeCounts={sin:259,pro:236,rev:169,pau:51,adj:5,fin:193};
+    stateAvgTimes={'Sin iniciar':25.1,'En proceso':61.7,'En revisión':66.2,'En pausa':44.7,'Ajustes':6.2,'Finalizado':0};
+    totalTasks=259;
+  }
+
+  const PAD=24, NW=100, NH=44, COL_GAP=18;
+  const totalCols=5;
+  const colW=(W-PAD*2-NW*totalCols)/(totalCols-1);
+
+  // Node definitions
+  const NODES=[
+    {id:'sin',label:'Sin iniciar',color:'#9B9997',col:0},
+    {id:'pro',label:'En proceso', color:'#1564C0',col:1},
+    {id:'rev',label:'En revisión',color:'#C05C0A',col:2,row:0},
+    {id:'pau',label:'En pausa',   color:'#6B7280',col:2,row:1},
+    {id:'adj',label:'Ajustes',    color:'#7C3ABA',col:3},
+    {id:'fin',label:'Finalizado', color:'#1A7A4A',col:4},
+  ];
+
+  // State key → node id
+  const SK={'Sin iniciar':'sin','En proceso':'pro','En revisión':'rev','En pausa':'pau','Ajustes':'adj','Finalizado':'fin'};
+
+  // Compute positions
+  const nodePos={};
+  const midY=H_/2;
+  NODES.forEach(n=>{
+    const x=PAD+n.col*(NW+colW);
+    let y;
+    if(n.col===2){y=n.row===0?midY-NH-COL_GAP/2:midY+COL_GAP/2;}
+    else{y=midY-NH/2;}
+    nodePos[n.id]={x,y};
+  });
+
+  // Build links from trCounts
+  const LINKS=[];
+  Object.entries(trCounts).forEach(([k,v])=>{
+    if(v===0)return;
+    const[from,to]=k.split('|||');
+    const fid=SK[from],tid=SK[to];
+    if(!fid||!tid)return;
+    LINKS.push({from:fid,to:tid,val:v,label:from+' → '+to,isDev:from==='En revisión'&&to==='En proceso'});
+  });
+  LINKS.sort((a,b)=>b.val-a.val);
+
+  const maxVal=Math.max(...LINKS.map(l=>l.val),1);
+  const scale=v=>2+(v/maxVal)*22;
+
+  // Accumulate vertical offsets
+  const outOff={},inOff={},totalOut={},totalIn={};
+  NODES.forEach(n=>{totalOut[n.id]=0;totalIn[n.id]=0;});
+  LINKS.forEach(l=>{totalOut[l.from]+=scale(l.val)+1;totalIn[l.to]+=scale(l.val)+1;});
+  NODES.forEach(n=>{outOff[n.id]=-totalOut[n.id]/2;inOff[n.id]=-totalIn[n.id]/2;});
+
+  const hitAreas=[];
+
+  function hexRgba(hex,a){
+    if(!hex||hex.length<7)return`rgba(100,100,100,${a})`;
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return`rgba(${r},${g},${b},${a})`;
+  }
+
+  function drawNode(n,hover){
+    const p=nodePos[n.id];
+    const cnt=nodeCounts[n.id]||0;
+    const avgT=stateAvgTimes[n.id==='sin'?'Sin iniciar':n.id==='pro'?'En proceso':n.id==='rev'?'En revisión':n.id==='pau'?'En pausa':n.id==='adj'?'Ajustes':'Finalizado']||0;
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.12)';ctx.shadowBlur=hover?12:4;
+    ctx.fillStyle=n.color+(hover?'':'DD');
+    ctx.beginPath();ctx.roundRect(p.x,p.y,NW,NH,6);ctx.fill();
+    ctx.shadowBlur=0;
+    if(hover){ctx.strokeStyle=n.color;ctx.lineWidth=2;ctx.stroke();}
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`700 10.5px -apple-system,sans-serif`;
+    ctx.fillText(n.label,p.x+NW/2,p.y+NH/2-8);
+    ctx.font=`500 9px -apple-system,sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,.8)';
+    const timeStr=avgT>0?avgT+'h avg':'—';
+    ctx.fillText(timeStr,p.x+NW/2,p.y+NH/2+5);
+    if(cnt>0){
+      ctx.font=`600 8.5px -apple-system,sans-serif`;
+      ctx.fillStyle='rgba(255,255,255,.65)';
+      ctx.fillText(cnt+' tareas',p.x+NW/2,p.y+NH/2+16);
+    }
+    ctx.restore();
+    hitAreas.push({type:'node',n,x:p.x,y:p.y,w:NW,h:NH,cnt,avgT});
+  }
+
+  function drawLink(l,hover){
+    const fromN=NODES.find(n=>n.id===l.from), toN=NODES.find(n=>n.id===l.to);
+    if(!fromN||!toN)return;
+    const sw=scale(l.val);
+    const fp=nodePos[l.from], tp=nodePos[l.to];
+    const fx=fp.x+NW, fy=fp.y+NH/2+outOff[l.from]+sw/2;
+    const tx=tp.x,   ty=tp.y+NH/2+inOff[l.to]+sw/2;
+    outOff[l.from]+=sw+1; inOff[l.to]+=sw+1;
+    const cp1x=fx+(tx-fx)*.45, cp2x=tx-(tx-fx)*.45;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(fx,fy-sw/2);
+    ctx.bezierCurveTo(cp1x,fy-sw/2,cp2x,ty-sw/2,tx,ty-sw/2);
+    ctx.lineTo(tx,ty+sw/2);
+    ctx.bezierCurveTo(cp2x,ty+sw/2,cp1x,fy+sw/2,fx,fy+sw/2);
+    ctx.closePath();
+    const grd=ctx.createLinearGradient(fx,0,tx,0);
+    const aFrom=hover?.45:.18, aTo=hover?.45:.18;
+    grd.addColorStop(0,hexRgba(fromN.color,aFrom));
+    grd.addColorStop(1,hexRgba(toN.color,aTo));
+    ctx.fillStyle=grd;
+    if(l.isDev){ctx.setLineDash([]);ctx.strokeStyle='rgba(185,28,28,.4)';ctx.lineWidth=1;}
+    ctx.fill();
+    if(l.isDev){ctx.stroke();}
+    // Arrow
+    ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx-7,ty-4);ctx.lineTo(tx-7,ty+4);ctx.closePath();
+    ctx.fillStyle=toN.color+(hover?'CC':'99');ctx.fill();
+    ctx.restore();
+    hitAreas.push({type:'link',l,fx,fy,tx,ty,sw});
+  }
+
+  function resetOffsets(){
+    NODES.forEach(n=>{outOff[n.id]=-totalOut[n.id]/2;inOff[n.id]=-totalIn[n.id]/2;});
+  }
+
+  function render(hovNode=null,hovLink=null){
+    ctx.clearRect(0,0,W,H_);
+    ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,W,H_);
+    resetOffsets(); hitAreas.length=0;
+    LINKS.forEach(l=>drawLink(l,hovLink===l));
+    NODES.forEach(n=>drawNode(n,hovNode===n));
+    // Count labels on thick links
+    resetOffsets();
+    LINKS.forEach(l=>{
+      const sw=scale(l.val);
+      const fp=nodePos[l.from],tp=nodePos[l.to];
+      const fy_=fp.y+NH/2+outOff[l.from]+sw/2;
+      const ty_=tp.y+NH/2+inOff[l.to]+sw/2;
+      outOff[l.from]+=sw+1; inOff[l.to]+=sw+1;
+      if(sw<7)return;
+      const mx=(fp.x+NW+tp.x)/2, my=(fy_+ty_)/2;
+      ctx.save();
+      ctx.font=`700 10px -apple-system,sans-serif`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(0,0,0,.55)';
+      ctx.fillText(l.val,mx,my);
+      ctx.restore();
+    });
+  }
+
+  render();
+
+  canvas.onmousemove=e=>{
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my_=e.clientY-rect.top;
+    let hovN=null,hovL=null;
+    for(const ha of hitAreas){
+      if(ha.type==='node'&&mx>=ha.x&&mx<=ha.x+ha.w&&my_>=ha.y&&my_<=ha.y+ha.h){hovN=ha;break;}
+    }
+    if(!hovN){
+      for(const ha of hitAreas){
+        if(ha.type==='link'){
+          const midX=(ha.fx+ha.tx)/2;
+          if(Math.abs(mx-midX)<(ha.tx-ha.fx)/2+10&&my_>=Math.min(ha.fy,ha.ty)-ha.sw&&my_<=Math.max(ha.fy,ha.ty)+ha.sw){hovL=ha;break;}
+        }
+      }
+    }
+    canvas.style.cursor=(hovN||hovL)?'pointer':'default';
+    if(hovN||hovL){
+      tip.style.display='block';
+      tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-10)+'px';
+      if(hovN){
+        tip.innerHTML=`<strong>${hovN.n.label}</strong><br>Tareas que pasaron: <strong>${hovN.cnt}</strong><br>Tiempo prom. en estado: <strong>${hovN.avgT>0?hovN.avgT+'h':'—'}</strong>`;
+      } else if(hovL){
+        const pct=Math.round(hovL.l.val/(totalTasks||1)*100);
+        tip.innerHTML=`<strong>${hovL.l.label}</strong>${hovL.l.isDev?'<br>⚠️ <strong>Devolución</strong>':''}<br><strong>${hovL.l.val} tareas</strong> hicieron esta transición<br>${pct}% del total analizado`;
+      }
+      render(hovN?.n||null, hovL?.l||null);
+    } else {
+      tip.style.display='none'; render();
+    }
+  };
+  canvas.onmouseleave=()=>{tip.style.display='none';render();};
+
+  let resizeTimer;
+  window.onresize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>buildS2(),120);};
+}
+
+// ── S3 TIEMPOS ────────────────────────────────────────────────────
+function buildS3(){
+  document.getElementById('ib_t').innerHTML=`📌 <strong>25h</strong> se pierden en espera antes de iniciar (20% del ciclo). "En revisión" (66h) supera a "En proceso" (58h). El rango más frecuente es <strong>3–7 días</strong> (85 de 193 tareas finalizadas).`;
+  const pK=['h_wai','h_pro','h_rev'],pC=['#9B9997','#1564C0','#C05C0A'],pL=['Espera','Proceso','Revisión'];
+  document.getElementById('phase_anat').innerHTML=ACTORS.filter(a=>AS[a]?.h_tot).map(a=>{
+    const s=AS[a];const tot=(s.h_wai||0)+(s.h_pro||0)+(s.h_rev||0)||1;
+    const segs=pK.map((k,i)=>({w:Math.round((s[k]||0)/tot*100),c:pC[i],l:pL[i],v:s[k]||0}));
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;font-weight:700;color:${AC[a]}">${a}</span><span style="font-size:10px;color:var(--sec)">Total prom: ${H(s.h_tot)}</span></div>
+      <div class="pbar">${segs.filter(sg=>sg.w>0).map(sg=>`<div class="pseg" style="width:${sg.w}%;background:${sg.c}" title="${sg.l}: ${H(sg.v)}">${sg.w>12?H(sg.v):''}</div>`).join('')}</div>
+      <div style="display:flex;gap:10px;margin-top:3px">${segs.map(sg=>sg.v>0?`<div style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--sec)"><div style="width:6px;height:6px;border-radius:1px;background:${sg.c}"></div>${sg.l}: ${H(sg.v)}</div>`:'').join('')}</div>
+    </div>`;
+  }).join('');
+  DC('fases');
+  CHARTS.fases=new Chart(document.getElementById('c_fases'),{type:'bar',
+    data:{labels:ACTORS.map(sn),datasets:[
+      {label:'⏳ Espera',data:ACTORS.map(a=>AS[a].h_wai||0),backgroundColor:'#9B9997CC',borderRadius:3},
+      {label:'⚡ Proceso',data:ACTORS.map(a=>AS[a].h_pro||0),backgroundColor:'#1564C0CC',borderRadius:3},
+      {label:'🔍 Revisión',data:ACTORS.map(a=>AS[a].h_rev||0),backgroundColor:'#C05C0ACC',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6B7280',font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)+'h'}}},scales:{x:{ticks:TF,grid:{display:false},border:{display:false}},y:{grid:GRD,ticks:{...TF,callback:v=>v+'h'},border:{display:false},min:0}}}});
+  document.getElementById('t_fases').innerHTML=`<thead><tr><th>Colaborador</th><th class="nr">Fin.</th><th class="nr">⏳ Espera</th><th class="nr">⚡ Proceso</th><th class="nr">🔍 Revisión</th><th class="nr">Rev→Fin</th><th class="nr">📐 Total</th></tr></thead>
+  <tbody>${ACTORS.map(a=>{const s=AS[a];return `<tr><td style="font-weight:700;color:${AC[a]}">${sn(a)}</td><td class="nr">${s.fin}</td><td class="nr"><span class="pill pa">${s.h_wai?s.h_wai.toFixed(1)+'h':'—'}</span></td><td class="nr"><span class="pill pb">${s.h_pro?s.h_pro.toFixed(1)+'h':'—'}</span></td><td class="nr"><span class="pill pa">${s.h_rev?s.h_rev.toFixed(1)+'h':'—'}</span></td><td class="nr"><span class="pill pp">${s.h_r2f?s.h_r2f.toFixed(1)+'h':'—'}</span></td><td class="nr"><span class="pill ${s.h_tot<100?'pg':'pa'}">${s.h_tot?s.h_tot.toFixed(1)+'h':'—'}</span></td></tr>`;}).join('')}</tbody>`;
+}
+
+// ── S4 EQUIPO ────────────────────────────────────────────────────
+function buildS4(){
+  const sorted=ACTORS.filter(a=>AS[a]).sort((a,b)=>AS[b].score-AS[a].score);
+  document.getElementById('actor_cards').innerHTML=sorted.map((a,i)=>{
+    const s=AS[a],sc=Math.round(s.score),ringC=sc>=75?'#1A7A4A':sc>=60?'#C05C0A':'#B91C1C';
+    const circ=2*Math.PI*18,dash=(circ*sc/100).toFixed(1),gap=(circ*(1-sc/100)).toFixed(1);
+    return `<div class="card" style="border-top:3px solid ${AC[a]}">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div class="sring-wrap"><svg width="48" height="48" viewBox="0 0 52 52"><circle cx="26" cy="26" r="18" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="4"/><circle cx="26" cy="26" r="18" fill="none" stroke="${ringC}" stroke-width="4" stroke-dasharray="${dash} ${gap}" stroke-linecap="round"/></svg><div class="sring-val" style="color:${ringC}">${sc}</div></div>
+        <div><div style="font-size:12px;font-weight:800;color:${AC[a]}">${a}</div><div style="font-size:10px;color:var(--sec)">#${i+1} · ${s.compliance}% cumpl.</div></div>
+      </div>
+      ${[['Espera',H(s.h_wai),'var(--sa)'],['Proceso',H(s.h_pro),'var(--A)'],['Revisión',H(s.h_rev),'var(--sa)'],['Total',H(s.h_tot),sc>=75?'var(--sg)':'var(--sa)'],['Dev.',s.returns,s.returns===0?'var(--sg)':'var(--sr)']].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--brd)"><span style="color:var(--sec)">${l}</span><span style="font-weight:700;color:${c}">${v}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+  DC('radar');
+  CHARTS.radar=new Chart(document.getElementById('c_radar'),{type:'radar',
+    data:{labels:['Cumplimiento','Velocidad','Calidad','Estabilidad'],datasets:ACTORS.filter(a=>AS[a]).map(a=>({label:sn(a),data:[AS[a].sc_c,AS[a].sc_s,AS[a].sc_q,AS[a].sc_st],borderColor:AC[a],backgroundColor:AC[a]+'18',borderWidth:2,pointRadius:3,pointBackgroundColor:AC[a]}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6B7280',font:{size:10},boxWidth:10}}},scales:{r:{min:0,max:100,grid:{color:'rgba(0,0,0,.08)'},angleLines:{color:'rgba(0,0,0,.08)'},ticks:{color:'#9B9997',backdropColor:'transparent',font:{size:9},stepSize:25},pointLabels:{color:'#5A5957',font:{size:10}}}}}});
+  renderLC();
+}
+function renderLC(){
+  DC('lc');const sel=document.getElementById('lcSel').value;
+  const actors=sel==='all'?['Colaborador A','Colaborador B','Colaborador C']:[sel];
+  const ds=[];
+  actors.forEach(a=>{const c=LC[a];if(!c?.length)return;
+    ds.push({label:a,data:c.map(p=>({x:p.seq,y:p.h})),borderColor:AC[a],backgroundColor:'transparent',borderWidth:2,pointRadius:1.5,tension:.25});
+    ds.push({label:a+' MA',data:c.map(p=>({x:p.seq,y:p.ma})),borderColor:AC[a]+'66',borderDash:[5,3],borderWidth:1.5,pointRadius:0,tension:.4});
+  });
+  document.getElementById('leg_lc').innerHTML=actors.filter(a=>LC[a]?.length).map(a=>`<div class="li"><div class="lsw" style="background:${AC[a]}"></div>${sn(a)}</div>`).join('');
+  CHARTS.lc=new Chart(document.getElementById('c_lc'),{type:'line',data:{datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>'Tarea #'+c[0].parsed.x,label:c=>c.dataset.label+': '+c.parsed.y+'h'}}},
+      scales:{x:{type:'linear',title:{display:true,text:'Iteración',color:'#6B7280',font:{size:10}},ticks:TF,grid:GRD,border:{display:false}},y:{title:{display:true,text:'Horas',color:'#6B7280',font:{size:10}},min:0,ticks:TF,grid:GRD,border:{display:false}}}}});
+}
+
+// ── S5 INDIVIDUAL ─────────────────────────────────────────────────
+function buildS5(){
+  document.getElementById('person_tabs').innerHTML=ACTORS.map(a=>`
+    <div class="ptab ${a===curPerson?'act':''}" style="${a===curPerson?'background:'+AC[a]+';color:#fff;border-color:transparent;':'color:'+AC[a]+';border-color:'+AC[a]+'44;'}" onclick="selectPerson('${a}',this)">${a}</div>`).join('');
+  renderPersonDetail(curPerson);
+}
+function selectPerson(a,el){
+  curPerson=a;
+  document.querySelectorAll('.ptab').forEach(t=>{t.classList.remove('act');t.style.background='';t.style.color=AC[t.textContent.trim()]||'var(--sec)';t.style.borderColor=(AC[t.textContent.trim()]||'var(--brd2)')+'44';});
+  el.classList.add('act');el.style.background=AC[a];el.style.color='#fff';el.style.borderColor='transparent';
+  renderPersonDetail(a);
+}
+function renderPersonDetail(a){
+  const s=AS[a];
+  const tasks=TASKS.filter(t=>t.a===a).sort((x,y)=>(y.h_tot||0)-(x.h_tot||0));
+  const sc=Math.round(s.score), ringC=sc>=75?'#1A7A4A':sc>=60?'#C05C0A':'#B91C1C';
+  const circ=2*Math.PI*22, dash=(circ*sc/100).toFixed(1), gap=(circ*(1-sc/100)).toFixed(1);
+  const stOpen=[['En proceso',s.in_proceso||tasks.filter(t=>t.s==='En proceso').length],['En revisión',s.in_revision||tasks.filter(t=>t.s==='En revisión').length],['En pausa',s.in_pausa||tasks.filter(t=>t.s==='En pausa').length],['Sin iniciar',s.not_started||tasks.filter(t=>t.s==='Sin iniciar').length]].filter(([,v])=>v>0);
+  // Per-project breakdown
+  const projBreak={};
+  tasks.forEach(t=>{projBreak[t.proj]=(projBreak[t.proj]||{total:0,fin:0});projBreak[t.proj].total++;if(t.s==='Finalizado')projBreak[t.proj].fin++;});
+
+  document.getElementById('person_detail').innerHTML=`
+  <div class="g2">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+        <div style="position:relative;width:60px;height:60px;flex-shrink:0">
+          <svg width="60" height="60" viewBox="0 0 60 60" style="position:absolute;top:0;left:0;transform:rotate(-90deg)">
+            <circle cx="30" cy="30" r="22" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"/>
+            <circle cx="30" cy="30" r="22" fill="none" stroke="${ringC}" stroke-width="5" stroke-dasharray="${dash} ${gap}" stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:16px;font-weight:800;color:${ringC}">${sc}</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:${AC[a]}">${a}</div>
+          <div style="font-size:11px;color:var(--sec);margin-top:2px">Score ${sc}/100 · #${ACTORS.filter(x=>AS[x]).sort((x,y)=>AS[y].score-AS[x].score).indexOf(a)+1} en ranking</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        ${[['Total tareas',s.total,'var(--A)'],['Finalizadas',s.fin,'var(--sg)'],['Cumplimiento',s.compliance+'%',s.compliance>=85?'var(--sg)':s.compliance>=60?'var(--sa)':'var(--sr)'],['Devoluciones',s.returns,s.returns===0?'var(--sg)':'var(--sr)'],['⏳ Espera prom.',H(s.h_wai),'var(--sa)'],['⚡ Proceso prom.',H(s.h_pro),'var(--A)'],['🔍 Revisión prom.',H(s.h_rev),'var(--sa)'],['📐 Total prom.',H(s.h_tot),sc>=75?'var(--sg)':'var(--sa)']].map(([l,v,c])=>`<div style="background:var(--sf2);border-radius:var(--r6);padding:8px 10px"><div style="font-size:10px;color:var(--sec);margin-bottom:2px">${l}</div><div style="font-size:16px;font-weight:800;color:${c}">${v}</div></div>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📁 Por proyecto</div>
+      ${Object.entries(projBreak).map(([proj,{total,fin}])=>{const p=P(fin,total);return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)"><span style="font-size:11px;font-weight:600;flex:1">${proj}</span><span style="font-size:10px;color:var(--sec)">${total} tareas</span><span class="pill ${p>=85?'pg':p>=60?'pa':'pr'}">${p}%</span></div>`}).join('')}
+      ${stOpen.length?`<div style="font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-top:10px;margin-bottom:6px">Tareas abiertas ahora</div>`+stOpen.map(([s_,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--brd)"><span style="font-size:13px">${SE_[s_]}</span><span style="font-size:11px;font-weight:600;flex:1">${s_}</span><span class="pill pa" style="background:${SC_[s_]}22;color:${SC_[s_]}">${v} tareas</span></div>`).join(''):''}
+    </div>
+    <div class="card">
+      <div class="ctit" style="margin-bottom:10px">Registro de tareas — ${a}</div>
+      <div style="font-size:10px;color:var(--sec);margin-bottom:8px">Mostrando ${Math.min(tasks.length,50)} de ${tasks.length} tareas · ordenadas por tiempo total</div>
+      <div class="tw" style="max-height:400px">
+        <table class="tbl">
+          <thead><tr><th>ID</th><th>Estado</th><th>Proyecto</th><th class="nr">⏳ Espera</th><th class="nr">⚡ Proceso</th><th class="nr">🔍 Revisión</th><th class="nr">📐 Total</th><th class="nr">Dev.</th></tr></thead>
+          <tbody>${tasks.slice(0,50).map(t=>`<tr>
+            <td><code style="font-size:9px;background:var(--sf2);padding:1px 5px;border-radius:3px;color:var(--sec)">${t.id}</code></td>
+            <td><span class="pill ${SP_[t.s]||'pgy'}">${SE_[t.s]} ${t.s}</span></td>
+            <td style="font-size:10px;color:var(--sec)">${t.proj}</td>
+            <td class="nr"><span class="pill pa">${H(t.h_wai)}</span></td>
+            <td class="nr"><span class="pill pb">${H(t.h_pro)}</span></td>
+            <td class="nr"><span class="pill pa">${H(t.h_rev)}</span></td>
+            <td class="nr"><span class="pill ${(t.h_tot||0)<100?'pg':(t.h_tot||0)<200?'pa':'pr'}">${H(t.h_tot)}</span></td>
+            <td class="nr"><span class="pill ${t.ret>0?'pr':'pg'}">${t.ret}</span></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── S6 DETALLE ────────────────────────────────────────────────────
+let detS={col:'h_tot',dir:'desc'};
+function renderDet(){
+  const fp=document.getElementById('fP').value,fs=document.getElementById('fS').value,fd=document.getElementById('fD').value;
+  const q=(document.getElementById('srch')?.value||'').toLowerCase();
+  let rows=TASKS.filter(t=>{
+    if(fp!=='all'&&t.a!==fp)return false;if(fs!=='all'&&t.s!==fs)return false;
+    if(fd==='fast'&&(t.h_tot||999)>=24)return false;if(fd==='med'&&((t.h_tot||0)<24||(t.h_tot||0)>=168))return false;if(fd==='slow'&&(t.h_tot||0)<168)return false;
+    if(q&&!t.id.toLowerCase().includes(q)&&!t.a.toLowerCase().includes(q)&&!t.proj.toLowerCase().includes(q))return false;
+    return true;
+  });
+  rows.sort((a,b)=>{const av=a[detS.col]??'',bv=b[detS.col]??'';return typeof av==='number'?(av-bv)*(detS.dir==='desc'?-1:1):String(av).localeCompare(String(bv))*(detS.dir==='desc'?-1:1);});
+  document.getElementById('detCnt').textContent=rows.length+' de '+TASKS.length;
+  const spd=t=>{const v=t.h_tot||0;return v<24?'<span class="pill pg">Rápida</span>':v<168?'<span class="pill pa">Normal</span>':'<span class="pill pr">Lenta</span>';};
+  document.getElementById('tb_det').innerHTML=rows.map(t=>`<tr>
+    <td><code style="font-size:9px;background:var(--sf2);padding:1px 5px;border-radius:3px;color:var(--sec)">${t.id}</code></td>
+    <td style="font-weight:700;color:${AC[t.a]||'var(--tx)'}">${sn(t.a)}</td>
+    <td><span class="pill ${SP_[t.s]||'pgy'}">${SE_[t.s]} ${t.s}</span></td>
+    <td class="nr">${t.cre||'—'}</td><td class="nr">${t.fin||'—'}</td>
+    <td class="nr"><span class="pill pa">${H(t.h_wai)}</span></td>
+    <td class="nr"><span class="pill pb">${H(t.h_pro)}</span></td>
+    <td class="nr"><span class="pill pa">${H(t.h_rev)}</span></td>
+    <td class="nr">${H(t.h_r2f)}</td>
+    <td class="nr"><span class="pill ${(t.h_tot||0)<100?'pg':(t.h_tot||0)<200?'pa':'pr'}">${H(t.h_tot)}</span></td>
+    <td class="nr"><span class="pill ${t.ret>0?'pr':'pg'}">${t.ret}</span></td>
+    <td class="nr">${t.chg}</td>
+    <td>${spd(t)}</td>
+  </tr>`).join('');
+}
+function srtD(col){detS.dir=detS.col===col&&detS.dir==='desc'?'asc':'desc';detS.col=col;renderDet();}
+
+function buildAll(){buildS1();buildS2();buildS3();buildS4();buildS5();renderDet();}
+buildAll();
+</script>
+</body>
+</html>

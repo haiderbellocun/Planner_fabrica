@@ -385,13 +385,19 @@ export const getMaterialProduction = async (req: AuthRequest, res: Response) => 
  */
 export const getTimeDistribution = async (req: AuthRequest, res: Response) => {
   try {
+    // All stats computed in SQL — no large array sent over the wire
     const result = await query(`
       SELECT
-        ts.name as status_name,
+        ts.name                                                                AS status_name,
         ts.color,
         ts.display_order,
-        ARRAY_AGG(tsh.duration_seconds ORDER BY tsh.duration_seconds)
-          FILTER (WHERE tsh.duration_seconds IS NOT NULL AND tsh.duration_seconds > 0) as durations
+        COUNT(*)::int                                                          AS count,
+        ROUND(MIN(tsh.duration_seconds)  / 3600.0, 2)                         AS min_h,
+        ROUND(MAX(tsh.duration_seconds)  / 3600.0, 2)                         AS max_h,
+        ROUND(AVG(tsh.duration_seconds)  / 3600.0, 2)                         AS mean_h,
+        ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS q1_h,
+        ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS median_h,
+        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS q3_h
       FROM public.task_status_history tsh
       JOIN public.task_statuses ts ON ts.id = tsh.from_status_id
       WHERE tsh.duration_seconds IS NOT NULL AND tsh.duration_seconds > 0
@@ -399,36 +405,21 @@ export const getTimeDistribution = async (req: AuthRequest, res: Response) => {
       ORDER BY ts.display_order
     `);
 
-    const distribution = result.rows.map(r => {
-      const durations = r.durations || [];
-      const hoursArray = durations.map((d: number) => d / 3600);
-
-      // Compute stats
-      const sorted = [...hoursArray].sort((a: number, b: number) => a - b);
-      const len = sorted.length;
-      const median = len > 0 ? sorted[Math.floor(len / 2)] : 0;
-      const q1 = len > 0 ? sorted[Math.floor(len * 0.25)] : 0;
-      const q3 = len > 0 ? sorted[Math.floor(len * 0.75)] : 0;
-      const mean = len > 0 ? sorted.reduce((a: number, b: number) => a + b, 0) / len : 0;
-      const min = len > 0 ? sorted[0] : 0;
-      const max = len > 0 ? sorted[len - 1] : 0;
-
-      return {
-        status_name: r.status_name,
-        color: r.color,
-        display_order: r.display_order,
-        count: len,
-        durations_hours: hoursArray,
-        stats: {
-          min: Math.round(min * 100) / 100,
-          q1: Math.round(q1 * 100) / 100,
-          median: Math.round(median * 100) / 100,
-          q3: Math.round(q3 * 100) / 100,
-          max: Math.round(max * 100) / 100,
-          mean: Math.round(mean * 100) / 100,
-        },
-      };
-    });
+    const distribution = result.rows.map(r => ({
+      status_name:    r.status_name,
+      color:          r.color,
+      display_order:  r.display_order,
+      count:          r.count,
+      durations_hours: [] as number[], // kept for type compatibility; empty — stats are in .stats
+      stats: {
+        min:    parseFloat(r.min_h)    || 0,
+        q1:     parseFloat(r.q1_h)    || 0,
+        median: parseFloat(r.median_h) || 0,
+        q3:     parseFloat(r.q3_h)    || 0,
+        max:    parseFloat(r.max_h)    || 0,
+        mean:   parseFloat(r.mean_h)  || 0,
+      },
+    }));
 
     res.json(distribution);
   } catch (error) {
@@ -1358,6 +1349,153 @@ export const getIndividualPerformance = async (req: AuthRequest, res: Response) 
     );
   } catch (error) {
     console.error('Individual performance report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/time-by-phase
+ * Average time per workflow status per collaborator, pivoted as phases array.
+ * Uses task_status_history + tasks.assignee_id.
+ */
+export const getTimeByPhase = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT
+        p.id                                                     AS profile_id,
+        p.full_name,
+        p.avatar_url,
+        ts.name                                                  AS status_name,
+        ts.color                                                 AS status_color,
+        ts.display_order,
+        COUNT(*)::int                                            AS sample_count,
+        ROUND(AVG(tsh.duration_seconds) / 3600.0, 2)            AS avg_hours,
+        ROUND(
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tsh.duration_seconds)
+          / 3600.0, 2
+        )                                                        AS median_hours
+      FROM public.task_status_history tsh
+      JOIN public.tasks t  ON t.id  = tsh.task_id
+      JOIN public.profiles p ON p.id = t.assignee_id
+      JOIN public.task_statuses ts ON ts.id = tsh.from_status_id
+      WHERE tsh.duration_seconds IS NOT NULL
+        AND tsh.duration_seconds > 0
+        AND t.assignee_id IS NOT NULL
+      GROUP BY p.id, p.full_name, p.avatar_url,
+               ts.name, ts.color, ts.display_order
+      ORDER BY p.full_name, ts.display_order
+    `);
+
+    // Pivot flat rows → { profile_id, full_name, avatar_url, phases[] }
+    const map = new Map<string, {
+      profile_id: string;
+      full_name: string;
+      avatar_url: string | null;
+      phases: { status_name: string; status_color: string; avg_hours: number; median_hours: number; sample_count: number }[];
+    }>();
+
+    for (const r of result.rows) {
+      if (!map.has(r.profile_id)) {
+        map.set(r.profile_id, {
+          profile_id: r.profile_id,
+          full_name: r.full_name,
+          avatar_url: r.avatar_url ?? null,
+          phases: [],
+        });
+      }
+      map.get(r.profile_id)!.phases.push({
+        status_name: r.status_name,
+        status_color: r.status_color,
+        avg_hours: parseFloat(r.avg_hours),
+        median_hours: parseFloat(r.median_hours),
+        sample_count: parseInt(r.sample_count, 10),
+      });
+    }
+
+    res.json([...map.values()]);
+  } catch (error) {
+    console.error('Time by phase report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/tasks-detail
+ * Full task list with per-phase time breakdown (up to 300 rows)
+ */
+export const getTasksDetail = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      WITH phase_times AS (
+        SELECT
+          tsh.task_id,
+          SUM(CASE WHEN ts.name = 'Sin iniciar' THEN tsh.duration_seconds ELSE 0 END)::numeric AS sec_espera,
+          SUM(CASE WHEN ts.name = 'En proceso'  THEN tsh.duration_seconds ELSE 0 END)::numeric AS sec_proceso,
+          SUM(CASE WHEN ts.name = 'En revisión' THEN tsh.duration_seconds ELSE 0 END)::numeric AS sec_revision,
+          SUM(CASE WHEN ts.name = 'Ajustes'     THEN tsh.duration_seconds ELSE 0 END)::numeric AS sec_ajustes
+        FROM public.task_status_history tsh
+        JOIN public.task_statuses ts ON ts.id = tsh.from_status_id
+        WHERE tsh.duration_seconds IS NOT NULL AND tsh.duration_seconds > 0
+        GROUP BY tsh.task_id
+      ),
+      ajuste_counts AS (
+        SELECT tsh.task_id, COUNT(*)::int AS cnt
+        FROM public.task_status_history tsh
+        JOIN public.task_statuses ts ON ts.id = tsh.to_status_id
+        WHERE ts.name = 'Ajustes'
+        GROUP BY tsh.task_id
+      )
+      SELECT
+        t.id,
+        t.title,
+        p.full_name                                                           AS assignee_name,
+        p.avatar_url,
+        ts_cur.name                                                           AS status_name,
+        ts_cur.color                                                          AS status_color,
+        ts_cur.is_completed,
+        proj.name                                                             AS project_name,
+        proj.key                                                              AS project_key,
+        t.created_at,
+        t.due_date,
+        CASE WHEN ts_cur.is_completed THEN t.updated_at ELSE NULL END        AS closed_at,
+        ROUND(COALESCE(pt.sec_espera,   0) / 3600.0, 2)                     AS h_espera,
+        ROUND(COALESCE(pt.sec_proceso,  0) / 3600.0, 2)                     AS h_proceso,
+        ROUND(COALESCE(pt.sec_revision, 0) / 3600.0, 2)                     AS h_revision,
+        ROUND(COALESCE(pt.sec_ajustes,  0) / 3600.0, 2)                     AS h_ajustes,
+        ROUND(COALESCE(pt.sec_espera + pt.sec_proceso + pt.sec_revision + pt.sec_ajustes, 0) / 3600.0, 2) AS h_total,
+        COALESCE(ac.cnt, 0)                                                  AS devoluciones
+      FROM public.tasks t
+      JOIN public.task_statuses ts_cur ON ts_cur.id = t.status_id
+      JOIN public.projects proj         ON proj.id   = t.project_id
+      LEFT JOIN public.profiles p       ON p.id      = t.assignee_id
+      LEFT JOIN phase_times pt          ON pt.task_id = t.id
+      LEFT JOIN ajuste_counts ac        ON ac.task_id = t.id
+      ORDER BY t.created_at DESC
+      LIMIT 300
+    `);
+
+    res.json(result.rows.map(r => ({
+      id:            r.id,
+      title:         r.title,
+      assignee_name: r.assignee_name ?? 'Sin asignar',
+      avatar_url:    r.avatar_url ?? null,
+      status_name:   r.status_name,
+      status_color:  r.status_color,
+      is_completed:  r.is_completed,
+      project_name:  r.project_name,
+      project_key:   r.project_key,
+      created_at:    r.created_at,
+      due_date:      r.due_date ?? null,
+      closed_at:     r.closed_at ?? null,
+      h_espera:      parseFloat(r.h_espera)   || 0,
+      h_proceso:     parseFloat(r.h_proceso)  || 0,
+      h_revision:    parseFloat(r.h_revision) || 0,
+      h_ajustes:     parseFloat(r.h_ajustes)  || 0,
+      h_total:       parseFloat(r.h_total)    || 0,
+      devoluciones:  parseInt(r.devoluciones) || 0,
+    })));
+  } catch (error) {
+    console.error('Tasks detail error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

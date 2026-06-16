@@ -9,7 +9,7 @@ import { env } from '../config/env.js';
 
 const secret: Secret = env.JWT_SECRET;
 const signOptions: SignOptions = {
-  expiresIn: (env.JWT_EXPIRES_IN ?? '7d') as SignOptions['expiresIn'],
+  expiresIn: (env.JWT_EXPIRES_IN ?? '4h') as SignOptions['expiresIn'],
 };
 
 export const login = async (req: AuthRequest, res: Response) => {
@@ -114,7 +114,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
        FROM public.users u
        LEFT JOIN public.profiles p ON p.user_id = u.id
        LEFT JOIN public.user_roles ur ON ur.user_id = p.id
-       WHERE u.id = $1`,
+       WHERE u.id = $1
+       LIMIT 1`,
       [req.user.id]
     );
 

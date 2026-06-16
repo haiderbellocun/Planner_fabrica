@@ -36,6 +36,7 @@ export default function SettingsPage() {
     password: '',
     role: 'user' as 'admin' | 'project_leader' | 'user',
   });
+  const [cargoCustom, setCargoCustom] = useState(false);
 
   const handleChange = (id: string, value: string) => {
     setValues(prev => ({
@@ -232,11 +233,45 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Cargo</label>
-                    <Input
-                      value={newUser.cargo}
-                      onChange={(e) => setNewUser({ ...newUser, cargo: e.target.value })}
-                      placeholder="Ej: Diseñador, Project Leader..."
-                    />
+                    {cargoCustom ? (
+                      <div className="flex gap-1.5">
+                        <Input
+                          value={newUser.cargo}
+                          onChange={(e) => setNewUser({ ...newUser, cargo: e.target.value })}
+                          placeholder="Escribe el cargo..."
+                          autoComplete="off"
+                          className="flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setCargoCustom(false); setNewUser({ ...newUser, cargo: '' }); }}
+                          className="text-xs text-muted-foreground hover:text-foreground px-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={newUser.cargo}
+                        onChange={(e) => {
+                          if (e.target.value === '__otro__') {
+                            setCargoCustom(true);
+                            setNewUser({ ...newUser, cargo: '' });
+                          } else {
+                            setNewUser({ ...newUser, cargo: e.target.value });
+                          }
+                        }}
+                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                      >
+                        <option value="">Sin cargo</option>
+                        {[...new Set(adminUsers.map((u) => u.cargo).filter(Boolean) as string[])]
+                          .sort()
+                          .map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        <option value="__otro__">+ Otro cargo...</option>
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Contraseña inicial *</label>
@@ -291,6 +326,7 @@ export default function SettingsPage() {
                         password: '',
                         role: 'user',
                       });
+                      setCargoCustom(false);
                     } catch (error: any) {
                       toast.error(error?.message || 'Error al crear usuario.');
                     }

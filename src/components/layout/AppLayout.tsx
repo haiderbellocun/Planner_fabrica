@@ -210,10 +210,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           <main
             className="flex-1 relative"
             style={{
-              backgroundImage: 'url(/bg_app.png)',
+              backgroundImage: 'url(./bg_app.png)',
               backgroundSize: 'cover',
               backgroundPosition: 'bottom center',
-              backgroundAttachment: 'local',
+              backgroundAttachment: 'fixed',
             }}
           >
             {children}

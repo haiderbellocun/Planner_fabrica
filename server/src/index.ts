@@ -28,6 +28,7 @@ import searchRoutes from './routes/search.js';
 import proximosProgramasRoutes from './routes/proximosProgramas.js';
 import checklistRoutes from './routes/checklist.js';
 import entregasRoutes from './routes/entregas.js';
+import calendarRoutes from './routes/calendar.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 
@@ -128,6 +129,7 @@ app.use('/api/proximos-programas', proximosProgramasRoutes);
 app.use('/api/projects/:projectId/checklist', checklistRoutes);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/entregas', entregasRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // 404 handler
 app.use((req, res) => {

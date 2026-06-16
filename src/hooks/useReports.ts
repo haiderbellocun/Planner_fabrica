@@ -407,6 +407,58 @@ export interface IndividualPerformanceFilters {
   date_to?: string;
 }
 
+export interface PhaseEntry {
+  status_name: string;
+  status_color: string;
+  avg_hours: number;
+  median_hours: number;
+  sample_count: number;
+}
+
+export interface TimeByPhase {
+  profile_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  phases: PhaseEntry[];
+}
+
+export function useReportTimeByPhase() {
+  return useQuery({
+    queryKey: ['report-time-by-phase'],
+    queryFn: () => api.get<TimeByPhase[]>('/api/reports/time-by-phase'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface TaskDetail {
+  id: string;
+  title: string;
+  assignee_name: string;
+  avatar_url: string | null;
+  status_name: string;
+  status_color: string;
+  is_completed: boolean;
+  project_name: string;
+  project_key: string;
+  created_at: string;
+  due_date: string | null;
+  closed_at: string | null;
+  h_espera: number;
+  h_proceso: number;
+  h_revision: number;
+  h_ajustes: number;
+  h_total: number;
+  devoluciones: number;
+}
+
+export function useReportTasksDetail() {
+  return useQuery({
+    queryKey: ['report-tasks-detail'],
+    queryFn: () => api.get<TaskDetail[]>('/api/reports/tasks-detail'),
+    staleTime: STALE_TIME,
+  });
+}
+
 export function useReportIndividualPerformance(filters: IndividualPerformanceFilters = {}) {
   return useQuery({
     queryKey: ['report-individual-performance', filters],

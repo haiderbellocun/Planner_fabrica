@@ -73,8 +73,7 @@ export default function ProjectDetailPage() {
   const updateProject = useUpdateProject();
 
   const [editingLink, setEditingLink] = useState(false);
-  const [linkValue, setLinkValue] = useState('');
-  const [linkLabelValue, setLinkLabelValue] = useState('');
+  const [editLinks, setEditLinks] = useState<{ label: string; url: string }[]>([{ label: '', url: '' }]);
 
   const isLeader =
     user?.role === 'admin' ||
@@ -178,88 +177,93 @@ export default function ProjectDetailPage() {
           </div>
           <p className="page-description">{project.description || 'Sin descripción'}</p>
 
-          {/* Link del proyecto */}
-          <div className="flex items-center gap-2 mt-1">
-            {editingLink ? (
-              <>
-                <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <Input
-                  className="h-7 text-sm w-36"
-                  placeholder="Nombre (ej: Drive)"
-                  value={linkLabelValue}
-                  onChange={(e) => setLinkLabelValue(e.target.value)}
-                />
-                <Input
-                  className="h-7 text-sm w-64"
-                  placeholder="https://..."
-                  value={linkValue}
-                  onChange={(e) => setLinkValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      updateProject.mutate({ id: projectId!, link: linkValue.trim() || null, link_label: linkLabelValue.trim() || null } as any);
-                      setEditingLink(false);
-                    }
-                    if (e.key === 'Escape') setEditingLink(false);
-                  }}
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-emerald-600"
-                  onClick={() => {
-                    updateProject.mutate({ id: projectId!, link: linkValue.trim() || null, link_label: linkLabelValue.trim() || null } as any);
-                    setEditingLink(false);
-                  }}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => setEditingLink(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </>
-            ) : project.link ? (
-              <>
-                <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm text-muted-foreground font-medium">
-                  {project.link_label || 'Enlace'}:
-                </span>
-                <a
-                  href={project.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline truncate max-w-xs"
-                >
-                  {project.link}
-                </a>
-                {canManageAsignaturas && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6"
-                    onClick={() => { setLinkValue(project.link || ''); setLinkLabelValue(project.link_label || ''); setEditingLink(true); }}
-                  >
-                    <Pencil className="h-3 w-3" />
+          {/* Links del proyecto */}
+          {(() => {
+            const parsedLinks: { label: string; url: string }[] = (() => {
+              if (!project.link) return [];
+              if (project.link.startsWith('[')) {
+                try { return JSON.parse(project.link); } catch { /* fall through */ }
+              }
+              return [{ label: project.link_label || '', url: project.link }];
+            })();
+
+            return (
+              <div className="mt-1">
+                {editingLink ? (
+                  <div className="space-y-1.5">
+                    {editLinks.map((lnk, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <Input
+                          className="h-7 text-sm w-32"
+                          placeholder="Nombre"
+                          value={lnk.label}
+                          onChange={(e) => setEditLinks(prev => prev.map((l, i) => i === idx ? { ...l, label: e.target.value } : l))}
+                        />
+                        <Input
+                          className="h-7 text-sm w-56"
+                          placeholder="https://..."
+                          value={lnk.url}
+                          onChange={(e) => setEditLinks(prev => prev.map((l, i) => i === idx ? { ...l, url: e.target.value } : l))}
+                        />
+                        {editLinks.length > 1 && (
+                          <button type="button" onClick={() => setEditLinks(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-muted-foreground hover:text-destructive">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <button type="button"
+                        onClick={() => setEditLinks(prev => [...prev, { label: '', url: '' }])}
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium">
+                        <Plus className="h-3 w-3" /> Agregar enlace
+                      </button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600"
+                        onClick={() => {
+                          const valid = editLinks.filter(l => l.url.trim());
+                          const serialized = valid.length === 0 ? null : JSON.stringify(valid);
+                          updateProject.mutate({ id: projectId!, link: serialized, link_label: null } as any);
+                          setEditingLink(false);
+                        }}>
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => setEditingLink(false)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : parsedLinks.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    {parsedLinks.map((lnk, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground font-medium">{lnk.label || 'Enlace'}:</span>
+                        <a href={lnk.url} target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline truncate max-w-[220px]">
+                          {lnk.url}
+                        </a>
+                      </div>
+                    ))}
+                    {canManageAsignaturas && (
+                      <Button size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => { setEditLinks(parsedLinks.length > 0 ? parsedLinks : [{ label: '', url: '' }]); setEditingLink(true); }}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ) : canManageAsignaturas ? (
+                  <Button variant="ghost" size="sm" className="h-7 text-muted-foreground text-xs px-2"
+                    onClick={() => { setEditLinks([{ label: '', url: '' }]); setEditingLink(true); }}>
+                    <Link2 className="h-3 w-3 mr-1" />
+                    Agregar enlace
                   </Button>
-                )}
-              </>
-            ) : canManageAsignaturas ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-muted-foreground text-xs px-2"
-                onClick={() => { setLinkValue(''); setLinkLabelValue(''); setEditingLink(true); }}
-              >
-                <Link2 className="h-3 w-3 mr-1" />
-                Agregar enlace
-              </Button>
-            ) : null}
-          </div>
+                ) : null}
+              </div>
+            );
+          })()}
 
           {/* Fecha de entrega */}
           {project.end_date && (

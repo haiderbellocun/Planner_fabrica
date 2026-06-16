@@ -70,7 +70,7 @@ export default function AuthPage() {
   return (
     <div
       className="min-h-screen w-full relative flex flex-col items-center justify-center p-4"
-      style={{ backgroundImage: 'url(/bg_login.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      style={{ backgroundImage: 'url(./bg_login.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
       <div className="absolute inset-0 bg-black/30" />
       <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-md">

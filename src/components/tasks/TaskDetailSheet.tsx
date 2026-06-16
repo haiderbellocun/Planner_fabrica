@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send } from 'lucide-react';
-import { useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
+import { useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +59,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const { data: comments = [] } = useTaskComments(task?.id);
   const { user } = useAuth();
   const updateTask = useUpdateTask();
+  const updateTaskStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
   const updateTemaAssignees = useUpdateTemaAssignees();
   const updateMaterialAssignees = useUpdateMaterialAssignees();
@@ -165,7 +166,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   };
 
   const handleStatusChange = (statusId: string) => {
-    updateTask.mutate({ id: taskData.id, status_id: statusId });
+    updateTaskStatus.mutate({ taskId: taskData.id, statusId, projectId: taskData.project_id });
   };
 
   const handleAssigneeChange = (assigneeId: string) => {
@@ -241,7 +242,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
           <div
             className="flex flex-col flex-1 overflow-hidden border-r border-border relative"
             style={{
-              backgroundImage: 'url(/FONDO_3.png)',
+              backgroundImage: 'url(./FONDO_3.png)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}

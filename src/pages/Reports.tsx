@@ -30,6 +30,12 @@ import {
   Scatter,
   ZAxis,
   ReferenceLine,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Legend,
 } from 'recharts';
 import {
   useReportOverview,
@@ -50,6 +56,11 @@ import {
   useReportWeeklyByCargo,
   useReportUnassignedMaterials,
   useReportIndividualPerformance,
+  useReportTimeByPhase,
+  useReportTasksDetail,
+  type IndividualPerformance,
+  type TimeByPhase,
+  type TaskDetail,
   type TeamMonthlyPoint,
   type TeamMemberByCargo,
   type WeeklyByCargoPoint,
@@ -65,10 +76,11 @@ import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import ViolinChart from '@/components/reports/ViolinChart';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
-import kpiProjectsImg from '@/assets/dashboard/projects.png';
-import kpiTasksImg from '@/assets/dashboard/tasks.png';
-import kpiPackageImg from '@/assets/dashboard/productivity.png';
-import kpiUsersImg from '@/assets/dashboard/notifications.png.png';
+import SankeyDiagram from '@/components/reports/SankeyDiagram';
+const kpiProjectsImg = './deco_foca.png';
+const kpiTasksImg = './deco_cangrejo.png';
+const kpiPackageImg = './RECURSOS-ADICIONALES-4.png';
+const kpiUsersImg = './deco_concha.png';
 
 // Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
@@ -111,7 +123,7 @@ function KpiCard({
 }) {
   return (
     <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-      <img src={image} alt="" className="absolute right-4 top-4 h-20 w-20 object-contain opacity-70 pointer-events-none" />
+      <img src={image} alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
       <CardHeader className="pb-2 p-0">
         <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">{title}</CardTitle>
       </CardHeader>
@@ -1905,152 +1917,803 @@ function TabProduccion() {
   );
 }
 
+// ---------- Tab: Eficiencia — helpers ----------
+
+function EficSectionHeader({ tag, title }: { tag: string; title: string }) {
+  return (
+    <div className="flex items-baseline gap-3 mb-5">
+      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">
+        {tag}
+      </span>
+      <h2 className="text-[15px] font-black tracking-tight text-foreground">{title}</h2>
+    </div>
+  );
+}
+
+function BulletBar({ label, value, meta = 85 }: { label: string; value: number | null; meta?: number }) {
+  const v = value ?? 0;
+  const fillPct = Math.min(v, 100);
+  const color = v >= meta ? '#1A7A4A' : v >= 60 ? '#C05C0A' : '#B91C1C';
+  return (
+    <div className="mb-3">
+      <div className="flex justify-between text-[11px] mb-1">
+        <span className="font-medium truncate max-w-[60%]">{label}</span>
+        <span className="font-bold tabular-nums" style={{ color }}>{value != null ? `${v}%` : '—'}</span>
+      </div>
+      <div className="relative h-4 rounded overflow-hidden flex">
+        <div className="h-full bg-red-100" style={{ width: '60%' }} />
+        <div className="h-full bg-amber-100" style={{ width: '20%' }} />
+        <div className="h-full bg-emerald-100" style={{ width: '20%' }} />
+        <div className="absolute inset-y-1 left-0 rounded transition-all" style={{ width: `${fillPct}%`, backgroundColor: color, opacity: 0.7 }} />
+        <div className="absolute top-0 bottom-0 w-[2px] bg-gray-700/40" style={{ left: `${meta}%` }} />
+      </div>
+      <div className="flex text-[9px] text-muted-foreground mt-0.5 relative">
+        <span>0%</span>
+        <span className="absolute" style={{ left: `${meta - 3}%` }}>meta {meta}%</span>
+        <span className="ml-auto">100%</span>
+      </div>
+    </div>
+  );
+}
+
+function PhaseAnatomyBar({ person, phases }: { person: string; phases: TimeByPhase['phases'] }) {
+  const total = phases.reduce((s, p) => s + p.avg_hours, 0);
+  if (total === 0) return null;
+  return (
+    <div className="mb-3">
+      <div className="text-[11px] font-medium mb-1 truncate">{person}</div>
+      <div className="flex h-5 rounded overflow-hidden gap-px">
+        {phases.map((p) => {
+          const pct = (p.avg_hours / total) * 100;
+          if (pct < 1) return null;
+          return (
+            <div
+              key={p.status_name}
+              className="flex items-center justify-center overflow-hidden"
+              style={{ width: `${pct}%`, backgroundColor: p.status_color || '#94A3B8' }}
+              title={`${p.status_name}: ${p.avg_hours.toFixed(1)}h (${pct.toFixed(0)}%)`}
+            >
+              {pct > 10 && <span className="text-[8px] font-bold text-white/90 px-1 truncate">{pct.toFixed(0)}%</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PersonCard({ person }: { person: IndividualPerformance }) {
+  const completionRate = person.total_tareas > 0
+    ? Math.round((person.tareas_completadas / person.total_tareas) * 100) : null;
+  const semCls = (v: number | null) =>
+    v == null ? 'bg-slate-100 text-slate-500' :
+    v >= 85 ? 'bg-emerald-100 text-emerald-800' :
+    v >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
+  return (
+    <Card className={CARD_CLASS}>
+      <CardContent className="pt-4 pb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={person.avatar_url ?? undefined} />
+            <AvatarFallback className="text-xs bg-primary/10 text-primary">{person.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate leading-tight">{person.full_name}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{person.cargo ?? '—'}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { label: 'Eficiencia', value: person.eficiencia_pct },
+            { label: 'Puntualidad', value: person.puntualidad_pct },
+            { label: 'Completadas', value: completionRate },
+            { label: 'Total tareas', value: person.total_tareas, noUnit: true },
+          ] as { label: string; value: number | null; noUnit?: boolean }[]).map((d) => (
+            <div key={d.label} className={`rounded-lg px-2 py-2 text-center ${semCls(d.value)}`}>
+              <p className="text-lg font-black leading-none">{d.value != null ? `${d.value}${d.noUnit ? '' : '%'}` : '—'}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-wide mt-0.5 opacity-80">{d.label}</p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ---------- Tab: Eficiencia ----------
 function TabEficiencia() {
+  const { data: overview } = useReportOverview();
   const { data: timeDist = [], isLoading: loadingTime } = useReportTimeDistribution();
   const { data: transitions = [], isLoading: loadingTrans } = useReportWorkflowTransitions();
-  const { data: teamByCargo = [] } = useReportTeamByCargo();
+  const { data: teamByCargo = [], isLoading: loadingCargo } = useReportTeamByCargo();
   const { data: weeklyByCargo = [] } = useReportWeeklyByCargo();
   const { data: unassignedMaterials = [] } = useReportUnassignedMaterials();
+  const { data: timeByPhase = [], isLoading: loadingPhase } = useReportTimeByPhase();
+  const { data: indPerf = [], isLoading: loadingIndPerf } = useReportIndividualPerformance();
+  const { data: tasks = [], isLoading: loadingTasks } = useReportTasksDetail();
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
+  const [filterCargo, setFilterCargo] = useState<string>('all');
+  const [taskSearch, setTaskSearch] = useState('');
+  const [sortCol, setSortCol] = useState<keyof TaskDetail>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  if (loadingTime || loadingTrans) return <LoadingState />;
+  // Solo bloquea con spinner si los datos de encabezado aún no llegaron
+  if (loadingCargo && loadingTime && loadingTrans) return <LoadingState />;
 
-  // Average time per status for horizontal bar
-  const avgTimeData = timeDist
-    .filter(d => d.count > 0)
-    .map(d => ({
-      name: d.status_name,
-      promedio: d.stats.mean,
-      mediana: d.stats.median,
-      color: STATUS_COLORS[d.status_name] || CHART_COLORS.muted,
-      count: d.count,
-    }));
+  // ── Filtro por cargo ────────────────────────────────────────────────────
+  // Número de personas por cargo (no suma de tareas)
+  const cargoGroups = teamByCargo.reduce<Record<string, number>>((acc, m) => {
+    const c = m.cargo || 'Sin cargo';
+    acc[c] = (acc[c] ?? 0) + 1;
+    return acc;
+  }, {});
+  const totalAllPersons = teamByCargo.length;
 
-  const avgConfig: ChartConfig = {
-    promedio: { label: 'Promedio', color: CHART_COLORS.indigo },
-    mediana: { label: 'Mediana', color: CHART_COLORS.indigoLight },
-  };
+  const filteredTeam    = filterCargo === 'all' ? teamByCargo   : teamByCargo.filter((m) => m.cargo === filterCargo);
+  const filteredIndPerf = filterCargo === 'all' ? indPerf       : indPerf.filter((p) => p.cargo === filterCargo);
+  const filteredPhase   = filterCargo === 'all' ? timeByPhase   : timeByPhase.filter((p) => {
+    const member = teamByCargo.find((m) => m.full_name === p.full_name);
+    return member?.cargo === filterCargo;
+  });
 
-  // Workflow transitions for visualization
-  const topTransitions = transitions
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
-    .map(t => ({
-      name: `${t.from_status} → ${t.to_status}`,
-      count: t.count,
-      fromColor: STATUS_COLORS[t.from_status] || CHART_COLORS.muted,
-      toColor: STATUS_COLORS[t.to_status] || CHART_COLORS.muted,
-    }));
+  // ── ① Resumen ──────────────────────────────────────────────────────────
+  const activeProjects = overview?.projects?.active ?? 0;
+  const totalTasks = overview?.tasks?.total ?? 0;
+  const finalizadas30d = overview?.recent_completed_30d ?? 0;
+  const perfWithEf = filteredIndPerf.filter((p) => p.eficiencia_pct != null);
+  const perfWithPunt = filteredIndPerf.filter((p) => p.puntualidad_pct != null);
+  const avgEficiencia = perfWithEf.length > 0
+    ? Math.round(perfWithEf.reduce((s, p) => s + (p.eficiencia_pct ?? 0), 0) / perfWithEf.length) : null;
+  const avgPuntualidad = perfWithPunt.length > 0
+    ? Math.round(perfWithPunt.reduce((s, p) => s + (p.puntualidad_pct ?? 0), 0) / perfWithPunt.length) : null;
 
-  // Find bottleneck (status with highest average time)
+  const stackData = filteredTeam.filter((m) => m.total_tasks > 0).map((m) => ({
+    name: m.full_name.split(/\s+/).slice(0, 2).join(' '),
+    completadas: Math.round((m.completed_tasks / m.total_tasks) * 100),
+    en_curso: Math.round((Math.max(0, m.active_tasks - m.overdue_tasks) / m.total_tasks) * 100),
+    vencidas: Math.round((m.overdue_tasks / m.total_tasks) * 100),
+  }));
+
+  const avgTimeData = timeDist.filter((d) => d.count > 0).map((d) => ({
+    name: d.status_name, promedio: d.stats.mean, color: STATUS_COLORS[d.status_name] || CHART_COLORS.muted,
+  }));
   const bottleneck = avgTimeData.length > 0
-    ? avgTimeData.reduce((prev, curr) => curr.promedio > prev.promedio ? curr : prev)
-    : null;
+    ? avgTimeData.reduce((prev, curr) => curr.promedio > prev.promedio ? curr : prev) : null;
+  const overdueMembers = filteredTeam.filter((m) => m.overdue_tasks > 0);
+  const totalOverdue = overdueMembers.reduce((s, m) => s + m.overdue_tasks, 0);
+
+  // ── ② Flujo ────────────────────────────────────────────────────────────
+  const topTransitions = [...transitions].sort((a, b) => b.count - a.count).slice(0, 12);
+  const maxTrans = topTransitions[0]?.count || 1;
+  const totalTransitions = transitions.reduce((s, t) => s + t.count, 0);
+  const tasksByStatus = (overview?.tasks?.by_status ?? []).filter((s) => s.count > 0);
+
+  // Sankey: construir nodos desde la unión de transitions + timeDist.
+  // transitions siempre tiene datos (no filtra por duration_seconds),
+  // timeDist puede estar vacío si no hay duraciones registradas.
+  const timeDistMap   = new Map(timeDist.map((d) => [d.status_name, d]));
+  const transColorMap = new Map<string, string>([
+    ...transitions.map((t) => [t.from_status, t.from_color] as [string, string]),
+    ...transitions.map((t) => [t.to_status,   t.to_color]   as [string, string]),
+  ]);
+  const allSankeyIds = new Set([
+    ...transitions.map((t) => t.from_status),
+    ...transitions.map((t) => t.to_status),
+  ]);
+  const sankeyNodes: SankeyNodeInput[] = Array.from(allSankeyIds).map((id) => {
+    const td = timeDistMap.get(id);
+    return {
+      id,
+      color:         td?.color ?? transColorMap.get(id) ?? '#94a3b8',
+      avg_hours:     td ? (td.stats?.mean ?? 0) : undefined,
+      task_count:    td?.count,
+      display_order: td?.display_order ?? 99,
+    };
+  });
+  const sankeyLinks = transitions.map((t) => ({
+    source: t.from_status,
+    target: t.to_status,
+    value:  t.count,
+  }));
+
+  // ── ③ Tiempos ──────────────────────────────────────────────────────────
+  const allStatuses = [...new Set(filteredPhase.flatMap((p) => p.phases.map((ph) => ph.status_name)))];
+  const phaseChartData = filteredPhase.map((p) => {
+    const row: Record<string, string | number> = { name: p.full_name.split(/\s+/).slice(0, 2).join(' ') };
+    allStatuses.forEach((s) => { row[s] = p.phases.find((x) => x.status_name === s)?.avg_hours ?? 0; });
+    return row;
+  });
+
+  // ── ④ Radar ────────────────────────────────────────────────────────────
+  const radarPersons = filteredIndPerf.slice(0, 5).map((p) => p.full_name.split(/\s+/).slice(0, 2).join(' '));
+  const radarData = ['Cumplimiento', 'Velocidad', 'Calidad', 'Estabilidad'].map((dim) => {
+    const entry: Record<string, string | number> = { subject: dim };
+    filteredIndPerf.slice(0, 5).forEach((p) => {
+      const name = p.full_name.split(/\s+/).slice(0, 2).join(' ');
+      let v = 0;
+      if (dim === 'Cumplimiento') v = p.puntualidad_pct ?? 0;
+      else if (dim === 'Velocidad') v = p.total_tareas > 0 ? Math.round((p.tareas_completadas / p.total_tareas) * 100) : 0;
+      else if (dim === 'Calidad') v = Math.min(p.eficiencia_pct ?? 0, 100);
+      else {
+        const m = teamByCargo.find((t) => t.id === p.id);
+        const rework = m && m.total_tasks > 0 ? (m.ajustes_count / m.total_tasks) * 100 : 0;
+        v = Math.max(0, Math.round(100 - rework));
+      }
+      entry[name] = Math.round(v);
+    });
+    return entry;
+  });
+  const radarConfig: ChartConfig = Object.fromEntries(
+    radarPersons.map((name, i) => [name, { label: name, color: SERIES_COLORS[i % SERIES_COLORS.length] }])
+  );
+
+  // ── ⑥ Tabla de tareas ─────────────────────────────────────────────────
+  const toggleSort = (col: keyof TaskDetail) => {
+    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortCol(col); setSortDir('desc'); }
+  };
+  const cargoMemberNames = new Set(filteredTeam.map((m) => m.full_name));
+  const filteredTasks = tasks
+    .filter((t) => filterCargo === 'all' || cargoMemberNames.has(t.assignee_name))
+    .filter((t) => {
+      if (!taskSearch) return true;
+      const q = taskSearch.toLowerCase();
+      return t.title.toLowerCase().includes(q) || t.assignee_name.toLowerCase().includes(q) || t.project_name.toLowerCase().includes(q);
+    });
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const av = a[sortCol] as string | number | boolean | null;
+    const bv = b[sortCol] as string | number | boolean | null;
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : Number(av) - Number(bv);
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  // ── ⑤ Individual ──────────────────────────────────────────────────────
+  const activePerson = filteredIndPerf.find((p) => p.id === selectedPerson)?.id ?? filteredIndPerf[0]?.id ?? null;
+  const activePersonData = filteredIndPerf.find((p) => p.id === activePerson);
 
   return (
-    <div className="space-y-8">
-      {/* Bottleneck alert */}
-      {bottleneck && bottleneck.promedio > 0 && (
-        <Card className={`border-destructive/30 bg-destructive/5 ${CARD_CLASS}`}>
-          <CardContent className="flex items-center gap-3 py-4">
-            <div className="rounded-full p-2" style={{ background: 'linear-gradient(135deg, #EF4444, #FBBF24)' }}>
-              <Clock className="h-4 w-4 text-white" />
+    <div className="space-y-12">
+
+      {/* ── Barra de filtros por cargo ── */}
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+        <span className="text-xs text-muted-foreground font-medium mr-1">Filtrar por cargo:</span>
+        <button
+          onClick={() => { setFilterCargo('all'); setSelectedPerson(null); }}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${filterCargo === 'all' ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-border hover:border-primary/40'}`}
+        >
+          Todos ({totalAllPersons})
+        </button>
+        {Object.entries(cargoGroups).sort((a, b) => b[1] - a[1]).map(([cargo, count]) => (
+          <button
+            key={cargo}
+            onClick={() => { setFilterCargo(cargo); setSelectedPerson(null); }}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${filterCargo === cargo ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-border hover:border-primary/40'}`}
+          >
+            {cargo} ({count})
+          </button>
+        ))}
+      </div>
+
+      {/* ① RESUMEN */}
+      <section>
+        <EficSectionHeader tag="① Resumen" title="Estado actual del equipo" />
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {([
+            { label: 'Proyectos activos', value: activeProjects, ctx: `de ${overview?.projects?.total ?? 0} total`, color: '#1564C0' },
+            { label: 'Tareas totales', value: totalTasks, ctx: 'en el sistema', color: '#7C3ABA' },
+            { label: 'Finalizadas (30d)', value: finalizadas30d, ctx: 'último mes', color: '#1A7A4A' },
+            { label: 'Puntualidad prom.', value: avgPuntualidad != null ? `${avgPuntualidad}%` : '—', ctx: 'entregas a tiempo', color: avgPuntualidad != null && avgPuntualidad >= 85 ? '#1A7A4A' : '#C05C0A' },
+            { label: 'Eficiencia prom.', value: avgEficiencia != null ? `${avgEficiencia}%` : '—', ctx: 'est. vs real', color: avgEficiencia != null && avgEficiencia >= 85 ? '#1A7A4A' : '#C05C0A' },
+          ] as { label: string; value: string | number; ctx: string; color: string }[]).map((k) => (
+            <div key={k.label} className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${k.color}` }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{k.label}</p>
+              <p className="text-2xl font-black leading-none" style={{ color: k.color }}>{k.value}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{k.ctx}</p>
             </div>
-            <div>
-              <p className="font-medium text-sm">Cuello de botella detectado</p>
-              <p className="text-xs text-muted-foreground">
-                Las tareas pasan en promedio <strong>{formatHours(bottleneck.promedio)}</strong> en estado
-                "<strong>{bottleneck.name}</strong>" ({bottleneck.count} transiciones registradas)
-              </p>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Composición de tareas por colaborador</CardTitle>
+              <CardDescription className="text-xs">Barras apiladas 100% · verde=completadas · azul=en curso · rojo=vencidas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stackData.length > 0 ? (
+                <ChartContainer
+                  config={{ completadas: { label: 'Completadas', color: '#1A7A4A' }, en_curso: { label: 'En curso', color: '#1564C0' }, vencidas: { label: 'Vencidas', color: '#B91C1C' } }}
+                  className="w-full" style={{ height: Math.max(stackData.length * 38, 100) }}
+                >
+                  <BarChart data={stackData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                    <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Bar dataKey="completadas" stackId="a" fill="#1A7A4A" barSize={16} />
+                    <Bar dataKey="en_curso" stackId="a" fill="#1564C0" barSize={16} />
+                    <Bar dataKey="vencidas" stackId="a" fill="#B91C1C" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={16} />
+                  </BarChart>
+                </ChartContainer>
+              ) : <EmptyState message="Sin datos de equipo" />}
+            </CardContent>
+          </Card>
+
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">% Cumplimiento vs. meta (85%)</CardTitle>
+              <CardDescription className="text-xs">Bullet chart · rojo=riesgo · ámbar=alerta · verde=objetivo</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-3">
+              {filteredIndPerf.length > 0
+                ? filteredIndPerf.map((p) => <BulletBar key={p.id} label={p.full_name.split(/\s+/).slice(0, 2).join(' ')} value={p.puntualidad_pct} />)
+                : <EmptyState message="Sin datos de puntualidad" />}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">⚠ Alertas</p>
+            <div className="space-y-2">
+              {bottleneck && bottleneck.promedio > 0 && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-[11px] leading-relaxed">
+                  <strong>Cuello de botella:</strong> promedio de <strong>{formatHours(bottleneck.promedio)}</strong> en estado "<strong>{bottleneck.name}</strong>".
+                </div>
+              )}
+              {totalOverdue > 0 && (
+                <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
+                  <strong>{totalOverdue} tareas vencidas</strong> en {overdueMembers.length} colaborador(es): {overdueMembers.map((m) => m.full_name.split(' ')[0]).join(', ')}.
+                </div>
+              )}
+              {avgPuntualidad != null && avgPuntualidad < 60 && (
+                <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
+                  <strong>Puntualidad crítica:</strong> promedio {avgPuntualidad}%, muy por debajo de la meta del 85%.
+                </div>
+              )}
+              {totalOverdue === 0 && (!bottleneck || bottleneck.promedio === 0) && (
+                <div className="rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 px-3 py-2 text-[11px]">✓ Sin alertas críticas en este momento.</div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">💡 Conclusiones</p>
+            <div className="space-y-2">
+              {avgEficiencia != null && (
+                <div className={`rounded-md px-3 py-2 text-[11px] leading-relaxed border ${avgEficiencia >= 85 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+                  Eficiencia promedio del equipo: <strong>{avgEficiencia}%</strong>{avgEficiencia >= 85 ? ' — dentro del rango objetivo.' : ' — por debajo de la meta del 85%.'}
+                </div>
+              )}
+              {finalizadas30d > 0 && (
+                <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-900 px-3 py-2 text-[11px] leading-relaxed">
+                  Se completaron <strong>{finalizadas30d} tareas</strong> en los últimos 30 días.
+                </div>
+              )}
+              {stackData.length > 0 && (() => {
+                const top = [...stackData].sort((a, b) => b.completadas - a.completadas)[0];
+                return top ? (
+                  <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-900 px-3 py-2 text-[11px] leading-relaxed">
+                    Mayor tasa de completadas: <strong>{top.name}</strong> ({top.completadas}%).
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Violin Chart */}
-      <Card className={CARD_CLASS}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Distribución de Tiempo por Estado</CardTitle>
-          <CardDescription>Diagrama de violín - distribución de horas que las tareas pasan en cada estado</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ViolinChart data={timeDist} height={320} />
-        </CardContent>
-      </Card>
+      {/* ② FLUJO DE ESTADOS */}
+      <section>
+        <EficSectionHeader tag="② Flujo de estados" title="¿Cómo recorren las tareas el proceso?" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-7">
-        {/* Average time per status */}
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Tiempo Promedio por Estado</CardTitle>
-            <CardDescription>Promedio y mediana en horas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {avgTimeData.length > 0 ? (
-              <ChartContainer config={avgConfig} className="h-[250px] w-full">
-                <BarChart data={avgTimeData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                  <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                  <XAxis type="number" {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
-                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={90} tick={{ fill: '#64748B', fontSize: 12 }} />
-                  <ChartTooltip content={<CustomTooltip />} />
-                  <Bar dataKey="promedio" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} />
-                  <Bar dataKey="mediana" fill={CHART_COLORS.indigoLight} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <EmptyState message="No hay datos de tiempo" />
-            )}
-          </CardContent>
-        </Card>
+        {(loadingTime || loadingTrans) ? (
+          <div className="h-[300px] rounded-2xl bg-muted/40 animate-pulse mb-5" />
+        ) : (
+          <>
+        <div className="rounded-md bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 px-4 py-2 text-[11px] text-slate-700 mb-5">
+          <strong>{totalTransitions} transiciones</strong> registradas · <strong>{transitions.length}</strong> rutas únicas · grosor de barra = volumen relativo de tareas.
+        </div>
 
-        {/* Workflow transitions */}
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Flujo de Trabajo</CardTitle>
-            <CardDescription>Transiciones más frecuentes entre estados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {topTransitions.length > 0 ? (
-              <div className="space-y-2">
-                {topTransitions.map((t, i) => {
-                  const maxCount = topTransitions[0].count;
-                  const width = (t.count / maxCount) * 100;
-                  return (
-                    <div key={i} className="flex items-center gap-3 text-xs">
-                      <span className="w-[180px] truncate text-muted-foreground flex-shrink-0">{t.name}</span>
-                      <div className="flex-1 relative h-5 bg-white/5 rounded overflow-hidden">
-                        <div
-                          className="absolute inset-y-0 left-0 rounded transition-all"
-                          style={{
-                            width: `${width}%`,
-                            background: `linear-gradient(90deg, ${t.fromColor}, ${t.toColor})`,
-                            opacity: 0.8,
-                          }}
-                        />
-                        <span className="relative z-10 px-2 leading-5 font-medium">{t.count}</span>
+        {sankeyLinks.length > 0
+          ? <div className="mb-5"><SankeyDiagram nodes={sankeyNodes} links={sankeyLinks} height={440} /></div>
+          : (
+            <Card className={`${CARD_CLASS} mb-5`}>
+              <CardContent className="py-6"><EmptyState message="No hay transiciones registradas" /></CardContent>
+            </Card>
+          )
+        }
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Tiempo promedio por estado</CardTitle>
+              <CardDescription className="text-xs">Horas que permanece una tarea en cada estado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {avgTimeData.length > 0 ? (
+                <div className="space-y-2 mt-1">
+                  {[...avgTimeData].sort((a, b) => b.promedio - a.promedio).map((d) => {
+                    const maxH = Math.max(...avgTimeData.map((x) => x.promedio));
+                    return (
+                      <div key={d.name} className="flex items-center gap-3 text-[11px]">
+                        <span className="w-[120px] truncate text-muted-foreground font-medium flex-shrink-0">{d.name}</span>
+                        <div className="flex-1 relative h-4 bg-slate-100 rounded overflow-hidden">
+                          <div className="absolute inset-y-0 left-0 rounded" style={{ width: `${(d.promedio / maxH) * 100}%`, backgroundColor: d.color, opacity: 0.8 }} />
+                        </div>
+                        <span className="w-16 text-right font-bold tabular-nums">{formatHours(d.promedio)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <EmptyState message="Sin datos de duración" />}
+            </CardContent>
+          </Card>
+
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Tareas activas por estado (ahora)</CardTitle>
+              <CardDescription className="text-xs">Distribución actual del backlog</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {tasksByStatus.length > 0 ? (
+                <div className="space-y-2 mt-1">
+                  {tasksByStatus.map((s) => {
+                    const maxC = Math.max(...tasksByStatus.map((x) => x.count));
+                    return (
+                      <div key={s.name} className="flex items-center gap-3 text-[11px]">
+                        <span className="w-[120px] truncate text-muted-foreground font-medium flex-shrink-0">{s.name}</span>
+                        <div className="flex-1 relative h-4 bg-slate-100 rounded overflow-hidden">
+                          <div className="absolute inset-y-0 left-0 rounded" style={{ width: `${(s.count / maxC) * 100}%`, backgroundColor: STATUS_COLORS[s.name] || CHART_COLORS.muted, opacity: 0.85 }} />
+                        </div>
+                        <span className="w-8 text-right font-bold tabular-nums">{s.count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <EmptyState message="Sin tareas registradas" />}
+            </CardContent>
+          </Card>
+        </div>
+          </>
+        )}
+      </section>
+
+      {/* ③ TIEMPOS POR FASE */}
+      <section>
+        <EficSectionHeader tag="③ Tiempos" title="¿Dónde se pierde el tiempo?" />
+
+        {loadingPhase ? (
+          <div className="h-[200px] rounded-2xl bg-muted/40 animate-pulse mb-5" />
+        ) : filteredPhase.length > 0 && (
+          <Card className={`${CARD_CLASS} mb-5`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Anatomía del ciclo por colaborador</CardTitle>
+              <CardDescription className="text-xs">Cada barra = 100% del tiempo · segmentos proporcionales al tiempo en cada estado</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-3">
+              <div className="flex flex-wrap gap-3 mb-4">
+                {filteredPhase.flatMap((p) => p.phases).reduce<Array<{ name: string; color: string }>>((acc, ph) => {
+                  if (!acc.find((x) => x.name === ph.status_name)) acc.push({ name: ph.status_name, color: ph.status_color });
+                  return acc;
+                }, []).map((s) => (
+                  <span key={s.name} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+              {filteredPhase.map((p) => <PhaseAnatomyBar key={p.profile_id} person={p.full_name} phases={p.phases} />)}
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Horas promedio por estado y colaborador</CardTitle>
+              <CardDescription className="text-xs">Solo tareas con historial registrado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {filteredPhase.length > 0 ? (
+                <ChartContainer
+                  config={Object.fromEntries(allStatuses.map((s, i) => [s, { label: s, color: SERIES_COLORS[i % SERIES_COLORS.length] }]))}
+                  className="w-full" style={{ height: Math.max(filteredPhase.length * 44, 120) }}
+                >
+                  <BarChart data={phaseChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                    <XAxis type="number" tickFormatter={(v) => `${v}h`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    {allStatuses.map((s, i) => (
+                      <Bar key={s} dataKey={s} fill={SERIES_COLORS[i % SERIES_COLORS.length]} barSize={10} radius={[0, 3, 3, 0]} />
+                    ))}
+                  </BarChart>
+                </ChartContainer>
+              ) : <EmptyState message="Sin historial de estados" />}
+            </CardContent>
+          </Card>
+
+          <Card className={CARD_CLASS}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Tabla detallada de tiempos por colaborador</CardTitle>
+              <CardDescription className="text-xs">Promedio de horas en cada estado</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {filteredPhase.length > 0 ? (
+                <div className="overflow-x-auto max-h-[280px]">
+                  <table className="w-full text-[11px]">
+                    <thead className="sticky top-0 bg-muted/60">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-semibold text-muted-foreground border-b">Colaborador</th>
+                        {allStatuses.map((s) => <th key={s} className="text-right py-2 px-2 font-semibold text-muted-foreground border-b whitespace-nowrap">{s}</th>)}
+                        <th className="text-right py-2 px-3 font-semibold text-muted-foreground border-b">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPhase.map((p) => (
+                        <tr key={p.profile_id} className="border-b hover:bg-muted/30 transition-colors">
+                          <td className="py-2 px-3 font-medium truncate max-w-[120px]">{p.full_name.split(/\s+/).slice(0, 2).join(' ')}</td>
+                          {allStatuses.map((s) => {
+                            const ph = p.phases.find((x) => x.status_name === s);
+                            return <td key={s} className="py-2 px-2 text-right tabular-nums text-muted-foreground">{ph ? `${ph.avg_hours.toFixed(1)}h` : '—'}</td>;
+                          })}
+                          <td className="py-2 px-3 text-right font-bold tabular-nums">{p.phases.reduce((s, ph) => s + ph.avg_hours, 0).toFixed(1)}h</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <EmptyState message="Sin historial de estados" />}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* ④ EQUIPO */}
+      <section>
+        <EficSectionHeader tag="④ Equipo" title="Rendimiento del equipo" />
+
+        {filteredIndPerf.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+              {filteredIndPerf.map((p) => <PersonCard key={p.id} person={p} />)}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+              {/* Radar multidimensional */}
+              <Card className={CARD_CLASS}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Perfil multidimensional</CardTitle>
+                  <CardDescription className="text-xs">
+                    Cumplimiento = puntualidad · Velocidad = % completadas · Calidad = eficiencia horas · Estabilidad = inverso de ajustes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {radarPersons.length > 0 ? (
+                    <ChartContainer config={radarConfig} className="h-[280px]">
+                      <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="62%">
+                        <PolarGrid stroke="#e2e8f0" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} />
+                        <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 8, fill: '#94a3b8' }} />
+                        {radarPersons.map((name, i) => (
+                          <Radar
+                            key={name}
+                            name={name}
+                            dataKey={name}
+                            stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                            fill={SERIES_COLORS[i % SERIES_COLORS.length]}
+                            fillOpacity={0.10}
+                            strokeWidth={2}
+                          />
+                        ))}
+                        <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                      </RadarChart>
+                    </ChartContainer>
+                  ) : <EmptyState message="Sin datos para el radar" />}
+                </CardContent>
+              </Card>
+
+              {/* Comparativa eficiencia y puntualidad */}
+              <Card className={CARD_CLASS}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Comparativa eficiencia y puntualidad</CardTitle>
+                  <CardDescription className="text-xs">Barras agrupadas · línea punteada = meta 85%</CardDescription>
+                </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{ eficiencia_pct: { label: 'Eficiencia %', color: CHART_COLORS.indigo }, puntualidad_pct: { label: 'Puntualidad %', color: CHART_COLORS.teal } }}
+                  className="w-full" style={{ height: Math.max(filteredIndPerf.length * 44, 140) }}
+                >
+                  <BarChart
+                    data={filteredIndPerf.map((p) => ({ name: p.full_name.split(/\s+/).slice(0, 2).join(' '), eficiencia_pct: p.eficiencia_pct ?? 0, puntualidad_pct: p.puntualidad_pct ?? 0 }))}
+                    layout="vertical" margin={{ left: 8, right: 20 }}
+                  >
+                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                    <XAxis type="number" domain={[0, 120]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <ReferenceLine x={85} stroke="#1A7A4A" strokeDasharray="4 2" label={{ value: 'Meta 85%', position: 'insideTopRight', fontSize: 10, fill: '#1A7A4A' }} />
+                    <Bar dataKey="eficiencia_pct" fill={CHART_COLORS.indigo} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
+                    <Bar dataKey="puntualidad_pct" fill={CHART_COLORS.teal} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+              </Card>
+            </div>{/* end grid radar + comparativa */}
+          </>
+        )}
+
+      </section>
+
+      {/* ⑤ DETALLE INDIVIDUAL */}
+      <section>
+        <EficSectionHeader tag="⑤ Individual" title="Detalle por persona" />
+
+        {loadingIndPerf ? (
+          <div className="h-[180px] rounded-2xl bg-muted/40 animate-pulse" />
+        ) : filteredIndPerf.length > 0 ? (
+          <>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {filteredIndPerf.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPerson(p.id)}
+                  className="text-[11px] font-semibold px-4 py-1.5 rounded-full border transition-all"
+                  style={activePerson === p.id
+                    ? { background: SERIES_COLORS[i % SERIES_COLORS.length], color: '#fff', borderColor: 'transparent' }
+                    : { background: 'white', color: '#64748B', borderColor: '#E2E8F0' }}
+                >
+                  {p.full_name.split(/\s+/).slice(0, 2).join(' ')}
+                </button>
+              ))}
+            </div>
+
+            {activePersonData && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <Card className={CARD_CLASS}>
+                  <CardContent className="pt-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={activePersonData.avatar_url ?? undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold">{activePersonData.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-bold text-sm">{activePersonData.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{activePersonData.cargo ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground">{activePersonData.email}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyState message="No hay transiciones registradas" />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    <div className="space-y-2">
+                      {([
+                        { label: 'Tareas totales', value: activePersonData.total_tareas },
+                        { label: 'Completadas', value: activePersonData.tareas_completadas },
+                        { label: 'Pendientes', value: activePersonData.tareas_pendientes },
+                        { label: 'Asignaturas cubiertas', value: activePersonData.asignaturas_cubiertas },
+                        { label: 'Horas estimadas', value: `${activePersonData.horas_estimadas_total}h` },
+                        { label: 'Horas reales', value: `${activePersonData.horas_reales_total}h` },
+                      ] as { label: string; value: string | number }[]).map((r) => (
+                        <div key={r.label} className="flex justify-between text-[11px] border-b pb-1.5">
+                          <span className="text-muted-foreground">{r.label}</span>
+                          <span className="font-semibold tabular-nums">{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-      <div className="pt-4 border-t">
-        <h2 className="text-base font-semibold mb-1">Rendimiento por equipo</h2>
-        <p className="text-xs text-muted-foreground mb-6">
-          Análisis por cargo: utilización, productividad y materiales pendientes
-        </p>
-        <div className="space-y-10">
-          <CargoPanel cargo="Analista de diseño" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
-          <CargoPanel cargo="GIF" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
-          <CargoPanel cargo="Presentadora" members={teamByCargo} weeklyByCargo={weeklyByCargo} unassignedMaterials={unassignedMaterials} />
+                <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                  {([
+                    { label: 'Eficiencia', value: activePersonData.eficiencia_pct, desc: 'Horas estimadas / reales × 100' },
+                    { label: 'Puntualidad', value: activePersonData.puntualidad_pct, desc: 'Entregas a tiempo con fecha límite' },
+                    { label: 'Completadas', value: activePersonData.total_tareas > 0 ? Math.round(activePersonData.tareas_completadas / activePersonData.total_tareas * 100) : null, desc: `${activePersonData.tareas_completadas} de ${activePersonData.total_tareas}` },
+                    { label: 'Cobertura', value: activePersonData.asignaturas_cubiertas || null, desc: 'Asignaturas distintas cubiertas', noUnit: true },
+                  ] as { label: string; value: number | null; desc: string; noUnit?: boolean }[]).map((m) => {
+                    const v = m.value;
+                    const gradCls = v == null ? 'from-slate-50 to-slate-100 text-slate-600' :
+                      v >= 85 ? 'from-emerald-50 to-emerald-100 text-emerald-800' :
+                      v >= 60 ? 'from-amber-50 to-amber-100 text-amber-800' :
+                      'from-red-50 to-red-100 text-red-800';
+                    return (
+                      <div key={m.label} className={`rounded-xl p-5 bg-gradient-to-br ${gradCls} flex flex-col justify-between min-h-[110px]`}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{m.label}</p>
+                        <p className="text-4xl font-black leading-none mt-2">{v != null ? `${v}${m.noUnit ? '' : '%'}` : '—'}</p>
+                        <p className="text-[10px] opacity-70 mt-1">{m.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        ) : <EmptyState message="Sin datos de rendimiento individual" />}
+      </section>
+
+      {/* ⑥ TABLA DETALLADA DE TAREAS */}
+      <section>
+        <EficSectionHeader tag="⑥ Tareas" title="Registro completo con tiempos por fase" />
+
+        {/* Barra de búsqueda */}
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            type="text"
+            placeholder="Buscar por título, colaborador o proyecto…"
+            value={taskSearch}
+            onChange={(e) => setTaskSearch(e.target.value)}
+            className="flex-1 h-8 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{sortedTasks.length} tareas</span>
         </div>
-      </div>
+
+        {loadingTasks ? (
+          <div className="h-[200px] rounded-2xl bg-muted/40 animate-pulse" />
+        ) : sortedTasks.length > 0 ? (
+          <Card className={CARD_CLASS}>
+            <CardContent className="p-0">
+              <div className="overflow-auto max-h-[480px]">
+                <table className="w-full text-[11px]" style={{ minWidth: 900 }}>
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
+                    <tr>
+                      {([
+                        { col: 'title',         label: 'Título',       align: 'left'  },
+                        { col: 'assignee_name', label: 'Colaborador',  align: 'left'  },
+                        { col: 'status_name',   label: 'Estado',       align: 'left'  },
+                        { col: 'project_key',   label: 'Proyecto',     align: 'left'  },
+                        { col: 'created_at',    label: 'Creado',       align: 'right' },
+                        { col: 'h_espera',      label: '⏳ Espera',    align: 'right' },
+                        { col: 'h_proceso',     label: '⚡ Proceso',   align: 'right' },
+                        { col: 'h_revision',    label: '🔍 Revisión',  align: 'right' },
+                        { col: 'h_ajustes',     label: '⚙ Ajustes',   align: 'right' },
+                        { col: 'h_total',       label: '📐 Total',     align: 'right' },
+                        { col: 'devoluciones',  label: 'Dev.',         align: 'right' },
+                      ] as { col: keyof TaskDetail; label: string; align: string }[]).map(({ col, label, align }) => (
+                        <th
+                          key={col}
+                          onClick={() => toggleSort(col)}
+                          className={`py-2 px-2 font-semibold text-muted-foreground border-b cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors text-${align}`}
+                        >
+                          {label} {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedTasks.map((t) => (
+                      <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="py-1.5 px-2 font-medium max-w-[200px] truncate" title={t.title}>{t.title}</td>
+                        <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[120px]">{t.assignee_name}</td>
+                        <td className="py-1.5 px-2">
+                          <span className="px-1.5 py-0.5 rounded text-white text-[10px] font-semibold" style={{ backgroundColor: t.status_color }}>
+                            {t.status_name}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-2 text-muted-foreground font-mono">{t.project_key}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">
+                          {new Date(t.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_espera   > 0 ? `${t.h_espera}h`   : '—'}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_proceso  > 0 ? `${t.h_proceso}h`  : '—'}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_revision > 0 ? `${t.h_revision}h` : '—'}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_ajustes  > 0 ? `${t.h_ajustes}h`  : '—'}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums font-bold">{t.h_total > 0 ? `${t.h_total}h` : '—'}</td>
+                        <td className="py-1.5 px-2 text-right">
+                          {t.devoluciones > 0 ? (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">{t.devoluciones}</span>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        ) : <EmptyState message="Sin tareas para mostrar" />}
+      </section>
+
     </div>
   );
 }

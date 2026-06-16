@@ -1,45 +1,72 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FolderKanban, Users, ListTodo, Loader2 } from 'lucide-react';
+import { Plus, FolderKanban, Users, ListTodo, Loader2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
-import projectsImg from '@/assets/dashboard/projects.png';
+import { cn } from '@/lib/utils';
+
+const TIPO_LABELS: Record<string, string> = {
+  profesional:  'Profesional',
+  diplomado:    'Diplomado',
+  maestria:     'Maestría',
+  doctorado:    'Doctorado',
+};
+
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterTipo, setFilterTipo]     = useState<string>('all');
+  const [filterMonth, setFilterMonth]   = useState<number>(-1); // -1 = todos
 
-  // Check if user can create projects (admin or project_leader)
   const canCreateProject = user?.role === 'admin' || user?.role === 'project_leader';
 
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Filtrar/ordenar proyectos según rol:
-  // - Usuarios y project_leaders: no ven proyectos finalizados
-  // - Admins: ven todos, pero los finalizados aparecen al final
-  const visibleProjects =
+  // Base list según rol
+  const baseProjects = useMemo(() =>
     user?.role === 'admin'
       ? [...projects].sort((a, b) => {
-          const aCompleted = a.status === 'completed';
-          const bCompleted = b.status === 'completed';
-          if (aCompleted === bCompleted) return 0;
-          return aCompleted ? 1 : -1;
+          const aC = a.status === 'completed', bC = b.status === 'completed';
+          return aC === bC ? 0 : aC ? 1 : -1;
         })
-      : projects.filter((p) => p.status !== 'completed');
+      : projects.filter((p) => p.status !== 'completed'),
+  [projects, user?.role]);
+
+  // Tipos y meses disponibles
+  const availableTipos = useMemo(() =>
+    [...new Set(baseProjects.map((p) => p.tipo_programa).filter(Boolean))] as string[],
+  [baseProjects]);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<number>();
+    baseProjects.forEach((p) => {
+      if (p.end_date) months.add(new Date(p.end_date).getMonth());
+    });
+    return [...months].sort((a, b) => a - b);
+  }, [baseProjects]);
+
+  // Aplicar filtros
+  const visibleProjects = useMemo(() =>
+    baseProjects.filter((p) => {
+      if (filterStatus !== 'all') {
+        if (filterStatus === 'active'    && p.status === 'completed') return false;
+        if (filterStatus === 'completed' && p.status !== 'completed') return false;
+      }
+      if (filterTipo !== 'all' && p.tipo_programa !== filterTipo) return false;
+      if (filterMonth !== -1 && p.end_date && new Date(p.end_date).getMonth() !== filterMonth) return false;
+      return true;
+    }),
+  [baseProjects, filterStatus, filterTipo, filterMonth]);
+
+  const hasFilters = filterStatus !== 'all' || filterTipo !== 'all' || filterMonth !== -1;
+
+  const clearFilters = () => { setFilterStatus('all'); setFilterTipo('all'); setFilterMonth(-1); };
 
   if (isLoading) {
     return (
@@ -68,6 +95,70 @@ export default function ProjectsPage() {
         <CreateProjectWizard open={dialogOpen} onOpenChange={setDialogOpen} />
       )}
 
+      {/* ── Filter bar ── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* Estado */}
+        {['all','active','completed'].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              filterStatus === s
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-muted-foreground border-border hover:border-primary/40'
+            )}
+          >
+            {s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : 'Finalizados'}
+          </button>
+        ))}
+
+        <div className="h-4 w-px bg-border mx-1" />
+
+        {/* Tipo */}
+        {availableTipos.map((t) => (
+          <button
+            key={t}
+            onClick={() => setFilterTipo(filterTipo === t ? 'all' : t)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              filterTipo === t
+                ? 'bg-teal-500 text-white border-teal-500'
+                : 'bg-white text-muted-foreground border-border hover:border-teal-400'
+            )}
+          >
+            {TIPO_LABELS[t] ?? t}
+          </button>
+        ))}
+
+        {availableMonths.length > 0 && <div className="h-4 w-px bg-border mx-1" />}
+
+        {/* Mes de entrega */}
+        {availableMonths.map((m) => (
+          <button
+            key={m}
+            onClick={() => setFilterMonth(filterMonth === m ? -1 : m)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              filterMonth === m
+                ? 'bg-amber-400 text-white border-amber-400'
+                : 'bg-white text-muted-foreground border-border hover:border-amber-300'
+            )}
+          >
+            {MONTH_NAMES[m]}
+          </button>
+        ))}
+
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="ml-1 flex items-center gap-1 px-2 py-1.5 rounded-full text-xs text-muted-foreground hover:text-destructive border border-border hover:border-destructive/40 transition-colors"
+          >
+            <X className="h-3 w-3" /> Limpiar
+          </button>
+        )}
+      </div>
+
       {visibleProjects.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -91,7 +182,7 @@ export default function ProjectsPage() {
           {visibleProjects.map((project) => (
             <Link key={project.id} to={`/projects/${project.id}`}>
               <Card className="relative h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
-                <img src="/Logo_coordinador_de_fabrica.png" alt="" className="absolute bottom-0 right-0 h-32 w-32 object-contain opacity-40 pointer-events-none z-0" />
+                <img src="./Logo_coordinador_de_fabrica.png" alt="" className="absolute bottom-0 right-0 h-32 w-32 object-contain opacity-40 pointer-events-none z-0" />
                 <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">

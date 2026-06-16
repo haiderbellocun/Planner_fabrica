@@ -27,6 +27,7 @@ import {
   User,
   GitBranch,
   CalendarClock,
+  CalendarDays,
   PackageCheck,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,6 +45,7 @@ const baseNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
   { title: 'Proyectos', url: '/projects', icon: FolderKanban },
   { title: 'Mis Tareas', url: '/my-tasks', icon: ListTodo },
+  { title: 'Calendario', url: '/calendar', icon: CalendarDays },
 ];
 
 const reportsNavItem = { title: 'Reportes', url: '/reports', icon: BarChart3 };
@@ -101,7 +103,7 @@ export function AppSidebar() {
       <SidebarContent
         className="px-2 py-3"
         style={!collapsed ? {
-          backgroundImage: 'linear-gradient(rgba(13,217,208,0.55), rgba(13,217,208,0.55)), url(/deco_coral.png)',
+          backgroundImage: 'linear-gradient(rgba(13,217,208,0.55), rgba(13,217,208,0.55)), url(./deco_coral.png)',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'bottom center',
           backgroundSize: '100% auto',

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMyTasks, useLeadersFocus, type LeadersFocusTask, type MyTaskWithProject } from '@/hooks/useTasks';
+import { useMyTasks, useLeadersFocus, useTask, type LeadersFocusTask, type MyTaskWithProject } from '@/hooks/useTasks';
+import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, AlertCircle, Calendar, AlertTriangle, ListTodo, CalendarDays } from 'lucide-react';
-import { format, isBefore, endOfWeek, startOfDay } from 'date-fns';
+import { Loader2, AlertCircle, Calendar, AlertTriangle, ListTodo, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
+import { format, endOfWeek, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 type MyTask = MyTaskWithProject;
@@ -40,12 +40,23 @@ type PersonLoad = {
   overdue: number;
   dueToday: number;
   dueThisWeek: number;
+  tasks: LeadersFocusTask[];
 };
 
 export function MyFocusToday() {
   const { isAdmin, isProjectLeader } = useAuth();
   const [focusTab, setFocusTab] = useState<FocusTab>('mine');
   const [showAllRanking, setShowAllRanking] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedProjectKey, setSelectedProjectKey] = useState<string>('');
+  const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
+
+  const { data: selectedTask } = useTask(selectedTaskId ?? undefined);
+
+  const openTask = (id: string, projectKey: string) => {
+    setSelectedTaskId(id);
+    setSelectedProjectKey(projectKey);
+  };
 
   const { tasks, data: myTasksData, isLoading, isError, error } = useMyTasks();
 
@@ -70,9 +81,8 @@ export function MyFocusToday() {
   });
   const vencidas = pendingForCards.filter((t) => {
     const due = 'due_date' in t ? t.due_date : null;
-    if (!due) return false;
-    const d = parseDue(due);
-    return d !== null && isBefore(d, today);
+    if (!due || typeof due !== 'string') return false;
+    return due.slice(0, 10) < todayStr;
   });
   const enCurso = pendingForCards;
   const estaSemana = pendingForCards.filter((t) => {
@@ -195,7 +205,7 @@ export function MyFocusToday() {
       const notCompleted = task.status?.is_completed === false;
       const parsedDue = parseDue(task.due_date);
       const dStr = typeof task.due_date === 'string' ? task.due_date.slice(0, 10) : null;
-      const overdue = parsedDue !== null && isBefore(parsedDue, today);
+      const overdue = dStr !== null && dStr < todayStr;
       const dueToday = dStr !== null && dStr === todayStr;
       const dueThisWeek = dStr !== null && dStr >= todayStr && dStr <= endOfWeekStr;
 
@@ -212,6 +222,7 @@ export function MyFocusToday() {
         if (projectLabel && !existing.projects.includes(projectLabel)) {
           existing.projects.push(projectLabel);
         }
+        if (notCompleted) existing.tasks.push(task);
       } else {
         personMap.set(key, {
           key,
@@ -223,6 +234,7 @@ export function MyFocusToday() {
           overdue: overdue ? 1 : 0,
           dueToday: dueToday ? 1 : 0,
           dueThisWeek: dueThisWeek ? 1 : 0,
+          tasks: notCompleted ? [task] : [],
         });
       }
     });
@@ -293,64 +305,99 @@ export function MyFocusToday() {
                         {rankingVisible.map((person) => {
                           const barWidth = maxPending > 0 ? Math.min(100, (person.pending / maxPending) * 100) : 0;
                           const risk = getRiskBadge(person);
+                          const isExpanded = expandedPerson === person.key;
                           return (
-                            <li
-                              key={person.key}
-                              className="flex flex-col gap-1.5 py-2 px-3 rounded-lg border border-transparent hover:bg-black/[0.02]"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm text-[#0F172A] truncate">{person.name}</p>
-                                  {person.cargo && (
-                                    <p className="text-[12px] text-[#64748B] truncate">{person.cargo}</p>
-                                  )}
-                                  {person.projects.length > 0 && (
-                                    <p className="text-[11px] text-[#94A3B8] truncate">
-                                      {person.projects.length === 1
-                                        ? person.projects[0]
-                                        : `${person.projects[0]} +${person.projects.length - 1} proyectos`}
-                                    </p>
-                                  )}
+                            <li key={person.key} className="flex flex-col rounded-lg border border-transparent hover:bg-black/[0.02]">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedPerson(isExpanded ? null : person.key)}
+                                className="w-full text-left flex flex-col gap-1.5 py-2 px-3 cursor-pointer"
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    {isExpanded
+                                      ? <ChevronDown className="h-3.5 w-3.5 text-[#64748B] shrink-0" />
+                                      : <ChevronRight className="h-3.5 w-3.5 text-[#64748B] shrink-0" />
+                                    }
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-sm text-[#0F172A] truncate">{person.name}</p>
+                                      {person.cargo && (
+                                        <p className="text-[12px] text-[#64748B] truncate">{person.cargo}</p>
+                                      )}
+                                      {person.projects.length > 0 && (
+                                        <p className="text-[11px] text-[#94A3B8] truncate">
+                                          {person.projects.length === 1
+                                            ? person.projects[0]
+                                            : `${person.projects[0]} +${person.projects.length - 1} proyectos`}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className={cn('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium', risk.className)}>
+                                      {risk.label}
+                                    </span>
+                                    <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border', person.overdue > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-black/5 text-[#64748B] border-black/10')}>
+                                      Vencidas {person.overdue}
+                                    </span>
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                      Hoy {person.dueToday}
+                                    </span>
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                      Semana {person.dueThisWeek}
+                                    </span>
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                      Pend. {person.pending}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
-                                      risk.className
-                                    )}
-                                  >
-                                    {risk.label}
-                                  </span>
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border',
-                                      person.overdue > 0
-                                        ? 'bg-red-50 text-red-700 border-red-200'
-                                        : 'bg-black/5 text-[#64748B] border-black/10'
-                                    )}
-                                  >
-                                    Vencidas {person.overdue}
-                                  </span>
-                                  <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
-                                    Hoy {person.dueToday}
-                                  </span>
-                                  <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
-                                    Semana {person.dueThisWeek}
-                                  </span>
-                                  <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
-                                    Pend. {person.pending}
-                                  </span>
+                                <div className="h-2 w-full rounded-xl border border-black/5 bg-black/5 overflow-hidden">
+                                  <div
+                                    className={cn('h-full rounded-xl transition-all', person.overdue > 0 ? 'bg-red-500/40' : 'bg-[#0DD9D0]/60')}
+                                    style={{ width: `${barWidth}%` }}
+                                  />
                                 </div>
-                              </div>
-                              <div className="h-2 w-full rounded-xl border border-black/5 bg-black/5 overflow-hidden">
-                                <div
-                                  className={cn(
-                                    'h-full rounded-xl transition-all',
-                                    person.overdue > 0 ? 'bg-red-500/40' : 'bg-[#0DD9D0]/60'
-                                  )}
-                                  style={{ width: `${barWidth}%` }}
-                                />
-                              </div>
+                              </button>
+
+                              {isExpanded && person.tasks.length > 0 && (
+                                <ul className="mx-3 mb-2 border-l-2 border-slate-100 pl-3 space-y-0.5">
+                                  {person.tasks
+                                    .sort((a, b) => {
+                                      const da = parseDue(a.due_date)?.getTime() ?? Infinity;
+                                      const db = parseDue(b.due_date)?.getTime() ?? Infinity;
+                                      return da - db;
+                                    })
+                                    .map((task) => {
+                                      const due = parseDue(task.due_date);
+                                      const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
+                                      return (
+                                        <li key={task.id}>
+                                          <button
+                                            type="button"
+                                            onClick={() => openTask(task.id, task.project?.key ?? '')}
+                                            className="w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-[#0DD9D0]/10 transition-colors group"
+                                          >
+                                            <span className="flex-1 text-sm text-[#0F172A] truncate group-hover:text-[#0BBFB7]">{task.title}</span>
+                                            <span className="text-[11px] text-[#94A3B8] shrink-0">
+                                              {task.project?.key ?? ''}
+                                            </span>
+                                            {due && (
+                                              <span className={cn('text-[11px] shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-[#64748B]')}>
+                                                {format(due, 'd MMM', { locale: es })}
+                                              </span>
+                                            )}
+                                            <span
+                                              className="text-[10px] px-1.5 py-0.5 rounded-md border shrink-0"
+                                              style={{ backgroundColor: `${task.status.color}20`, color: task.status.color, borderColor: `${task.status.color}40` }}
+                                            >
+                                              {task.status.name}
+                                            </span>
+                                          </button>
+                                        </li>
+                                      );
+                                    })}
+                                </ul>
+                              )}
                             </li>
                           );
                         })}
@@ -377,14 +424,15 @@ export function MyFocusToday() {
                   {teamList.slice(0, 5).map((task: LeadersFocusTask) => {
                     const parsed = parseDue(task.due_date);
                     const dueFormatted = parsed ? format(parsed, 'd MMM yyyy', { locale: es }) : '—';
-                    const isOverdue = parsed !== null && isBefore(parsed, today);
+                    const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
                     return (
                       <li key={task.id}>
-                        <Link
-                          to={task.project?.id ? `/projects/${task.project.id}` : '#'}
-                          className="flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => openTask(task.id, task.project?.key ?? '')}
+                          className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors group"
                         >
-                          <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate">{task.title}</span>
+                          <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate group-hover:text-[#0BBFB7]">{task.title}</span>
                           <span className="text-xs text-[#64748B]">
                             {task.assignee?.full_name ?? task.assignee?.email ?? '—'}
                             {task.assignee?.cargo ? ` · ${task.assignee.cargo}` : ''}
@@ -401,13 +449,20 @@ export function MyFocusToday() {
                           >
                             {task.status?.name ?? '—'}
                           </Badge>
-                        </Link>
+                        </button>
                       </li>
                     );
                   })}
                 </ul>
               </CardContent>
             </Card>
+
+          <TaskDetailSheet
+            task={selectedTask ?? null}
+            projectKey={selectedProjectKey}
+            open={!!selectedTaskId}
+            onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }}
+          />
           </>
         )}
       </section>
@@ -503,14 +558,15 @@ export function MyFocusToday() {
               {priorityList.map((task) => {
                 const parsed = parseDue(task.due_date ?? null);
                 const dueFormatted = parsed ? format(parsed, 'd MMM yyyy', { locale: es }) : '—';
-                const isOverdue = parsed !== null && isBefore(parsed, today);
+                const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
                 return (
                   <li key={task.id}>
-                    <Link
-                      to={`/projects/${task.project_id}`}
-                      className="flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => openTask(task.id, task.project?.key ?? '')}
+                      className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors group"
                     >
-                      <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate">{task.title}</span>
+                      <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate group-hover:text-[#0BBFB7]">{task.title}</span>
                       <span className="text-xs text-[#64748B]">{task.project?.name ?? task.project?.key ?? '—'}</span>
                       <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-[#64748B]'}`}>
                         {dueFormatted}
@@ -525,7 +581,7 @@ export function MyFocusToday() {
                       >
                         {task.status?.name ?? '—'}
                       </Badge>
-                    </Link>
+                    </button>
                   </li>
                 );
               })}
@@ -533,6 +589,13 @@ export function MyFocusToday() {
           </CardContent>
         </Card>
       ) : null}
+
+      <TaskDetailSheet
+        task={selectedTask ?? null}
+        projectKey={selectedProjectKey}
+        open={!!selectedTaskId}
+        onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }}
+      />
     </section>
   );
 }
