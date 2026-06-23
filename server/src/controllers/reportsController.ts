@@ -1500,3 +1500,51 @@ export const getTasksDetail = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * GET /api/reports/ontime-by-equipo
+ * On-time completion rate grouped by cargo (equipo), top 10.
+ * "On time" = the task was marked completed on or before its due_date.
+ */
+export const getOntimeByEquipo = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      WITH completed_tasks AS (
+        SELECT
+          t.id,
+          t.due_date,
+          t.assignee_id,
+          MAX(tsh.started_at) AS completed_at
+        FROM public.tasks t
+        JOIN public.task_statuses ts  ON ts.id  = t.status_id       AND ts.is_completed  = true
+        JOIN public.task_status_history tsh ON tsh.task_id = t.id
+        JOIN public.task_statuses ts2 ON ts2.id = tsh.to_status_id  AND ts2.is_completed = true
+        WHERE t.due_date IS NOT NULL
+          AND t.assignee_id IS NOT NULL
+        GROUP BY t.id, t.due_date, t.assignee_id
+      )
+      SELECT
+        p.cargo,
+        COUNT(*)::int                                                                              AS total_completed,
+        COUNT(*) FILTER (WHERE ct.completed_at::date <= ct.due_date)::int                         AS ontime,
+        ROUND(COUNT(*) FILTER (WHERE ct.completed_at::date <= ct.due_date) * 100.0
+              / NULLIF(COUNT(*), 0))::int                                                          AS pct
+      FROM completed_tasks ct
+      JOIN public.profiles p ON p.id = ct.assignee_id
+      WHERE p.cargo IS NOT NULL AND p.cargo <> ''
+      GROUP BY p.cargo
+      ORDER BY total_completed DESC
+      LIMIT 10
+    `);
+
+    res.json(result.rows.map(r => ({
+      cargo:           r.cargo,
+      total_completed: r.total_completed,
+      ontime:          r.ontime,
+      pct:             r.pct ?? 0,
+    })));
+  } catch (error) {
+    console.error('Ontime by equipo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+

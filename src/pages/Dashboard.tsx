@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
 import { useTasks, useTaskStatuses } from '@/hooks/useTasks';
 import { MyFocusToday } from '@/components/dashboard/MyFocusToday';
+import { EquipoOntimeChart } from '@/components/dashboard/EquipoOntimeChart';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +26,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { profile } = useAuth();
+  const { profile, isAdmin, isProjectLeader } = useAuth();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: notifications = [] } = useNotifications();
   const { data: statuses = [] } = useTaskStatuses();
@@ -256,6 +257,13 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* Entregas a tiempo — solo admin/leader */}
+      {(isAdmin || isProjectLeader) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7 md:gap-8">
+          <EquipoOntimeChart />
+        </div>
+      )}
       </div>
     </div>
   );

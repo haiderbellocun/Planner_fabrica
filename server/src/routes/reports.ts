@@ -21,6 +21,7 @@ import {
   getIndividualPerformance,
   getTimeByPhase,
   getTasksDetail,
+  getOntimeByEquipo,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -48,5 +49,6 @@ router.get('/unassigned-materials', getUnassignedMaterials);
 router.get('/individual-performance', getIndividualPerformance);
 router.get('/time-by-phase', getTimeByPhase);
 router.get('/tasks-detail', getTasksDetail);
+router.get('/ontime-by-equipo', getOntimeByEquipo);
 
 export default router;

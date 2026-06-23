@@ -473,3 +473,20 @@ export function useReportIndividualPerformance(filters: IndividualPerformanceFil
     staleTime: STALE_TIME,
   });
 }
+
+// --- On-time by equipo ---
+
+export interface OntimeByEquipo {
+  cargo: string;
+  total_completed: number;
+  ontime: number;
+  pct: number;
+}
+
+export function useReportOntimeByEquipo() {
+  return useQuery({
+    queryKey: ['report-ontime-by-equipo'],
+    queryFn: () => api.get<OntimeByEquipo[]>('/api/reports/ontime-by-equipo'),
+    staleTime: STALE_TIME,
+  });
+}
