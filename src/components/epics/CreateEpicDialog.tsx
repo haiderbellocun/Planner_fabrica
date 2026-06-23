@@ -42,6 +42,11 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  const toDateInput = (val: string | null | undefined) => {
+    if (!val) return '';
+    return val.slice(0, 10);
+  };
+
   useEffect(() => {
     if (!open) return;
     if (epic) {
@@ -49,8 +54,8 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
       setDescription(epic.description ?? '');
       setColor(epic.color || PRESET_COLORS[0]);
       setStatus(epic.status);
-      setStartDate(epic.start_date ?? '');
-      setEndDate(epic.end_date ?? '');
+      setStartDate(toDateInput(epic.start_date));
+      setEndDate(toDateInput(epic.end_date));
       return;
     }
 

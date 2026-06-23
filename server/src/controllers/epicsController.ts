@@ -55,19 +55,22 @@ export const updateEpic = async (req: AuthRequest, res: Response) => {
     const { epicId } = req.params;
     const { title, description, color, status, start_date, end_date, display_order } = req.body;
 
+    const updates: string[] = ['updated_at = NOW()'];
+    const values: unknown[] = [];
+    let i = 1;
+
+    if (title !== undefined)         { updates.push(`title = $${i++}`);         values.push(title); }
+    if (description !== undefined)   { updates.push(`description = $${i++}`);   values.push(description ?? null); }
+    if (color !== undefined)         { updates.push(`color = $${i++}`);         values.push(color); }
+    if (status !== undefined)        { updates.push(`status = $${i++}`);        values.push(status); }
+    if (start_date !== undefined)    { updates.push(`start_date = $${i++}`);    values.push(start_date || null); }
+    if (end_date !== undefined)      { updates.push(`end_date = $${i++}`);      values.push(end_date || null); }
+    if (display_order !== undefined) { updates.push(`display_order = $${i++}`); values.push(display_order); }
+
+    values.push(epicId);
     const result = await query(
-      `UPDATE public.epics
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           color = COALESCE($3, color),
-           status = COALESCE($4, status),
-           start_date = COALESCE($5, start_date),
-           end_date = COALESCE($6, end_date),
-           display_order = COALESCE($7, display_order),
-           updated_at = NOW()
-       WHERE id = $8
-       RETURNING *`,
-      [title, description, color, status, start_date, end_date, display_order, epicId]
+      `UPDATE public.epics SET ${updates.join(', ')} WHERE id = $${i} RETURNING *`,
+      values
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Epic not found' });
     res.json(result.rows[0]);

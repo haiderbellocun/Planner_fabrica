@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
-import { sendTaskAssignedEmail } from '../services/emailService.js';
+import { sendTaskAssignedEmail, buildTaskAssignedHtml } from '../services/emailService.js';
 
 /**
  * GET /api/projects/:projectId/tasks
@@ -527,32 +527,19 @@ export const createTask = async (req: AuthRequest, res: Response) => {
         const project = projectResult.rows[0];
 
         if (assignee?.email) {
-          const frontendUrl = env.FRONTEND_URL ?? '';
-          const taskLink = frontendUrl ? `${frontendUrl}/#/my-tasks` : '';
-
-          const subject = `Nueva tarea asignada en ${project?.name ?? 'un proyecto'}`;
-          const htmlParts = [
-            `<p>Hola ${assignee.full_name ?? ''},</p>`,
-            `<p>Se te ha asignado una nueva tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
-            `<p><strong>${title}</strong></p>`,
-          ];
-
-          if (due_date) {
-            htmlParts.push(`<p>Fecha de vencimiento: <strong>${due_date}</strong></p>`);
-          }
-
-          if (taskLink) {
-            htmlParts.push(
-              `<p>Puedes verla en la aplicación aquí: <a href="${taskLink}">${taskLink}</a></p>`
-            );
-          }
-
-          htmlParts.push('<p>Fábrica de Contenidos</p>');
+          const frontendUrl = (env.FRONTEND_URL ?? '').replace(/\/$/, '');
+          const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
 
           await sendTaskAssignedEmail({
             to: assignee.email,
-            subject,
-            html: htmlParts.join(''),
+            subject: `Nueva tarea asignada en ${project?.name ?? 'un proyecto'}`,
+            html: buildTaskAssignedHtml({
+              assigneeName: assignee.full_name ?? '',
+              projectName: project?.name ?? 'un proyecto',
+              taskTitle: title,
+              dueDate: due_date || null,
+              taskLink,
+            }),
           });
         }
       } catch (emailError) {
@@ -686,23 +673,20 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
         const project = projectResult.rows[0];
 
         if (assignee?.email) {
-          const frontendUrl = env.FRONTEND_URL ?? '';
+          const frontendUrl = (env.FRONTEND_URL ?? '').replace(/\/$/, '');
           const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
 
           await sendTaskAssignedEmail({
             to: assignee.email,
             subject: `Tarea asignada en ${project?.name ?? 'un proyecto'}`,
-            html: [
-              `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">`,
-              `<h2 style="color: #0DD9D0;">Tarea asignada</h2>`,
-              `<p>Hola <strong>${assignee.full_name ?? ''}</strong>,</p>`,
-              `<p>Se te ha asignado una tarea en <strong>${project?.name ?? 'un proyecto'}</strong>:</p>`,
-              `<p style="font-size: 18px;"><strong>${task.title}</strong></p>`,
-              task.due_date ? `<p>Fecha de vencimiento: <strong>${new Date(task.due_date).toLocaleDateString('es-CO')}</strong></p>` : '',
-              taskLink ? `<p><a href="${taskLink}" style="background:#0DD9D0;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Ver mis tareas</a></p>` : '',
-              `<p style="color:#666;font-size:12px;margin-top:24px;">Planner Fábrica - Sealab</p>`,
-              `</div>`,
-            ].join(''),
+            html: buildTaskAssignedHtml({
+              assigneeName: assignee.full_name ?? '',
+              projectName: project?.name ?? 'un proyecto',
+              taskTitle: task.title,
+              dueDate: task.due_date,
+              taskLink,
+              isReassignment: true,
+            }),
           });
         }
       } catch (emailError) {

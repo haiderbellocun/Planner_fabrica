@@ -85,16 +85,33 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     );
     const newUser = userResult.rows[0];
 
-    const profileResult = await query(
-      `INSERT INTO public.profiles (user_id, full_name, avatar_url, email, cargo)
-       VALUES ($1, $2, NULL, $3, $4)
-       RETURNING id`,
-      [newUser.id, full_name, email, cargo || null]
+    // El trigger en public.users crea el perfil automáticamente.
+    // Intentamos actualizar el perfil existente; si no existe (sin trigger), lo insertamos.
+    let profileId: string;
+
+    const existingProfile = await query(
+      `SELECT id FROM public.profiles WHERE user_id = $1`,
+      [newUser.id]
     );
-    const profileId = profileResult.rows[0].id;
+
+    if (existingProfile.rows.length > 0) {
+      profileId = existingProfile.rows[0].id;
+      await query(
+        `UPDATE public.profiles SET full_name = $1, email = $2, cargo = $3 WHERE id = $4`,
+        [full_name, email, cargo || null, profileId]
+      );
+    } else {
+      const profileResult = await query(
+        `INSERT INTO public.profiles (user_id, full_name, avatar_url, email, cargo)
+         VALUES ($1, $2, NULL, $3, $4)
+         RETURNING id`,
+        [newUser.id, full_name, email, cargo || null]
+      );
+      profileId = profileResult.rows[0].id;
+    }
 
     await query(
-      `INSERT INTO public.user_roles (user_id, role) VALUES ($1, $2)`,
+      `INSERT INTO public.user_roles (user_id, role) VALUES ($1, $2::app_role)`,
       [profileId, normalizedRole]
     );
 

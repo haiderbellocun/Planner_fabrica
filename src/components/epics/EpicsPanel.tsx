@@ -62,13 +62,15 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
     deleteEpic.mutate(epic.id);
   };
 
+  const parseDate = (val: string) => new Date(val.slice(0, 10) + 'T00:00:00');
+
   const formatRange = (start: string | null, end: string | null) => {
     if (!start && !end) return null;
     if (start && end) {
-      return `${format(new Date(start), 'd MMM yyyy', { locale: es })} - ${format(new Date(end), 'd MMM yyyy', { locale: es })}`;
+      return `${format(parseDate(start), 'd MMM yyyy', { locale: es })} - ${format(parseDate(end), 'd MMM yyyy', { locale: es })}`;
     }
-    if (start) return `Desde ${format(new Date(start), 'd MMM yyyy', { locale: es })}`;
-    return `Hasta ${format(new Date(end as string), 'd MMM yyyy', { locale: es })}`;
+    if (start) return `Desde ${format(parseDate(start), 'd MMM yyyy', { locale: es })}`;
+    return `Hasta ${format(parseDate(end as string), 'd MMM yyyy', { locale: es })}`;
   };
 
   return (

@@ -61,7 +61,7 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --port=8080
-      - --set-secrets=JWT_SECRET=jwt-secret:latest,DATABASE_URL=database-url:latest,CORS_ORIGIN=cors-origin:latest
+      - --set-secrets=JWT_SECRET=jwt-secret:latest,DATABASE_URL=database-url:latest,CORS_ORIGIN=cors-origin:latest,SMTP_HOST=smtp-host:latest,SMTP_PORT=smtp-port:latest,SMTP_USER=smtp-user:latest,SMTP_PASS=smtp-pass:latest,SMTP_FROM=smtp-from:latest
       - --add-cloudsql-instances=$PROJECT_ID:${_REGION}:${_CLOUD_SQL_INSTANCE}
       - --min-instances=0
       - --max-instances=5
