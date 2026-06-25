@@ -18,6 +18,9 @@ export interface Entrega {
   tipo_entrega: TipoEntrega;
   estado: EstadoEntrega;
   notas: string | null;
+  cantidad_semestres: number | null;
+  materias: string | null;             // JSON array stored as text
+  materiales_entregados: string | null; // JSON array stored as text
   created_by: string | null;
   creator_name: string | null;
   created_at: string;
@@ -25,6 +28,15 @@ export interface Entrega {
 }
 
 export type EntregaInput = Omit<Entrega, 'id' | 'created_by' | 'creator_name' | 'created_at' | 'updated_at'>;
+
+export function parseTags(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try { return JSON.parse(value); } catch { return []; }
+}
+
+export function serializeTags(tags: string[]): string | null {
+  return tags.length > 0 ? JSON.stringify(tags) : null;
+}
 
 export function useEntregas() {
   return useQuery({

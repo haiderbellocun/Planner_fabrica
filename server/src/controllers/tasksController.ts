@@ -453,6 +453,8 @@ export const createTask = async (req: AuthRequest, res: Response) => {
     const reporterId = req.user?.profileId;
     const userRole = req.user?.role;
 
+    if (!due_date) return res.status(400).json({ error: 'La fecha de vencimiento es obligatoria' });
+
     // Check permission: only admin and project_leader of THIS project can assign tasks
     if (assignee_id) {
       // Admins and project_leaders can always assign tasks

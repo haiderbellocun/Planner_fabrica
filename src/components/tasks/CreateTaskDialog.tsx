@@ -281,12 +281,13 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Fecha límite</Label>
+              <Label htmlFor="dueDate">Fecha límite *</Label>
               <Input
                 id="dueDate"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -295,7 +296,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createTask.isPending || !title.trim()}>
+            <Button type="submit" disabled={createTask.isPending || !title.trim() || !dueDate}>
               {createTask.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Crear Tarea
             </Button>

@@ -30,6 +30,9 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
       tipo_entrega,
       estado,
       notas,
+      cantidad_semestres,
+      materias,
+      materiales_entregados,
     } = req.body;
 
     if (!nombre_proyecto || !fecha_entrega) {
@@ -39,8 +42,10 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
     const result = await query(
       `INSERT INTO public.entregas
          (nombre_proyecto, escuela, nivel_programa, modalidad, fecha_entrega,
-          entregado_a, tipo_entrega, estado, notas, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          entregado_a, tipo_entrega, estado, notas,
+          cantidad_semestres, materias, materiales_entregados,
+          created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         nombre_proyecto,
@@ -52,6 +57,9 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
         tipo_entrega || 'primera_entrega',
         estado || 'pendiente',
         notas || null,
+        cantidad_semestres ? parseInt(cantidad_semestres) : null,
+        materias || null,
+        materiales_entregados || null,
         profileId || null,
       ]
     );
@@ -75,20 +83,26 @@ export const updateEntrega = async (req: AuthRequest, res: Response) => {
       tipo_entrega,
       estado,
       notas,
+      cantidad_semestres,
+      materias,
+      materiales_entregados,
     } = req.body;
 
     const result = await query(
       `UPDATE public.entregas SET
-         nombre_proyecto = COALESCE($1, nombre_proyecto),
-         escuela         = $2,
-         nivel_programa  = $3,
-         modalidad       = $4,
-         fecha_entrega   = COALESCE($5, fecha_entrega),
-         entregado_a     = $6,
-         tipo_entrega    = COALESCE($7, tipo_entrega),
-         estado          = COALESCE($8, estado),
-         notas           = $9
-       WHERE id = $10
+         nombre_proyecto       = COALESCE($1, nombre_proyecto),
+         escuela               = $2,
+         nivel_programa        = $3,
+         modalidad             = $4,
+         fecha_entrega         = COALESCE($5, fecha_entrega),
+         entregado_a           = $6,
+         tipo_entrega          = COALESCE($7, tipo_entrega),
+         estado                = COALESCE($8, estado),
+         notas                 = $9,
+         cantidad_semestres    = $10,
+         materias              = $11,
+         materiales_entregados = $12
+       WHERE id = $13
        RETURNING *`,
       [
         nombre_proyecto,
@@ -100,6 +114,9 @@ export const updateEntrega = async (req: AuthRequest, res: Response) => {
         tipo_entrega,
         estado,
         notas ?? null,
+        cantidad_semestres ? parseInt(cantidad_semestres) : null,
+        materias ?? null,
+        materiales_entregados ?? null,
         id,
       ]
     );
