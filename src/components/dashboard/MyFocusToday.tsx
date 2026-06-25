@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMyTasks, useLeadersFocus, useTask, type LeadersFocusTask, type MyTaskWithProject } from '@/hooks/useTasks';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
@@ -12,10 +12,6 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 type MyTask = MyTaskWithProject;
-
-const today = startOfDay(new Date());
-const todayStr = format(today, 'yyyy-MM-dd');
-const endOfWeekStr = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
 function parseDue(due: unknown): Date | null {
   if (due == null || typeof due !== 'string') return null;
@@ -45,6 +41,12 @@ type PersonLoad = {
 
 export function MyFocusToday() {
   const { isAdmin, isProjectLeader } = useAuth();
+
+  // Computed on each render so they never go stale if the app stays open past midnight
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
+  const endOfWeekStr = useMemo(() => format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'), [today]);
+
   const [focusTab, setFocusTab] = useState<FocusTab>('mine');
   const [showAllRanking, setShowAllRanking] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
