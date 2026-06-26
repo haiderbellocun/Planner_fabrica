@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjects, ProjectWithDetails } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FolderKanban, Users, ListTodo, Loader2, X } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, X, CalendarClock, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,45 @@ const TIPO_LABELS: Record<string, string> = {
   doctorado:    'Doctorado',
 };
 
+const TIPO_COLORS: Record<string, string> = {
+  profesional: 'bg-blue-100 text-blue-700 border-blue-200',
+  diplomado:   'bg-amber-100 text-amber-700 border-amber-200',
+  maestria:    'bg-purple-100 text-purple-700 border-purple-200',
+  doctorado:   'bg-emerald-100 text-emerald-700 border-emerald-200',
+};
+
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function formatEndDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function AvatarStack({ members }: { members: ProjectWithDetails['members'] }) {
+  const shown = members.slice(0, 3);
+  const extra = members.length - shown.length;
+  return (
+    <div className="flex items-center -space-x-2">
+      {shown.map((m) => (
+        <div
+          key={m.id}
+          className="h-6 w-6 rounded-full ring-2 ring-white bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden"
+          title={m.profile?.full_name ?? ''}
+        >
+          {m.profile?.avatar_url
+            ? <img src={m.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+            : (m.profile?.full_name?.charAt(0) ?? '?')}
+        </div>
+      ))}
+      {extra > 0 && (
+        <div className="h-6 w-6 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+          +{extra}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
@@ -179,46 +217,80 @@ export default function ProjectsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visibleProjects.map((project) => (
-            <Link key={project.id} to={`/projects/${project.id}`}>
-              <Card className="relative h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
-                <img src="./Logo_coordinador_de_fabrica.png" alt="" className="absolute bottom-0 right-0 h-32 w-32 object-contain opacity-40 pointer-events-none z-0" />
-                <CardHeader className="relative z-10">
-                  <div className="flex items-start justify-between">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FolderKanban className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="secondary">{project.key}</Badge>
-                      {project.status === 'completed' && (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] px-2 py-0">
-                          Finalizado
-                        </Badge>
+          {visibleProjects.map((project) => {
+            const total = Number(project.tasks_count) || 0;
+            const done  = Number(project.completed_tasks) || 0;
+            const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+            const endDate = formatEndDate(project.end_date);
+            const isCompleted = project.status === 'completed';
+
+            return (
+              <Link key={project.id} to={`/projects/${project.id}`}>
+                <Card className="h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
+                  <CardContent className="p-5 flex flex-col gap-3 h-full">
+
+                    {/* Row 1: badges */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className="font-mono text-xs">{project.key}</Badge>
+                      {project.tipo_programa && (
+                        <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border', TIPO_COLORS[project.tipo_programa] ?? 'bg-gray-100 text-gray-600 border-gray-200')}>
+                          {TIPO_LABELS[project.tipo_programa] ?? project.tipo_programa}
+                        </span>
+                      )}
+                      {isCompleted && (
+                        <span className="ml-auto flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Finalizado
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <CardTitle className="mt-3">{project.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {project.description || 'Sin descripción'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <ListTodo className="h-4 w-4" />
-                        <span>{project.tasks_count} tareas</span>
+
+                    {/* Row 2: name + icon */}
+                    <div className="flex items-start gap-3">
+                      <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FolderKanban className="h-4.5 w-4.5 text-primary" />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        <span>{project.members.length}</span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm leading-snug line-clamp-1">{project.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                          {project.description || 'Sin descripción'}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+
+                    {/* Row 3: progress */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {done} / {total} tareas completadas
+                        </span>
+                        <span className="font-medium text-foreground">{pct}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all', isCompleted ? 'bg-emerald-500' : 'bg-primary')}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 4: end date + avatars */}
+                    <div className="flex items-center justify-between mt-auto pt-1">
+                      {endDate ? (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <CalendarClock className="h-3.5 w-3.5" />
+                          Entrega {endDate}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <AvatarStack members={project.members} />
+                    </div>
+
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

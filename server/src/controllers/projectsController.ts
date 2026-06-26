@@ -24,10 +24,12 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
         `SELECT
           p.*,
           COUNT(DISTINCT pm.id) as members_count,
-          COUNT(DISTINCT t.id) as tasks_count
+          COUNT(DISTINCT t.id) as tasks_count,
+          COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks
          FROM public.projects p
          LEFT JOIN public.project_members pm ON pm.project_id = p.id
          LEFT JOIN public.tasks t ON t.project_id = p.id
+         LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
          GROUP BY p.id
          ORDER BY p.created_at DESC`
       );
@@ -38,7 +40,8 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
         `SELECT DISTINCT ON (p.id)
           p.*,
           (SELECT COUNT(DISTINCT pm2.id) FROM public.project_members pm2 WHERE pm2.project_id = p.id) as members_count,
-          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 WHERE t2.project_id = p.id) as tasks_count
+          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 WHERE t2.project_id = p.id) as tasks_count,
+          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 JOIN public.task_statuses ts2 ON ts2.id = t2.status_id WHERE t2.project_id = p.id AND ts2.is_completed = true) as completed_tasks
          FROM public.projects p
          JOIN public.tasks t ON t.project_id = p.id
          WHERE (

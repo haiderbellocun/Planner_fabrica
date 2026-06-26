@@ -8,6 +8,7 @@ export interface ProjectWithDetails extends Project {
   members: (ProjectMember & { profile: Profile })[];
   tasks_count: number;
   members_count: number;
+  completed_tasks: number;
 }
 
 export function useProjects() {

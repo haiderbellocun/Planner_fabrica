@@ -1842,76 +1842,73 @@ function TabProduccion() {
     pendientes: { label: 'Pendientes', color: CHART_COLORS.muted },
   };
 
-  // Polar area data for distribution
-  const polarMatData = activeMaterials.map((m, i) => ({
-    name: m.name.replace(/_/g, ' '),
-    value: m.total_required,
-    color: RANKING_COLORS[i % RANKING_COLORS.length],
-  }));
-
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
-        {/* Bar chart: production by type */}
-        <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Producción por Tipo de Material</CardTitle>
-            <CardDescription>Estado de materiales requeridos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={matConfig} className="h-[320px] w-full">
-              <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                <XAxis type="number" {...AXIS_STYLE} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  {...AXIS_STYLE}
-                  width={120}
-                  tick={{ fontSize: 10 }}
-                />
-                <ChartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="completados" stackId="a" fill={CHART_COLORS.teal} />
-                <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.indigo} />
-                <Bar dataKey="pendientes" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Polar area chart: material distribution */}
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribución</CardTitle>
-            <CardDescription>Proporción por tipo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PolarAreaChart data={polarMatData} height={320} />
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-6">
+      {/* Bar chart: full width */}
+      <Card className={CARD_CLASS}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Producción por Tipo de Material</CardTitle>
+          <CardDescription>Completados · En progreso · Pendientes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={matConfig} className="h-[340px] w-full">
+            <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
+              <CartesianGrid horizontal={false} {...GRID_STYLE} />
+              <XAxis type="number" {...AXIS_STYLE} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                {...AXIS_STYLE}
+                width={130}
+                tick={{ fontSize: 11 }}
+              />
+              <ChartTooltip content={<CustomTooltip />} />
+              <Bar dataKey="completados" stackId="a" fill={CHART_COLORS.teal} name="Completados" />
+              <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.indigo} name="En progreso" />
+              <Bar dataKey="pendientes" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} name="Pendientes" />
+            </BarChart>
+          </ChartContainer>
+          {/* Legend */}
+          <div className="flex items-center gap-5 mt-3 justify-center">
+            {[
+              { color: CHART_COLORS.teal,   label: 'Completados' },
+              { color: CHART_COLORS.indigo, label: 'En progreso' },
+              { color: CHART_COLORS.muted,  label: 'Pendientes' },
+            ].map(({ color, label }) => (
+              <span key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: color }} />
+                {label}
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Material progress cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {activeMaterials.map(m => (
-          <Card key={m.id} className={`p-4 ${CARD_CLASS}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">{m.icon}</span>
-              <span className="font-medium text-sm capitalize">{m.name.replace(/_/g, ' ')}</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Progreso</span>
-                <span className="font-medium">{m.completion_rate}%</span>
+        {activeMaterials.map(m => {
+          const rate = m.completion_rate ?? 0;
+          const barColor = rate === 100 ? '#10b981' : rate >= 60 ? '#6366f1' : '#94a3b8';
+          return (
+            <Card key={m.id} className={`p-4 ${CARD_CLASS}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{m.icon}</span>
+                  <span className="font-medium text-sm capitalize">{m.name.replace(/_/g, ' ')}</span>
+                </div>
+                <span className="text-sm font-bold tabular-nums" style={{ color: barColor }}>{rate}%</span>
               </div>
-              <Progress value={m.completion_rate} className="h-1.5" />
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-2">
+                <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: barColor }} />
+              </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{m.completed_tasks} completados</span>
+                <span>{m.in_progress_tasks} en progreso</span>
                 <span>{m.total_required} total</span>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
