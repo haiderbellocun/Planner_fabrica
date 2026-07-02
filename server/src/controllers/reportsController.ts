@@ -199,8 +199,10 @@ export const getProjectsTimeline = async (req: AuthRequest, res: Response) => {
         ON tma.task_id = t.parent_task_id
         AND tma.assignee_id = t.assignee_id
         AND tma.material_id = t.material_requerido_id
+      WHERE p.status != 'completed'
       GROUP BY p.id
       HAVING COUNT(DISTINCT t.id) > 0
+        AND COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = false) > 0
       ORDER BY p.name
     `);
 
