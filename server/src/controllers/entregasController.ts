@@ -33,6 +33,7 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
       cantidad_semestres,
       materias,
       materiales_entregados,
+      proyecto_id,
     } = req.body;
 
     if (!nombre_proyecto || !fecha_entrega) {
@@ -44,8 +45,8 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
          (nombre_proyecto, escuela, nivel_programa, modalidad, fecha_entrega,
           entregado_a, tipo_entrega, estado, notas,
           cantidad_semestres, materias, materiales_entregados,
-          created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          proyecto_id, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         nombre_proyecto,
@@ -60,6 +61,7 @@ export const createEntrega = async (req: AuthRequest, res: Response) => {
         cantidad_semestres ? parseInt(cantidad_semestres) : null,
         materias || null,
         materiales_entregados || null,
+        proyecto_id || null,
         profileId || null,
       ]
     );
@@ -86,6 +88,7 @@ export const updateEntrega = async (req: AuthRequest, res: Response) => {
       cantidad_semestres,
       materias,
       materiales_entregados,
+      proyecto_id,
     } = req.body;
 
     const result = await query(
@@ -101,8 +104,9 @@ export const updateEntrega = async (req: AuthRequest, res: Response) => {
          notas                 = $9,
          cantidad_semestres    = $10,
          materias              = $11,
-         materiales_entregados = $12
-       WHERE id = $13
+         materiales_entregados = $12,
+         proyecto_id           = $13
+       WHERE id = $14
        RETURNING *`,
       [
         nombre_proyecto,
@@ -117,6 +121,7 @@ export const updateEntrega = async (req: AuthRequest, res: Response) => {
         cantidad_semestres ? parseInt(cantidad_semestres) : null,
         materias ?? null,
         materiales_entregados ?? null,
+        proyecto_id ?? null,
         id,
       ]
     );

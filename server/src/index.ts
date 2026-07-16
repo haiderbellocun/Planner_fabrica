@@ -24,6 +24,7 @@ import adminUsersRoutes from './routes/adminUsers.js';
 import healthRoutes from './routes/health.js';
 import profileRoutes from './routes/profile.js';
 import epicsRoutes from './routes/epics.js';
+import teamsRoutes from './routes/teams.js';
 import searchRoutes from './routes/search.js';
 import proximosProgramasRoutes from './routes/proximosProgramas.js';
 import checklistRoutes from './routes/checklist.js';
@@ -104,6 +105,7 @@ app.use('/api/auth', authRoutes);
 // Mount project tasks routes FIRST (more specific route)
 app.use('/api/projects/:projectId/tasks', projectTasksRouter);
 app.use('/api/projects/:projectId/epics', epicsRoutes);
+app.use('/api/projects/:projectId/teams', teamsRoutes);
 
 // Then mount other routes
 app.use('/api/projects', projectsRoutes);

@@ -7,9 +7,13 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
 import { EpicBadge } from '@/components/epics/EpicBadge';
+import { TeamBadge } from '@/components/teams/TeamBadge';
 
 interface TaskCardProps {
-  task: TaskWithDetails & { epic?: { id: string; title: string; color: string } | null };
+  task: TaskWithDetails & {
+    epic?: { id: string; title: string; color: string } | null;
+    team?: { id: string; name: string; color: string } | null;
+  };
   projectKey: string;
   onClick: () => void;
   isDragging?: boolean;
@@ -52,9 +56,10 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
         </div>
       </div>
 
-      {task.epic && (
-        <div className="mb-1">
-          <EpicBadge epic={task.epic} />
+      {(task.epic || task.team) && (
+        <div className="flex items-center gap-1 mb-1 flex-wrap">
+          {task.epic && <EpicBadge epic={task.epic} />}
+          {task.team && <TeamBadge team={task.team} />}
         </div>
       )}
 

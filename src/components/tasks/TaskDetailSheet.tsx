@@ -29,6 +29,7 @@ import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2,
 import { useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
+import { useTeams } from '@/hooks/useTeams';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
@@ -56,6 +57,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const { data: statuses = [] } = useTaskStatuses();
   const { data: profiles = [] } = useProfiles();
   const { data: project } = useProject(task?.project_id);
+  const { data: teams = [] } = useTeams(task?.project_id);
   const { data: comments = [] } = useTaskComments(task?.id);
   const { user } = useAuth();
   const updateTask = useUpdateTask();
@@ -171,6 +173,12 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
 
   const handleAssigneeChange = (assigneeId: string) => {
     updateTask.mutate({ id: taskData.id, assignee_id: assigneeId || null });
+  };
+
+  const isDesarrolloProject = project?.tipo_programa === 'desarrollo';
+
+  const handleTeamChange = (teamId: string) => {
+    updateTask.mutate({ id: taskData.id, team_id: teamId || null });
   };
 
   // Check which status transitions are allowed for current user
@@ -333,6 +341,40 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                 </p>
               )}
             </div>
+
+            {isDesarrolloProject && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Equipo</label>
+                <Select
+                  value={taskData.team_id || 'none'}
+                  onValueChange={(v) => handleTeamChange(v === 'none' ? '' : v)}
+                  disabled={!canChangeAssignee}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin equipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin equipo</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: team.color }}
+                          />
+                          {team.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!canChangeAssignee && (
+                  <p className="text-xs text-muted-foreground">
+                    Solo administradores y líderes de proyecto pueden cambiar el equipo
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Dates */}

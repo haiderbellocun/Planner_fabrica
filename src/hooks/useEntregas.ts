@@ -10,6 +10,7 @@ export type EstadoEntrega = 'aceptado' | 'con_observaciones' | 'rechazado' | 'pe
 export interface Entrega {
   id: string;
   nombre_proyecto: string;
+  proyecto_id: string | null;
   escuela: string | null;
   nivel_programa: NivelPrograma | null;
   modalidad: Modalidad | null;

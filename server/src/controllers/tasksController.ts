@@ -67,7 +67,8 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         tema.id as tema_id, tema.title as tema_title,
         asig.id as asignatura_id, asig.name as asignatura_name, asig.code as asignatura_code, asig.semestre as asignatura_semestre,
         prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo,
-        ep.id as ep_epic_id, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status
+        ep.id as ep_epic_id, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status,
+        tm.id as tm_team_id, tm.name as team_name, tm.color as team_color
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
@@ -78,6 +79,7 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
        LEFT JOIN public.asignaturas asig ON asig.id = t.asignatura_id OR asig.id = tema.asignatura_id OR asig.id = mr.asignatura_id
        LEFT JOIN public.programas prog ON prog.id = asig.programa_id
        LEFT JOIN public.epics ep ON ep.id = t.epic_id
+       LEFT JOIN public.teams tm ON tm.id = t.team_id
        WHERE ${whereClause}
        ORDER BY t.created_at DESC`,
       params
@@ -180,6 +182,14 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
             status: row.epic_status,
           }
         : null,
+      team_id: row.team_id,
+      team: row.tm_team_id
+        ? {
+            id: row.tm_team_id,
+            name: row.team_name,
+            color: row.team_color,
+          }
+        : null,
     }));
 
     if (env.NODE_ENV !== 'production') {
@@ -216,10 +226,12 @@ export const getTask = async (req: AuthRequest, res: Response) => {
         mt.id as material_type_id, mt.name as material_type_name, mt.icon as material_type_icon,
         tema.id as tema_id, tema.title as tema_title,
         asig.id as asignatura_id, asig.name as asignatura_name, asig.code as asignatura_code, asig.semestre as asignatura_semestre,
-        prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo
+        prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo,
+        tm.id as team_id_ref, tm.name as team_name, tm.color as team_color
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        LEFT JOIN public.epics ep ON ep.id = t.epic_id
+       LEFT JOIN public.teams tm ON tm.id = t.team_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
        LEFT JOIN public.profiles reporter ON reporter.id = t.reporter_id
        LEFT JOIN public.materiales_requeridos mr ON mr.id = t.material_requerido_id
@@ -261,6 +273,14 @@ export const getTask = async (req: AuthRequest, res: Response) => {
             title: row.epic_title,
             color: row.epic_color,
             status: row.epic_status,
+          }
+        : null,
+      team_id: row.team_id,
+      team: row.team_id_ref
+        ? {
+            id: row.team_id_ref,
+            name: row.team_name,
+            color: row.team_color,
           }
         : null,
       status: {
@@ -449,7 +469,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id } = req.body;
     const reporterId = req.user?.profileId;
     const userRole = req.user?.role;
 
@@ -486,8 +506,8 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     // Insert task
     const result = await query(
-      `INSERT INTO public.tasks (project_id, title, description, priority, status_id, assignee_id, reporter_id, due_date, tags, material_requerido_id, asignatura_id, epic_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO public.tasks (project_id, title, description, priority, status_id, assignee_id, reporter_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         projectId,
@@ -502,6 +522,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
         material_requerido_id || null,
         asignatura_id || null,
         epic_id || null,
+        team_id || null,
       ]
     );
 
@@ -563,7 +584,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, epic_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -629,6 +650,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     if (epic_id !== undefined) {
       updates.push(`epic_id = $${paramCount++}`);
       values.push(epic_id);
+    }
+    if (team_id !== undefined) {
+      updates.push(`team_id = $${paramCount++}`);
+      values.push(team_id);
     }
 
     if (updates.length === 0) {

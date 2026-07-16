@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Search, PackageCheck, Download, CalendarDays, TableProperties, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Pencil, Trash2, Search, PackageCheck, Download, CalendarDays, TableProperties, X, LayoutDashboard } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,16 @@ import {
   type NivelPrograma,
   type Modalidad,
 } from '@/hooks/useEntregas';
+import {
+  useEntregaMateriales,
+  useSetEntregaMateriales,
+  useEntregaMaterialesResumen,
+  type EntregaMaterialItemInput,
+} from '@/hooks/useEntregaMateriales';
+import { useProjects } from '@/hooks/useProjects';
+import { useAsignaturas } from '@/hooks/useAsignaturas';
+import { useMaterialTypes, useMaterialesAsignatura } from '@/hooks/useMateriales';
+import { EntregasDashboard } from '@/components/entregas/EntregasDashboard';
 import {
   Sheet,
   SheetContent,
@@ -85,6 +95,7 @@ const ESTADO_COLORS: Record<EstadoEntrega, string> = {
 
 const EMPTY_FORM: EntregaInput = {
   nombre_proyecto:      '',
+  proyecto_id:          null,
   escuela:              '',
   nivel_programa:       null,
   modalidad:            null,
@@ -164,6 +175,99 @@ function TagInput({
   );
 }
 
+// ─── Materia + material picker (proyectos del catálogo) ─────────────────────────
+
+function AsignaturaPicker({
+  asignaturas,
+  selectedIds,
+  onAdd,
+}: {
+  asignaturas: { id: string; name: string }[];
+  selectedIds: string[];
+  onAdd: (id: string) => void;
+}) {
+  const [choice, setChoice] = useState('');
+  const available = asignaturas.filter((a) => !selectedIds.includes(a.id));
+
+  return (
+    <div className="flex gap-2">
+      <select
+        value={choice}
+        onChange={(e) => setChoice(e.target.value)}
+        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        <option value="">— Seleccionar materia —</option>
+        {available.map((a) => (
+          <option key={a.id} value={a.id}>{a.name}</option>
+        ))}
+      </select>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!choice}
+        onClick={() => { onAdd(choice); setChoice(''); }}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+function AsignaturaMaterialesRow({
+  asignaturaId,
+  asignaturaName,
+  values,
+  onChange,
+  onRemove,
+}: {
+  asignaturaId: string;
+  asignaturaName: string;
+  values: Record<string, number>;
+  onChange: (materialTypeId: string, cantidad: number) => void;
+  onRemove: () => void;
+}) {
+  const { data: materiales = [], isLoading } = useMaterialesAsignatura(asignaturaId);
+
+  return (
+    <div className="rounded-lg border p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">{asignaturaName}</p>
+        <button type="button" onClick={onRemove} className="text-slate-400 hover:text-destructive transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {isLoading ? (
+        <p className="text-xs text-slate-400">Cargando materiales requeridos…</p>
+      ) : materiales.length === 0 ? (
+        <p className="text-xs text-slate-400">Esta materia no tiene materiales requeridos configurados.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {materiales.map((m) => (
+            <div key={m.material_type_id} className="flex items-center gap-1.5 text-xs">
+              <span className="flex-1 truncate" title={m.material_type.name}>
+                {m.material_type.icon} {m.material_type.name}
+              </span>
+              <Input
+                type="number"
+                min={0}
+                max={m.cantidad}
+                value={values[m.material_type_id] ?? 0}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(m.cantidad, parseInt(e.target.value, 10) || 0));
+                  onChange(m.material_type_id, v);
+                }}
+                className="h-7 w-14 px-1.5 text-xs"
+              />
+              <span className="text-slate-400 whitespace-nowrap">/ {m.cantidad}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Form Sheet ─────────────────────────────────────────────────────────────────
 
 function EntregaForm({
@@ -180,6 +284,7 @@ function EntregaForm({
     initial
       ? {
           nombre_proyecto:      initial.nombre_proyecto,
+          proyecto_id:          initial.proyecto_id,
           escuela:              initial.escuela ?? '',
           nivel_programa:       initial.nivel_programa,
           modalidad:            initial.modalidad,
@@ -195,37 +300,86 @@ function EntregaForm({
       : { ...EMPTY_FORM }
   );
 
-  // Tag lists managed as arrays, serialized on submit
+  // Tag lists managed as arrays, serialized on submit (flujo legado, sin proyecto del catálogo)
   const [materiasList, setMateriasList] = useState<string[]>(() => parseTags(initial?.materias));
   const [materialesList, setMaterialesList] = useState<string[]>(() => parseTags(initial?.materiales_entregados));
 
+  // Flujo con proyecto real del catálogo: conteo estructurado materia x tipo de material
+  const [proyectoId, setProyectoId] = useState<string | null>(initial?.proyecto_id ?? null);
+  const [selectedAsignaturaIds, setSelectedAsignaturaIds] = useState<string[]>([]);
+  const [materialCounts, setMaterialCounts] = useState<Record<string, Record<string, number>>>({});
+
+  const { data: projects = [] } = useProjects();
+  const { data: asignaturas = [] } = useAsignaturas(proyectoId ?? undefined);
+  const { data: materialTypes = [] } = useMaterialTypes();
+  const { data: existingMateriales = [] } = useEntregaMateriales(initial?.proyecto_id ? initial.id : undefined);
+
+  useEffect(() => {
+    if (existingMateriales.length === 0) return;
+    const ids = Array.from(new Set(existingMateriales.map((m) => m.asignatura_id)));
+    setSelectedAsignaturaIds(ids);
+    const counts: Record<string, Record<string, number>> = {};
+    for (const m of existingMateriales) {
+      counts[m.asignatura_id] = { ...(counts[m.asignatura_id] ?? {}), [m.material_type_id]: m.cantidad_entregada };
+    }
+    setMaterialCounts(counts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingMateriales.length]);
+
   const createMutation = useCreateEntrega();
   const updateMutation = useUpdateEntrega();
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const setMaterialesMutation = useSetEntregaMateriales();
+  const isPending = createMutation.isPending || updateMutation.isPending || setMaterialesMutation.isPending;
 
   const set = (k: keyof EntregaInput, v: unknown) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nombre_proyecto.trim() || !form.fecha_entrega) return;
 
+    const items: EntregaMaterialItemInput[] = proyectoId
+      ? selectedAsignaturaIds.flatMap((aid) =>
+          Object.entries(materialCounts[aid] ?? {})
+            .filter(([, cantidad]) => cantidad > 0)
+            .map(([material_type_id, cantidad_entregada]) => ({ asignatura_id: aid, material_type_id, cantidad_entregada }))
+        )
+      : [];
+
+    // Se siguen serializando los campos de texto libre para que la tabla/export existentes no cambien
+    const materiasNames = proyectoId
+      ? (selectedAsignaturaIds.map((aid) => asignaturas.find((a) => a.id === aid)?.name).filter(Boolean) as string[])
+      : materiasList;
+    const materialesNames = proyectoId
+      ? (Array.from(new Set(
+          items.map((it) => materialTypes.find((mt) => mt.id === it.material_type_id)?.name).filter(Boolean)
+        )) as string[])
+      : materialesList;
+
     const payload: EntregaInput = {
       ...form,
+      proyecto_id:          proyectoId,
       escuela:              form.escuela || null,
       nivel_programa:       form.nivel_programa || null,
       modalidad:            form.modalidad || null,
       entregado_a:          form.entregado_a || null,
       notas:                form.notas || null,
       cantidad_semestres:   form.cantidad_semestres || null,
-      materias:             serializeTags(materiasList),
-      materiales_entregados: serializeTags(materialesList),
+      materias:             serializeTags(materiasNames),
+      materiales_entregados: serializeTags(materialesNames),
     };
 
-    if (isEdit && initial) {
-      updateMutation.mutate({ id: initial.id, ...payload }, { onSuccess: onClose });
-    } else {
-      createMutation.mutate(payload, { onSuccess: onClose });
+    try {
+      const saved = isEdit && initial
+        ? await updateMutation.mutateAsync({ id: initial.id, ...payload })
+        : await createMutation.mutateAsync(payload);
+
+      if (proyectoId) {
+        await setMaterialesMutation.mutateAsync({ id: saved.id, items });
+      }
+      onClose();
+    } catch {
+      // los toasts de error ya los maneja cada mutation
     }
   };
 
@@ -237,6 +391,31 @@ function EntregaForm({
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {/* Proyecto del catálogo */}
+          <div className="space-y-1.5">
+            <Label>Proyecto (catálogo)</Label>
+            <select
+              value={proyectoId ?? ''}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                setProyectoId(v);
+                setSelectedAsignaturaIds([]);
+                setMaterialCounts({});
+                const proj = projects.find((p) => p.id === v);
+                if (proj) set('nombre_proyecto', proj.name);
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">— Ninguno (texto libre) —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Selecciona un proyecto del catálogo para registrar el conteo real de materiales entregados por materia.
+            </p>
+          </div>
+
           {/* Nombre proyecto */}
           <div className="space-y-1.5">
             <Label>Nombre del proyecto <span className="text-red-500">*</span></Label>
@@ -316,21 +495,62 @@ function EntregaForm({
             />
           </div>
 
-          {/* Materias */}
-          <TagInput
-            label="Materias entregadas"
-            tags={materiasList}
-            onChange={setMateriasList}
-            placeholder="Escribe una materia y presiona +"
-          />
-
-          {/* Materiales entregados */}
-          <TagInput
-            label="Materiales entregados"
-            tags={materialesList}
-            onChange={setMaterialesList}
-            placeholder="Ej. Video, PDF, Infografía…"
-          />
+          {/* Materias y materiales entregados */}
+          {proyectoId ? (
+            <div className="space-y-2">
+              <Label>Materias y materiales entregados</Label>
+              <AsignaturaPicker
+                asignaturas={asignaturas}
+                selectedIds={selectedAsignaturaIds}
+                onAdd={(id) => setSelectedAsignaturaIds((prev) => [...prev, id])}
+              />
+              {selectedAsignaturaIds.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  {selectedAsignaturaIds.map((aid) => {
+                    const asignatura = asignaturas.find((a) => a.id === aid);
+                    if (!asignatura) return null;
+                    return (
+                      <AsignaturaMaterialesRow
+                        key={aid}
+                        asignaturaId={aid}
+                        asignaturaName={asignatura.name}
+                        values={materialCounts[aid] ?? {}}
+                        onChange={(materialTypeId, cantidad) =>
+                          setMaterialCounts((prev) => ({
+                            ...prev,
+                            [aid]: { ...(prev[aid] ?? {}), [materialTypeId]: cantidad },
+                          }))
+                        }
+                        onRemove={() => {
+                          setSelectedAsignaturaIds((prev) => prev.filter((x) => x !== aid));
+                          setMaterialCounts((prev) => {
+                            const next = { ...prev };
+                            delete next[aid];
+                            return next;
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <TagInput
+                label="Materias entregadas"
+                tags={materiasList}
+                onChange={setMateriasList}
+                placeholder="Escribe una materia y presiona +"
+              />
+              <TagInput
+                label="Materiales entregados"
+                tags={materialesList}
+                onChange={setMaterialesList}
+                placeholder="Ej. Video, PDF, Infografía…"
+              />
+            </>
+          )}
 
           {/* Entregado a */}
           <div className="space-y-1.5">
@@ -405,11 +625,12 @@ export default function Entregas() {
 
   const { data: entregas = [], isLoading } = useEntregas();
   const deleteMutation = useDeleteEntrega();
+  const { data: materialesResumen = [] } = useEntregaMaterialesResumen();
 
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState<EstadoEntrega | 'todos'>('todos');
   const [filterTipo, setFilterTipo] = useState<TipoEntrega | 'todos'>('todos');
-  const [view, setView] = useState<'table' | 'calendar'>('table');
+  const [view, setView] = useState<'table' | 'calendar' | 'dashboard'>('table');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Entrega | null>(null);
   const [deleting, setDeleting] = useState<Entrega | null>(null);
@@ -510,6 +731,14 @@ export default function Entregas() {
             >
               <CalendarDays className="h-4 w-4" /> Calendario
             </Button>
+            <Button
+              variant={view === 'dashboard' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5 px-3"
+              onClick={() => setView('dashboard')}
+            >
+              <LayoutDashboard className="h-4 w-4" /> Dashboard
+            </Button>
           </div>
           <Button
             variant="outline"
@@ -529,7 +758,8 @@ export default function Entregas() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats (el Dashboard tiene su propio resumen, más completo) */}
+      {view !== 'dashboard' && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total registros',       value: stats.total,             color: 'text-foreground'  },
@@ -543,8 +773,10 @@ export default function Entregas() {
           </div>
         ))}
       </div>
+      )}
 
       {/* Filters */}
+      {view !== 'dashboard' && (
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -576,6 +808,7 @@ export default function Entregas() {
           ))}
         </select>
       </div>
+      )}
 
       {/* Calendar view */}
       {view === 'calendar' && (
@@ -595,6 +828,11 @@ export default function Entregas() {
           </div>
           <MiniCalendar events={calendarEvents} />
         </div>
+      )}
+
+      {/* Dashboard view */}
+      {view === 'dashboard' && (
+        <EntregasDashboard entregas={entregas} materialesResumen={materialesResumen} />
       )}
 
       {/* Table */}

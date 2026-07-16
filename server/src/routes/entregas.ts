@@ -7,6 +7,11 @@ import {
   updateEntrega,
   deleteEntrega,
 } from '../controllers/entregasController.js';
+import {
+  getEntregaMateriales,
+  setEntregaMateriales,
+  getEntregaMaterialesResumen,
+} from '../controllers/entregaMaterialesController.js';
 
 const router = Router();
 
@@ -23,5 +28,10 @@ const leaderGuard = (req: AuthRequest, res: Response, next: NextFunction) => {
 router.post('/',     leaderGuard, createEntrega);
 router.patch('/:id', leaderGuard, updateEntrega);
 router.delete('/:id',leaderGuard, deleteEntrega);
+
+// Detalle de materiales entregados por materia (para el dashboard de conteo)
+router.get('/materiales',      getEntregaMaterialesResumen);
+router.get('/:id/materiales',  getEntregaMateriales);
+router.put('/:id/materiales',  leaderGuard, setEntregaMateriales);
 
 export default router;

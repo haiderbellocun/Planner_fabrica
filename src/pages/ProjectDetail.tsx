@@ -13,6 +13,7 @@ import { ProgramaCardComplete } from '@/components/programas/ProgramaCardComplet
 import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgramaDialog';
 import { EpicsPanel } from '@/components/epics/EpicsPanel';
 import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
+import { TeamsPanel } from '@/components/teams/TeamsPanel';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -61,7 +62,7 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'checklist'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'checklist'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -86,6 +87,7 @@ export default function ProjectDetailPage() {
   const canCompleteProject = isLeader;
   const isDesarrolloProject = project?.tipo_programa === 'desarrollo';
   const canManageEpics = isLeader;
+  const canManageTeams = isLeader;
 
   const handleTaskClick = (task: TaskWithDetails) => {
     setSelectedTask(task);
@@ -335,7 +337,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'checklist')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'teams' | 'checklist')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
@@ -344,6 +346,9 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
           {isDesarrolloProject && (
             <TabsTrigger value="epics">Épicas ({epics.length})</TabsTrigger>
+          )}
+          {isDesarrolloProject && (
+            <TabsTrigger value="teams">Equipos</TabsTrigger>
           )}
         </TabsList>
 
@@ -503,6 +508,18 @@ export default function ProjectDetailPage() {
             <EpicsPanel
               projectId={projectId!}
               canManage={canManageEpics ?? false}
+              tasks={tasks}
+              onTaskClick={handleTaskClick}
+            />
+          </TabsContent>
+        )}
+
+        {isDesarrolloProject && (
+          <TabsContent value="teams" className="space-y-4">
+            <TeamsPanel
+              projectId={projectId!}
+              canManage={canManageTeams ?? false}
+              members={project.members}
               tasks={tasks}
               onTaskClick={handleTaskClick}
             />

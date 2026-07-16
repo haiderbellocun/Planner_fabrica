@@ -25,6 +25,7 @@ import { useAsignaturasByPrograma } from '@/hooks/useAsignaturas';
 import { useProgramas } from '@/hooks/useProgramas';
 import { useTemasWithMateriales } from '@/hooks/useTemas';
 import { useEpics } from '@/hooks/useEpics';
+import { useTeams } from '@/hooks/useTeams';
 import { Loader2 } from 'lucide-react';
 
 interface CreateTaskDialogProps {
@@ -43,6 +44,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
   const [programaId, setProgramaId] = useState<string>('');
   const [asignaturaId, setAsignaturaId] = useState<string>('');
   const [epicId, setEpicId] = useState<string>('');
+  const [teamId, setTeamId] = useState<string>('');
 
   const { user } = useAuth();
   const { data: profiles = [], isLoading: profilesLoading, error: profilesError } = useProfiles();
@@ -50,6 +52,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
   const { data: asignaturas = [], isLoading: asignaturasLoading } = useAsignaturasByPrograma(programaId || undefined);
   const { data: temasWithMateriales = [], isLoading: temasLoading } = useTemasWithMateriales(asignaturaId || undefined);
   const { data: epics = [] } = useEpics(projectId);
+  const { data: teams = [] } = useTeams(projectId);
   const createTask = useCreateTask();
   const isDesarrolloProject = tipoPrograma === 'desarrollo';
 
@@ -68,6 +71,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
       due_date: dueDate || undefined,
       asignatura_id: asignaturaId || undefined,
       epic_id: isDesarrolloProject && epicId ? epicId : undefined,
+      team_id: isDesarrolloProject && teamId ? teamId : undefined,
     });
 
     // Reset form
@@ -79,6 +83,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
     setProgramaId('');
     setAsignaturaId('');
     setEpicId('');
+    setTeamId('');
     onOpenChange(false);
   };
 
@@ -271,6 +276,34 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
                               style={{ backgroundColor: epic.color }}
                             />
                             {epic.title}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {isDesarrolloProject && (
+                <div className="space-y-2">
+                  <Label htmlFor="team">Equipo (opcional)</Label>
+                  <Select
+                    value={teamId || 'none'}
+                    onValueChange={(v) => setTeamId(v === 'none' ? '' : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin equipo</SelectItem>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          <span className="inline-flex items-center gap-2">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: team.color }}
+                            />
+                            {team.name}
                           </span>
                         </SelectItem>
                       ))}

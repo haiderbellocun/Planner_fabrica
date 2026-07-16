@@ -81,10 +81,28 @@ export interface Epic {
   updated_at: string;
 }
 
+export interface Team {
+  id: string;
+  project_id: string;
+  name: string;
+  color: string;
+  display_order: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  members: {
+    id: string;
+    profile_id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  }[];
+}
+
 export interface Task {
   id: string;
   project_id: string;
   epic_id: string | null;
+  team_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;
