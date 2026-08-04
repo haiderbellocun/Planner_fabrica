@@ -1,7 +1,7 @@
 import { Component, ReactNode, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Package, Clock, BarChart3, CalendarDays, AlertTriangle, Users, TrendingUp, Target, CheckCircle2 } from 'lucide-react';
+import { Loader2, Package, Clock, BarChart3, CalendarDays, AlertTriangle, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,8 +40,6 @@ import {
 import {
   useReportOverview,
   useReportProjectsProgress,
-  useReportTeamPerformance,
-  useReportTeamCapacity,
   useReportMaterialProduction,
   useReportTimeDistribution,
   useReportWorkflowTransitions,
@@ -51,7 +49,6 @@ import {
   useUserMiniReport,
   type UserMiniReport,
   useReportProjectsTimeline,
-  useReportTeamMonthlyCompletion,
   useReportTeamByCargo,
   useReportWeeklyByCargo,
   useReportUnassignedMaterials,
@@ -61,10 +58,13 @@ import {
   type IndividualPerformance,
   type TimeByPhase,
   type TaskDetail,
-  type TeamMonthlyPoint,
-  type TeamMemberByCargo,
-  type WeeklyByCargoPoint,
   type UnassignedMaterial,
+  useReportPersonMetrics,
+  useReportCapacityForecast,
+  useReportThroughput,
+  useReportProductionByPerson,
+  type ReportScopeFilters,
+  type PersonMetric,
 } from '@/hooks/useReports';
 import { useProjects, type ProjectWithDetails } from '@/hooks/useProjects';
 import {
@@ -72,21 +72,124 @@ import {
   formatDuration, formatHours,
   AXIS_STYLE, GRID_STYLE,
 } from '@/components/reports/ReportCharts';
+import { axisTick, gridColor, chartColors } from '@/components/charts/chartTheme';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
-import ViolinChart from '@/components/reports/ViolinChart';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
 import SankeyDiagram from '@/components/reports/SankeyDiagram';
-const kpiProjectsImg = './deco_foca.png';
-const kpiTasksImg = './deco_cangrejo.png';
-const kpiPackageImg = './RECURSOS-ADICIONALES-4.png';
-const kpiUsersImg = './deco_concha.png';
+import { HeroBanner, StatTile, SpotlightCard, AttentionItem } from '@/components/shared/StoryUI';
 
 // Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
 
 // Ranking colors for top collaborators
 const RANKING_COLORS = ['#FBBF24', '#4F46E5', '#0DD9D0', '#6366F1', '#BFEFF0'];
+
+// ---------- Shared band-color helpers (puntualidad primaria, eficiencia de horas secundaria) ----------
+function punctualityBandColor(pct: number | null): string {
+  if (pct == null) return 'text-muted-foreground';
+  if (pct >= 90) return 'text-emerald-600';
+  if (pct >= 80) return 'text-amber-600';
+  return 'text-red-600';
+}
+
+// Two-sided: both over- and under-running the estimate are signals, not just "faster = better".
+function efficiencyBandColor(pct: number | null): string {
+  if (pct == null) return 'text-muted-foreground';
+  if (pct >= 80 && pct <= 120) return 'text-emerald-600';
+  if ((pct >= 60 && pct < 80) || (pct > 120 && pct <= 150)) return 'text-amber-600';
+  return 'text-red-600';
+}
+
+const RISK_BADGE_CLASSES: Record<string, string> = {
+  available: 'bg-sky-50 text-sky-700 border-sky-200',
+  ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  warning: 'bg-amber-50 text-amber-700 border-amber-200',
+  over: 'bg-red-50 text-red-700 border-red-200',
+};
+
+// Shared date-range control — used by any tab needing a completion-time window.
+// Labels are honest about what they actually select (rolling N days, not calendar
+// "this week/month" as the previous copy implied).
+const REPORT_RANGES = ['7d', '30d', '90d', 'all'] as const;
+type ReportRangeKey = typeof REPORT_RANGES[number];
+
+function resolveRange(key: ReportRangeKey): { date_from?: string; date_to?: string } {
+  if (key === 'all') return {};
+  const days = key === '7d' ? 7 : key === '30d' ? 30 : 90;
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(now.getDate() - days);
+  return { date_from: from.toISOString().split('T')[0], date_to: now.toISOString().split('T')[0] };
+}
+
+function ReportScopeFilterBar({
+  projectId, onProjectChange, rangeKey, onRangeChange,
+}: {
+  projectId: string;
+  onProjectChange: (v: string) => void;
+  rangeKey: ReportRangeKey;
+  onRangeChange: (v: ReportRangeKey) => void;
+}) {
+  const { data: projects = [] } = useProjects();
+  return (
+    <div className="flex flex-wrap gap-3 items-center">
+      <Select value={projectId} onValueChange={onProjectChange}>
+        <SelectTrigger className="w-[220px]">
+          <SelectValue placeholder="Todos los proyectos" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los proyectos</SelectItem>
+          {projects.map((p: ProjectWithDetails) => (
+            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={rangeKey} onValueChange={(v) => onRangeChange(v as ReportRangeKey)}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="7d">Últimos 7 días</SelectItem>
+          <SelectItem value="30d">Últimos 30 días</SelectItem>
+          <SelectItem value="90d">Últimos 90 días</SelectItem>
+          <SelectItem value="all">Todo el tiempo</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// Compact forward-looking capacity strip: one bar per upcoming week, risk-colored.
+function CapacityWeekStrip({ weeks }: { weeks: { week_start: string; horas: number; utilizacion_pct: number; risk_color: string; risk_label: string }[] }) {
+  if (!weeks || weeks.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1">
+      {weeks.map((w) => {
+        const barColor =
+          w.risk_color === 'red' ? CHART_COLORS.coral
+          : w.risk_color === 'amber' ? CHART_COLORS.yellow
+          : w.risk_color === 'sky' ? chartColors.info
+          : CHART_COLORS.green;
+        const heightPct = Math.max(8, Math.min(100, w.utilizacion_pct));
+        const d = new Date(w.week_start + 'T12:00:00');
+        const label = d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        return (
+          <div
+            key={w.week_start}
+            className="flex flex-col items-center gap-0.5"
+            title={`Sem. ${label} · ${formatHours(w.horas)} (${w.utilizacion_pct}% · ${w.risk_label})`}
+          >
+            <div className="h-8 w-3 bg-gray-100 rounded-sm overflow-hidden flex items-end">
+              <div className="w-full rounded-sm" style={{ height: `${heightPct}%`, backgroundColor: barColor }} />
+            </div>
+            <span className="text-[8px] text-muted-foreground">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ---------- Error Boundary (evita pantalla en blanco por errores no capturados) ----------
 class ReportsErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
@@ -112,36 +215,13 @@ class ReportsErrorBoundary extends Component<{ children: ReactNode }, { hasError
   }
 }
 
-// ---------- KPI Card — solo imagen (logo nuevo), sin icono montado ----------
-function KpiCard({
-  title, value, subtitle, image,
-}: {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  image: string;
-}) {
-  return (
-    <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-      <img src={image} alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
-      <CardHeader className="pb-2 p-0">
-        <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 pt-3">
-        <div className="text-3xl font-semibold text-[#0F172A]">{value}</div>
-        {subtitle && <p className="text-xs text-[#64748B] mt-0.5">{subtitle}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ---------- Tab: Resumen ----------
 function TabResumen() {
   const { data: overview, isLoading, isError, error } = useReportOverview();
   const { data: projectsProgress = [] } = useReportProjectsProgress();
-  const { data: team = [] } = useReportTeamPerformance();
   const { data: categories = [] } = useReportProjectCategories();
   const { data: weeklyTrend = [] } = useReportTasksWeeklyTrend();
+  const { data: personMetrics } = useReportPersonMetrics();
 
   if (isLoading) {
     return <LoadingState />;
@@ -175,18 +255,20 @@ function TabResumen() {
     }))
     .filter(s => s.name);
 
-  // Top 5 collaborators with ranking colors
-  const top5 = team.slice(0, 5).map((t, i) => ({
+  // Top 5 collaborators by hours delivered (not raw task count — a raw count rewards
+  // whoever picks the easiest work; horas_completadas is weighted by real complexity).
+  const topPeople = [...(personMetrics?.people ?? [])]
+    .sort((a, b) => b.horas_completadas - a.horas_completadas)
+    .slice(0, 5);
+  const top5 = topPeople.map((t, i) => ({
     name: (t.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') || 'Usuario',
-    completadas: t.completed_tasks,
-    en_progreso: t.in_progress_tasks,
-    total: t.total_tasks,
+    horas: t.horas_completadas,
+    puntualidad: t.puntualidad_pct,
     color: RANKING_COLORS[i] || CHART_COLORS.muted,
   }));
 
   const teamBarConfig: ChartConfig = {
-    completadas: { label: 'Completadas', color: CHART_COLORS.teal },
-    en_progreso: { label: 'En progreso', color: CHART_COLORS.muted },
+    horas: { label: 'Horas entregadas', color: CHART_COLORS.teal },
   };
 
   // Project progress for stacked bar
@@ -231,35 +313,46 @@ function TabResumen() {
     completed: p.completed,
   }));
 
+  const puntualidadGlobal = personMetrics?.overall.puntualidad_pct ?? null;
+  const puntualidadTone = puntualidadGlobal == null ? 'info' : puntualidadGlobal >= 90 ? 'good' : puntualidadGlobal >= 80 ? 'warning' : 'critical';
+
   return (
     <div className="space-y-8">
+      <HeroBanner
+        eyebrow="Resumen operativo"
+        story={
+          <>
+            <b className="text-white">{projectsData.active}</b> proyectos activos generan{' '}
+            <b className="text-white">{tasks.total ?? 0} tareas</b>, con{' '}
+            <b className="text-white">{puntualidadGlobal != null ? `${puntualidadGlobal}% de puntualidad` : 'puntualidad aún sin datos suficientes'}</b>{' '}
+            en las entregas evaluables del equipo.
+          </>
+        }
+        stats={[
+          { value: projectsData.active, label: `Proyectos activos de ${projectsData.total}` },
+          { value: `${materialsData.completion_rate ?? 0}%`, label: 'Materiales completados' },
+          { value: teamData.active_members, label: 'Personas activas' },
+        ]}
+      />
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
-        <KpiCard
-          title="Proyectos Activos"
-          value={projectsData.active}
-          subtitle={`${projectsData.total} totales`}
-          image={kpiProjectsImg}
-        />
-        <KpiCard
-          title="Tareas Totales"
-          value={tasks.total ?? 0}
-          subtitle={`${overview.recent_completed_30d ?? 0} completadas (30d)`}
-          image={kpiTasksImg}
-        />
-        <KpiCard
-          title="Materiales"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <StatTile label="Proyectos activos" value={projectsData.active} sub={`${projectsData.total} totales`} />
+        <StatTile label="Tareas totales" value={tasks.total ?? 0} sub={`${overview.recent_completed_30d ?? 0} completadas (30d)`} />
+        <StatTile
+          label="Materiales"
           value={`${materialsData.completion_rate ?? 0}%`}
-          subtitle={`${materialsData.completed} de ${materialsData.total} completados`}
-          image={kpiPackageImg}
+          sub={`${materialsData.completed} de ${materialsData.total} completados`}
         />
-        <KpiCard
-          title="Equipo Activo"
+        <StatTile
+          label="Puntualidad global"
+          value={puntualidadGlobal != null ? `${puntualidadGlobal}%` : '—'}
+          sub={personMetrics ? `${personMetrics.overall.entregas_a_tiempo} de ${personMetrics.overall.entregas_evaluables} a tiempo` : 'Cargando...'}
+          pill={{ tone: puntualidadTone, label: puntualidadTone === 'good' ? 'Sólido' : puntualidadTone === 'warning' ? 'Atención' : puntualidadTone === 'critical' ? 'Riesgo' : 'Sin datos' }}
+        />
+        <StatTile
+          label="Equipo activo"
           value={teamData.active_members}
-          subtitle={overview.avg_completion_seconds > 0
-            ? `Promedio: ${formatDuration(overview.avg_completion_seconds)}`
-            : 'Sin datos de tiempo aún'}
-          image={kpiUsersImg}
+          sub={overview.avg_completion_seconds > 0 ? `Entrega promedio: ${formatDuration(overview.avg_completion_seconds)}` : 'Sin datos de tiempo aún'}
         />
       </div>
 
@@ -268,11 +361,11 @@ function TabResumen() {
         <Card className={CARD_CLASS}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Distribución de Tareas</CardTitle>
-            <CardDescription>Por estado actual</CardDescription>
+            <CardDescription>Por estado actual · escala logarítmica (para que se vean las categorías pequeñas)</CardDescription>
           </CardHeader>
           <CardContent>
             {statusData.some(s => s.value > 0) ? (
-              <PolarAreaChart data={statusData} height={280} />
+              <PolarAreaChart data={statusData} height={280} logScale />
             ) : (
               <EmptyState message="No hay tareas registradas" />
             )}
@@ -290,7 +383,7 @@ function TabResumen() {
                 <BarChart data={projectBarData} layout="vertical" margin={{ left: 10, right: 10 }}>
                   <CartesianGrid horizontal={false} {...GRID_STYLE} />
                   <XAxis type="number" {...AXIS_STYLE} />
-                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={55} tick={{ fill: '#64748B', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={55} tick={{ fill: axisTick.fill, fontSize: 12 }} />
                   <ChartTooltip content={<CustomTooltip />} />
                   <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
                   <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.indigo} />
@@ -327,7 +420,7 @@ function TabResumen() {
                         : c.category === 'otros'
                           ? CHART_COLORS.yellow
                           : c.category === 'desarrollo'
-                            ? '#10b981'
+                            ? CHART_COLORS.green
                             : CHART_COLORS.muted;
                   return (
                     <div key={c.category} className="flex flex-col items-center gap-1">
@@ -398,30 +491,46 @@ function TabResumen() {
         </Card>
       </div>
 
-      {/* Row 4: Top Collaborators with ranking colors */}
+      {/* Row 4: Top Collaborators by hours delivered, with punctuality as a second signal */}
       {top5.length > 0 && (
-        <Card className={CARD_CLASS}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <SpotlightCard
+            tag="Top colaborador"
+            name={top5[0].name}
+            metricValue={formatHours(top5[0].horas)}
+            metricUnit="entregadas"
+            note={top5[0].puntualidad != null ? `${top5[0].puntualidad}% de puntualidad` : 'Sin datos de puntualidad'}
+          />
+        <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Top Colaboradores</CardTitle>
-            <CardDescription>Por tareas completadas</CardDescription>
+            <CardTitle className="text-base">Top colaboradores</CardTitle>
+            <CardDescription>Por horas entregadas (ponderado por complejidad, no por conteo de tareas)</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={teamBarConfig} className="h-[200px] w-full">
-              <BarChart data={top5} layout="vertical" margin={{ left: 10, right: 10 }}>
+              <BarChart data={top5} layout="vertical" margin={{ left: 10, right: 40 }}>
                 <CartesianGrid horizontal={false} {...GRID_STYLE} />
                 <XAxis type="number" {...AXIS_STYLE} />
-                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={110} tick={{ fill: '#64748B', fontSize: 12 }} />
+                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={110} tick={{ fill: axisTick.fill, fontSize: 12 }} />
                 <ChartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="completadas" stackId="a" radius={[0, 0, 0, 0]}>
+                <Bar dataKey="horas" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
                   {top5.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Bar>
-                <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} opacity={0.4} />
               </BarChart>
             </ChartContainer>
+            <div className="mt-2 space-y-1">
+              {top5.map((p) => (
+                <div key={p.name} className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>{p.name}</span>
+                  <span>{p.puntualidad != null ? `${p.puntualidad}% puntualidad` : 'sin datos de puntualidad'}</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
+        </div>
       )}
     </div>
   );
@@ -488,8 +597,30 @@ function TabProyectos() {
     }
   }
 
+  const atRiskCount = projects.filter(p => (p.overdue_tasks ?? 0) > 0).length;
+  const avgCompletion = projects.length > 0
+    ? Math.round(projects.reduce((acc, p) => acc + (p.completion_rate ?? 0), 0) / projects.length)
+    : 0;
+
   return (
     <div className="space-y-8">
+      <HeroBanner
+        eyebrow="Proyectos"
+        story={
+          <>
+            <b className="text-white">{activeProjects.length} proyectos activos</b> avanzan a un{' '}
+            <b className="text-white">{avgCompletion}% de progreso promedio</b>.{' '}
+            {atRiskCount > 0
+              ? <><b className="text-white">{atRiskCount} {atRiskCount === 1 ? 'está' : 'están'} en riesgo</b> por tareas vencidas.</>
+              : 'Ninguno tiene tareas vencidas en este momento.'}
+          </>
+        }
+        stats={[
+          { value: projects.length, label: 'Proyectos totales' },
+          { value: `${avgCompletion}%`, label: 'Progreso promedio' },
+          { value: atRiskCount, label: 'En riesgo' },
+        ]}
+      />
       {/* Línea de tiempo estimada */}
       {validTimeline.length > 0 && minDate && maxDate && (() => {
         const today = new Date();
@@ -576,7 +707,7 @@ function TabProyectos() {
                                 style={{
                                   left: `${startPct + completedBarWidth}%`,
                                   width: `${remainingBarWidth}%`,
-                                  backgroundColor: isAtRisk ? '#EF4444' : CHART_COLORS.muted,
+                                  backgroundColor: isAtRisk ? CHART_COLORS.coral : CHART_COLORS.muted,
                                   opacity: isAtRisk ? 0.35 : 0.2,
                                   borderRadius: completedBarWidth < 0.5 ? '6px' : '0 6px 6px 0',
                                 }}
@@ -719,7 +850,7 @@ function TabProyectos() {
                     position: 'insideBottom',
                     offset: -10,
                     fontSize: 11,
-                    fill: '#64748B',
+                    fill: axisTick.fill,
                   }}
                   {...AXIS_STYLE}
                 />
@@ -732,7 +863,7 @@ function TabProyectos() {
                     angle: -90,
                     position: 'insideLeft',
                     fontSize: 11,
-                    fill: '#64748B',
+                    fill: axisTick.fill,
                   }}
                   {...AXIS_STYLE}
                 />
@@ -776,7 +907,7 @@ function TabProyectos() {
                     const x = p.completion_rate;
                     const fill =
                       y >= 3 || x < 20
-                        ? '#EF4444'
+                        ? CHART_COLORS.coral
                         : y > 0
                           ? CHART_COLORS.yellow
                           : x >= 70
@@ -902,19 +1033,22 @@ function TabProyectos() {
 
 // ---------- Tab: Equipo ----------
 function TabEquipo() {
-  const { data: team = [], isLoading } = useReportTeamPerformance();
-  const { data: capacity, isLoading: loadingCapacity } = useReportTeamCapacity();
+  const { data: personMetrics, isLoading: loadingPeople } = useReportPersonMetrics();
+  const { data: capacity, isLoading: loadingCapacity } = useReportCapacityForecast({ weeks: 4 });
   const { data: workload = [] } = useReportWorkloadByCargo();
-  const { data: teamMonthly = [] } = useReportTeamMonthlyCompletion();
+  const { data: throughput = [] } = useReportThroughput({ bucket: 'week', group_by: 'person' });
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cargoFilter, setCargoFilter] = useState<string>('all');
   const { data: userReport, isLoading: loadingUserReport } = useUserMiniReport(selectedUserId);
 
-  if (isLoading || loadingCapacity) return <LoadingState />;
+  if (loadingPeople || loadingCapacity) return <LoadingState />;
 
-  if (team.length === 0) return <EmptyState message="No hay datos de equipo" />;
+  const people = personMetrics?.people ?? [];
+  if (people.length === 0) return <EmptyState message="No hay datos de equipo" />;
+
+  const peopleById = new Map(people.map(p => [p.id, p]));
 
   const workloadConfig: ChartConfig = {
     completed_tasks: { label: 'Completadas', color: CHART_COLORS.teal },
@@ -929,58 +1063,50 @@ function TabEquipo() {
   }));
 
   const capacityMembers = capacity?.members ?? [];
-  const defaultWeeklyCapacity = capacity?.schedule.weekly_hours ?? 40.25;
+  const overall = capacity?.overall;
 
-  const teamPendingHours = capacityMembers.reduce((sum, m) => {
-    const value = Number.isFinite(m.pending_horas) ? m.pending_horas : 0;
-    return sum + value;
-  }, 0);
+  const overallHolguraDisplay = overall
+    ? overall.holgura_horas >= 0
+      ? `Holgura ${formatHours(overall.holgura_horas)}`
+      : `Exceso ${formatHours(Math.abs(overall.holgura_horas))}`
+    : '0h';
 
-  const teamCapacityHours = capacityMembers.reduce((sum, m) => {
-    const baseWeekly =
-      Number.isFinite(m.weekly_hours_capacity) && m.weekly_hours_capacity > 0
-        ? m.weekly_hours_capacity
-        : defaultWeeklyCapacity;
-    return sum + baseWeekly;
-  }, 0);
+  // Weekly throughput (hours), stacked by top-5 people + "Otros" — replaces the old
+  // raw monthly task-count chart.
+  const throughputWeeks = Array.from(new Set(throughput.map(t => t.bucket_start))).sort((a, b) => a.localeCompare(b));
+  const hoursByPerson = new Map<string, number>();
+  throughput.forEach(t => hoursByPerson.set(t.key, (hoursByPerson.get(t.key) ?? 0) + t.horas));
+  const topThroughputPeople = Array.from(hoursByPerson.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([key]) => key);
+  const extraThroughputPeople = Array.from(hoursByPerson.keys()).filter(k => !topThroughputPeople.includes(k));
+  const labelByKey = new Map(throughput.map(t => [t.key, t.label]));
 
-  const teamUtilPct = teamCapacityHours > 0
-    ? Math.round((teamPendingHours / teamCapacityHours) * 100) || 0
-    : 0;
-
-  const teamGapHours = teamCapacityHours - teamPendingHours;
-  const absTeamGapHours = Math.abs(teamGapHours);
-
-  let teamGapDisplay = '0h';
-  if (teamGapHours > 0) {
-    teamGapDisplay = `Holgura ${formatHours(teamGapHours)}`;
-  } else if (teamGapHours < 0) {
-    teamGapDisplay = `Exceso ${formatHours(absTeamGapHours)}`;
-  }
-
-  const riskCounts = capacityMembers.reduce(
-    (acc, m) => {
-      const level = m.risk_level || 'ok';
-      if (level === 'over') acc.over += 1;
-      else if (level === 'warning') acc.warning += 1;
-      else acc.ok += 1;
-      return acc;
-    },
-    { ok: 0, warning: 0, over: 0 },
-  );
-
-  // Capacity bar chart data
-  const capacityBarData = (capacity?.members || []).map(m => ({
-    name: (m.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') || 'Usuario',
-    pending_horas: m.pending_horas,
-    completed_horas: m.completed_horas,
-    capacidad_semanal: capacity?.schedule?.weekly_hours || 40.25,
-  }));
-
-  const capacityBarConfig: ChartConfig = {
-    pending_horas: { label: 'Hrs pendientes', color: CHART_COLORS.indigo },
-    completed_horas: { label: 'Hrs completadas', color: CHART_COLORS.teal },
-  };
+  const throughputData = throughputWeeks.map(week => {
+    const base: Record<string, number | string> = {
+      week: new Date(week + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }),
+    };
+    topThroughputPeople.forEach(key => {
+      const label = labelByKey.get(key) ?? key;
+      const match = throughput.find(t => t.bucket_start === week && t.key === key);
+      base[label] = match ? match.horas : 0;
+    });
+    if (extraThroughputPeople.length > 0) {
+      base.Otros = throughput
+        .filter(t => t.bucket_start === week && extraThroughputPeople.includes(t.key))
+        .reduce((sum, t) => sum + t.horas, 0);
+    }
+    return base;
+  });
+  const throughputSeriesNames = [
+    ...topThroughputPeople.map(k => labelByKey.get(k) ?? k),
+    ...(extraThroughputPeople.length > 0 ? ['Otros'] : []),
+  ];
+  const throughputBarConfig: ChartConfig = throughputSeriesNames.reduce((acc, name, idx) => {
+    acc[name] = { label: name, color: RANKING_COLORS[idx % RANKING_COLORS.length] };
+    return acc;
+  }, {} as ChartConfig);
 
   // Format date for display
   const formatDate = (dateStr: string | null) => {
@@ -992,75 +1118,52 @@ function TabEquipo() {
   return (
     <div className="space-y-8">
       {/* Capacity Section */}
-      {capacity && capacity.members.length > 0 && (
+      {capacity && capacityMembers.length > 0 && (
         <>
           {/* Global team capacity indicator */}
-          {capacityMembers.length > 0 && (
-            <Card className={CARD_CLASS}>
-              <CardContent className="py-4 px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                    Indicador global de capacidad
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <p className="text-xl font-semibold text-[#0F172A]">{teamUtilPct}%</p>
-                      <p className="text-muted-foreground">Utilización global</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#0F172A]">
-                        {teamPendingHours > 0 ? formatHours(teamPendingHours) : '0h'}
-                      </p>
-                      <p className="text-muted-foreground">Horas pendientes</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#0F172A]">
-                        {teamCapacityHours > 0 ? formatHours(teamCapacityHours) : '0h'}
-                      </p>
-                      <p className="text-muted-foreground">Capacidad semanal</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#0F172A]">
-                        {teamGapDisplay}
-                      </p>
-                      <p className="text-muted-foreground">Gap global</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-start sm:items-end gap-2 text-xs">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Riesgo del equipo
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {riskCounts.ok > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="border-emerald-200 bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px]"
-                      >
-                        OK · {riskCounts.ok}
-                      </Badge>
-                    )}
-                    {riskCounts.warning > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="border-amber-200 bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px]"
-                      >
-                        Riesgo · {riskCounts.warning}
-                      </Badge>
-                    )}
-                    {riskCounts.over > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="border-red-200 bg-red-50 text-red-700 px-2 py-0.5 text-[11px]"
-                      >
-                        Sobrecargado · {riskCounts.over}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {overall && (
+            <>
+              <HeroBanner
+                eyebrow="Equipo · compromiso semana actual"
+                story={
+                  <>
+                    El equipo está al <b className="text-white">{overall.utilizacion_pct}% de utilización</b> esta semana —{' '}
+                    <b className="text-white">{formatHours(overall.carga_semana_actual)}</b> comprometidas de{' '}
+                    <b className="text-white">{formatHours(overall.capacidad_total)}</b> disponibles.{' '}
+                    {overall.risk_counts.over > 0
+                      ? <><b className="text-white">{overall.risk_counts.over} {overall.risk_counts.over === 1 ? 'persona está sobrecargada' : 'personas están sobrecargadas'}</b>.</>
+                      : 'Nadie está sobrecargado en este momento.'}
+                  </>
+                }
+                stats={[
+                  { value: `${overall.utilizacion_pct}%`, label: 'Utilización semana actual' },
+                  { value: overallHolguraDisplay, label: 'Holgura / exceso' },
+                  { value: overall.risk_counts.available, label: 'Con espacio disponible' },
+                ]}
+              />
+              <div className="flex flex-wrap gap-2">
+                {overall.risk_counts.available > 0 && (
+                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.available}`}>
+                    Disponible · {overall.risk_counts.available}
+                  </Badge>
+                )}
+                {overall.risk_counts.ok > 0 && (
+                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.ok}`}>
+                    OK · {overall.risk_counts.ok}
+                  </Badge>
+                )}
+                {overall.risk_counts.warning > 0 && (
+                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.warning}`}>
+                    Riesgo · {overall.risk_counts.warning}
+                  </Badge>
+                )}
+                {overall.risk_counts.over > 0 && (
+                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.over}`}>
+                    Sobrecargado · {overall.risk_counts.over}
+                  </Badge>
+                )}
+              </div>
+            </>
           )}
 
           {/* Schedule info bar */}
@@ -1081,10 +1184,33 @@ function TabEquipo() {
             </CardContent>
           </Card>
 
+          {/* Attention panel: overloaded people, most severe first */}
+          {(() => {
+            const overloaded = [...capacityMembers]
+              .filter(m => m.current.risk_level === 'over')
+              .sort((a, b) => b.current.utilizacion_pct - a.current.utilizacion_pct)
+              .slice(0, 5);
+            if (overloaded.length === 0) return null;
+            return (
+              <div className="space-y-2">
+                {overloaded.map(m => (
+                  <AttentionItem
+                    key={m.id}
+                    severity="critical"
+                    title={m.full_name || 'Sin nombre'}
+                    description={`${m.current.utilizacion_pct}% de utilización esta semana · ${formatHours(Math.abs(m.current.holgura_horas))} de exceso`}
+                    cta="Ver detalle"
+                    onClick={() => { setSelectedUserId(String(m.id)); setDrawerOpen(true); }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+
           {/* Cargo filter */}
           {(() => {
             const cargos = Array.from(
-              new Set(capacity.members.map(m => m.cargo || 'Sin cargo'))
+              new Set(capacityMembers.map(m => m.cargo || 'Sin cargo'))
             ).sort();
             return (
               <div className="flex flex-wrap gap-2 items-center">
@@ -1097,10 +1223,10 @@ function TabEquipo() {
                       : 'bg-background border-border hover:bg-muted'
                   }`}
                 >
-                  Todos ({capacity.members.length})
+                  Todos ({capacityMembers.length})
                 </button>
                 {cargos.map(cargo => {
-                  const count = capacity.members.filter(m => (m.cargo || 'Sin cargo') === cargo).length;
+                  const count = capacityMembers.filter(m => (m.cargo || 'Sin cargo') === cargo).length;
                   return (
                     <button
                       key={cargo}
@@ -1121,28 +1247,20 @@ function TabEquipo() {
 
           {/* Capacity cards per person */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-            {capacity.members.filter(m =>
+            {capacityMembers.filter(m =>
               cargoFilter === 'all' || (m.cargo || 'Sin cargo') === cargoFilter
             ).map(member => {
-              const isOverloaded = member.utilization_pct > 100;
-              const barPct = Math.min(member.utilization_pct, 200) / 2; // Scale: 200% = full bar
+              const pm = peopleById.get(member.id);
+              const isOverloaded = member.current.utilizacion_pct > 100;
+              const barPct = Math.min(member.current.utilizacion_pct, 200) / 2; // Scale: 200% = full bar
+              const riskBadgeClass = RISK_BADGE_CLASSES[member.current.risk_level] ?? RISK_BADGE_CLASSES.ok;
 
-              const riskBadgeClass =
-                member.risk_color === 'red'
-                  ? 'bg-red-50 text-red-700 border-red-200'
-                  : member.risk_color === 'amber'
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-
-              let gapText: string | null = null;
-              if (member.capacity_gap_hours !== 0) {
-                const absGap = Math.abs(member.capacity_gap_hours);
-                if (member.capacity_gap_hours > 0) {
-                  gapText = `Exceso +${formatHours(absGap)}`;
-                } else {
-                  gapText = `Holgura ${formatHours(absGap)}`;
-                }
-              }
+              const holgura = member.current.holgura_horas;
+              const gapText = holgura !== 0
+                ? holgura < 0
+                  ? `Exceso +${formatHours(Math.abs(holgura))}`
+                  : `Holgura ${formatHours(holgura)}`
+                : null;
 
               const onClick = () => {
                 setSelectedUserId(String(member.id));
@@ -1168,7 +1286,7 @@ function TabEquipo() {
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm truncate">{member.full_name || 'Sin nombre'}</p>
                           <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 border ${riskBadgeClass}`}>
-                            {member.risk_label}
+                            {member.current.risk_label}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">{member.cargo || 'Sin cargo'}</p>
@@ -1178,29 +1296,31 @@ function TabEquipo() {
                     {/* Metrics row */}
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div>
-                        <p className="text-lg font-bold" style={{ color: CHART_COLORS.indigo }}>{member.pending_tasks}</p>
+                        <p className="text-lg font-bold" style={{ color: CHART_COLORS.indigo }}>
+                          {pm?.unidades_pendientes ?? '-'}
+                        </p>
                         <p className="text-[10px] text-muted-foreground">Pendientes</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold" style={{ color: CHART_COLORS.indigo }}>
-                          {member.pending_horas > 0 ? formatHours(member.pending_horas) : '-'}
+                        <p className={`text-lg font-bold ${punctualityBandColor(pm?.puntualidad_pct ?? null)}`}>
+                          {pm?.puntualidad_pct != null ? `${pm.puntualidad_pct}%` : '-'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Horas</p>
+                        <p className="text-[10px] text-muted-foreground">Puntualidad</p>
                       </div>
                       <div>
-                        <p className="text-lg font-bold" style={{ color: isOverloaded ? '#EF4444' : CHART_COLORS.teal }}>
-                          {member.estimated_work_days > 0 ? `${member.estimated_work_days}d` : '-'}
+                        <p className="text-lg font-bold" style={{ color: isOverloaded ? CHART_COLORS.coral : CHART_COLORS.teal }}>
+                          {member.backlog.dias_para_vaciar > 0 ? `${member.backlog.dias_para_vaciar}d` : '-'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Días est.</p>
+                        <p className="text-[10px] text-muted-foreground">Días backlog</p>
                       </div>
                     </div>
 
                     {/* Utilization bar + gap */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-[10px]">
-                        <span className="text-muted-foreground">Ocupación semanal</span>
+                        <span className="text-muted-foreground">Compromiso semana actual</span>
                         <span className={`font-semibold ${isOverloaded ? 'text-red-500' : ''}`}>
-                          {member.utilization_pct}%
+                          {member.current.utilizacion_pct}%
                         </span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -1209,66 +1329,45 @@ function TabEquipo() {
                           style={{
                             width: `${Math.min(barPct, 100)}%`,
                             background: isOverloaded
-                              ? `linear-gradient(90deg, ${CHART_COLORS.yellow}, ${'#EF4444'})`
+                              ? `linear-gradient(90deg, ${CHART_COLORS.yellow}, ${CHART_COLORS.coral})`
                               : `linear-gradient(90deg, ${CHART_COLORS.indigo}, ${CHART_COLORS.tealDark})`,
                           }}
                         />
                       </div>
                       {gapText && (
                         <div className="flex justify-between text-[10px] mt-1">
-                          <span className="text-muted-foreground">Gap semanal</span>
-                          <span
-                            className={`font-medium ${
-                              member.capacity_gap_hours > 0 ? 'text-red-600' : 'text-emerald-600'
-                            }`}
-                          >
+                          <span className="text-muted-foreground">Gap semana actual</span>
+                          <span className={`font-medium ${holgura < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                             {gapText}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {/* Sparklines de completadas/mes */}
-                    {teamMonthly && teamMonthly.length > 0 && (
-                      (() => {
-                        const personMonthly = (teamMonthly as TeamMonthlyPoint[]).filter(
-                          p => p.profile_id === member.id,
-                        );
-                        if (personMonthly.length === 0) return null;
-                        const sparkColor =
-                          member.risk_color === 'red'
-                            ? '#EF4444'
-                            : member.risk_color === 'amber'
-                              ? CHART_COLORS.yellow
-                              : CHART_COLORS.teal;
-                        const sorted = [...personMonthly].sort((a, b) => a.month.localeCompare(b.month));
-                        const sparkData = sorted.map(p => ({
-                          month: p.month,
-                          completed_count: p.completed_count,
-                        }));
-                        return (
-                          <div className="flex items-center justify-end gap-1 pt-1">
-                            <span className="text-[9px] text-muted-foreground">Finalizadas/mes</span>
-                            <PersonSparkline data={sparkData} color={sparkColor} />
-                          </div>
-                        );
-                      })()
-                    )}
+                    {/* Proyección próximas semanas */}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[9px] text-muted-foreground">Próximas semanas</span>
+                      <CapacityWeekStrip weeks={member.weeks} />
+                    </div>
 
-                    {/* Footer: completion date + warnings */}
+                    {/* Footer: backlog drain estimate + warnings */}
                     <div className="flex items-center justify-between text-xs pt-1 border-t">
-                      {member.estimated_completion_date ? (
+                      {member.backlog.fecha_backlog_vacio ? (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <CalendarDays className="h-3 w-3" />
-                          <span>Finaliza ~{formatDate(member.estimated_completion_date)}</span>
+                          <span>Backlog libre ~{formatDate(member.backlog.fecha_backlog_vacio)}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">Sin carga pendiente</span>
+                        <span className="text-muted-foreground text-xs">Sin backlog pendiente</span>
                       )}
-                      {member.tasks_sin_estimacion > 0 && (
-                        <div className="flex items-center gap-1 text-amber-500" title="Tareas sin horas estimadas asignadas">
+                      {(member.backlog.unidades_sin_estimacion > 0 || member.backlog.horas_sin_fecha > 0) && (
+                        <div className="flex items-center gap-1 text-amber-500" title="Trabajo sin estimación u sin fecha límite">
                           <AlertTriangle className="h-3 w-3" />
-                          <span className="text-[10px]">{member.tasks_sin_estimacion} sin est.</span>
+                          <span className="text-[10px]">
+                            {member.backlog.unidades_sin_estimacion > 0 && `${member.backlog.unidades_sin_estimacion} sin est.`}
+                            {member.backlog.unidades_sin_estimacion > 0 && member.backlog.horas_sin_fecha > 0 && ' · '}
+                            {member.backlog.horas_sin_fecha > 0 && `${formatHours(member.backlog.horas_sin_fecha)} sin fecha`}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1277,28 +1376,6 @@ function TabEquipo() {
               );
             })}
           </div>
-
-          {/* Capacity comparison bar chart */}
-          {capacityBarData.length > 0 && (
-            <Card className={CARD_CLASS}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Horas de Trabajo por Colaborador</CardTitle>
-                <CardDescription>Horas pendientes vs completadas</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={capacityBarConfig} className="h-[220px] w-full">
-                  <BarChart data={capacityBarData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis type="number" {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
-                    <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={110} tick={{ fill: '#64748B', fontSize: 12 }} />
-                    <ChartTooltip content={<CustomTooltip />} />
-                    <Bar dataKey="completed_horas" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="pending_horas" stackId="a" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
 
@@ -1314,7 +1391,7 @@ function TabEquipo() {
               <BarChart data={workloadData} layout="vertical" margin={{ left: 10, right: 10 }}>
                 <CartesianGrid horizontal={false} {...GRID_STYLE} />
                 <XAxis type="number" {...AXIS_STYLE} />
-                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={130} tick={{ fill: '#64748B', fontSize: 12 }} />
+                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={130} tick={{ fill: axisTick.fill, fontSize: 12 }} />
                 <ChartTooltip content={<CustomTooltip />} />
                 <Bar dataKey="completed_tasks" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
                 <Bar dataKey="pending_tasks" stackId="a" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
@@ -1324,83 +1401,30 @@ function TabEquipo() {
         </Card>
       )}
 
-      {/* Velocidad del equipo */}
-      {teamMonthly && (teamMonthly as TeamMonthlyPoint[]).length > 0 && (
+      {/* Velocidad del equipo (horas entregadas) */}
+      {throughputData.length > 0 && (
         <Card className={CARD_CLASS}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Velocidad del equipo</CardTitle>
-            <CardDescription>Tareas finalizadas por mes (últimos 6 meses)</CardDescription>
+            <CardTitle className="text-base">Velocidad del equipo (horas entregadas)</CardTitle>
+            <CardDescription>Horas de trabajo completadas por semana, por colaborador</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{}} className="h-[240px] w-full">
-              {(() => {
-                const points = teamMonthly as TeamMonthlyPoint[];
-                const uniquePeople = Array.from(
-                  new Map(points.map(p => [p.full_name, p.full_name])).values(),
-                );
-                const topPeople = uniquePeople.slice(0, 5);
-                const extraPeople = uniquePeople.slice(5);
-
-                const months = Array.from(
-                  new Set(points.map(p => p.month)),
-                ).sort((a, b) => a.localeCompare(b));
-
-                const data = months.map(m => {
-                  const base: Record<string, number | string> = {
-                    month: new Date(m + 'T12:00:00').toLocaleDateString('es-CO', {
-                      month: 'short',
-                    }),
-                  };
-                  topPeople.forEach(name => {
-                    const match = points.find(p => p.month === m && p.full_name === name);
-                    base[name] = match ? match.completed_count : 0;
-                  });
-                  if (extraPeople.length > 0) {
-                    const othersCount = points
-                      .filter(p => p.month === m && extraPeople.includes(p.full_name))
-                      .reduce((sum, p) => sum + p.completed_count, 0);
-                    base.Otros = othersCount;
-                  }
-                  return base;
-                });
-
-                const personsForStack = [...topPeople];
-                if (extraPeople.length > 0) {
-                  personsForStack.push('Otros');
-                }
-
-                const barConfig: ChartConfig = personsForStack.reduce((acc, name, idx) => {
-                  acc[name] = {
-                    label: name,
-                    color: RANKING_COLORS[idx % RANKING_COLORS.length],
-                  };
-                  return acc;
-                }, {} as ChartConfig);
-
-                return (
-                  <ChartContainer config={barConfig} className="h-[240px] w-full">
-                    <BarChart data={data} margin={{ left: 10, right: 10 }}>
-                      <CartesianGrid {...GRID_STYLE} />
-                      <XAxis dataKey="month" {...AXIS_STYLE} />
-                      <YAxis {...AXIS_STYLE} />
-                      <ChartTooltip content={<CustomTooltip />} />
-                      {personsForStack.map((name, idx) => (
-                        <Bar
-                          key={name}
-                          dataKey={name}
-                          stackId="a"
-                          fill={RANKING_COLORS[idx % RANKING_COLORS.length]}
-                          radius={
-                            idx === personsForStack.length - 1
-                              ? [BAR_RADIUS, BAR_RADIUS, 0, 0]
-                              : [0, 0, 0, 0]
-                          }
-                        />
-                      ))}
-                    </BarChart>
-                  </ChartContainer>
-                );
-              })()}
+            <ChartContainer config={throughputBarConfig} className="h-[240px] w-full">
+              <BarChart data={throughputData} margin={{ left: 10, right: 10 }}>
+                <CartesianGrid {...GRID_STYLE} />
+                <XAxis dataKey="week" {...AXIS_STYLE} />
+                <YAxis {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
+                <ChartTooltip content={<CustomTooltip />} />
+                {throughputSeriesNames.map((name, idx) => (
+                  <Bar
+                    key={name}
+                    dataKey={name}
+                    stackId="a"
+                    fill={RANKING_COLORS[idx % RANKING_COLORS.length]}
+                    radius={idx === throughputSeriesNames.length - 1 ? [BAR_RADIUS, BAR_RADIUS, 0, 0] : [0, 0, 0, 0]}
+                  />
+                ))}
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -1452,7 +1476,7 @@ function TabEquipo() {
       <Card className={CARD_CLASS}>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Rendimiento del Equipo</CardTitle>
-          <CardDescription>Métricas individuales de cada colaborador</CardDescription>
+          <CardDescription>Puntualidad primero — la señal principal de eficiencia real</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -1461,16 +1485,15 @@ function TabEquipo() {
                 <tr className="border-b text-muted-foreground">
                   <th className="text-left py-3 px-2 font-medium">Colaborador</th>
                   <th className="text-left py-3 px-2 font-medium">Cargo</th>
-                  <th className="text-center py-3 px-2 font-medium">Tareas</th>
-                  <th className="text-center py-3 px-2 font-medium">Completadas</th>
-                  <th className="text-center py-3 px-2 font-medium">Materiales</th>
-                  <th className="text-center py-3 px-2 font-medium">Hrs Est.</th>
-                  <th className="text-center py-3 px-2 font-medium">Hrs Reales</th>
-                  <th className="text-center py-3 px-2 font-medium">Avance</th>
+                  <th className="text-center py-3 px-2 font-medium">Puntualidad</th>
+                  <th className="text-center py-3 px-2 font-medium">Unidades</th>
+                  <th className="text-center py-3 px-2 font-medium">Horas entregadas</th>
+                  <th className="text-center py-3 px-2 font-medium">Est./Efectivo</th>
+                  <th className="text-center py-3 px-2 font-medium">Sin estimación</th>
                 </tr>
               </thead>
               <tbody>
-                {team.map(member => (
+                {[...people].sort((a, b) => b.horas_completadas - a.horas_completadas).map(member => (
                   <tr key={member.id} className="border-b last:border-0 hover:bg-white/5 transition-colors">
                     <td className="py-3 px-2">
                       <div className="flex items-center gap-2">
@@ -1486,23 +1509,21 @@ function TabEquipo() {
                     <td className="py-3 px-2">
                       <span className="text-muted-foreground text-xs">{member.cargo || '-'}</span>
                     </td>
-                    <td className="py-3 px-2 text-center font-medium">{member.total_tasks}</td>
+                    <td className={`py-3 px-2 text-center font-semibold ${punctualityBandColor(member.puntualidad_pct)}`}>
+                      {member.puntualidad_pct != null ? `${member.puntualidad_pct}%` : '-'}
+                    </td>
                     <td className="py-3 px-2 text-center">
-                      <span style={{ color: CHART_COLORS.teal }} className="font-medium">{member.completed_tasks}</span>
+                      {member.unidades_completadas} / {member.unidades_asignadas}
                     </td>
-                    <td className="py-3 px-2 text-center">{member.materials_assigned}</td>
-                    <td className="py-3 px-2 text-center text-muted-foreground">
-                      {member.total_horas_estimadas > 0 ? formatHours(member.total_horas_estimadas) : '-'}
+                    <td className="py-3 px-2 text-center">
+                      <span style={{ color: CHART_COLORS.teal }} className="font-medium">
+                        {member.horas_completadas > 0 ? formatHours(member.horas_completadas) : '-'}
+                      </span>
                     </td>
-                    <td className="py-3 px-2 text-center text-muted-foreground">
-                      {member.total_horas_reales > 0 ? formatHours(member.total_horas_reales) : '-'}
+                    <td className={`py-3 px-2 text-center ${efficiencyBandColor(member.eficiencia_horas_pct)}`}>
+                      {member.eficiencia_horas_pct != null ? `${member.eficiencia_horas_pct}%` : '—'}
                     </td>
-                    <td className="py-3 px-2">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Progress value={member.completion_rate} className="h-1.5 w-16" />
-                        <span className="text-xs font-medium w-8">{member.completion_rate}%</span>
-                      </div>
-                    </td>
+                    <td className="py-3 px-2 text-center text-muted-foreground">{member.unidades_sin_estimacion}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1619,7 +1640,7 @@ function TareasPorEstadoChart({ report }: { report: UserMiniReport }) {
               dataKey="name"
               {...AXIS_STYLE}
               width={90}
-              tick={{ fill: '#64748B', fontSize: 11 }}
+              tick={{ fill: axisTick.fill, fontSize: 11 }}
             />
             <ChartTooltip content={<CustomTooltip />} />
             <Bar dataKey="count" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
@@ -1819,97 +1840,259 @@ function CapacidadResumen({ report }: { report: UserMiniReport }) {
 
 // ---------- Tab: Producción ----------
 function TabProduccion() {
+  const [projectId, setProjectId] = useState('all');
+  const [rangeKey, setRangeKey] = useState<ReportRangeKey>('30d');
+  const filters: ReportScopeFilters = {
+    ...(projectId !== 'all' ? { project_id: projectId } : {}),
+    ...resolveRange(rangeKey),
+  };
+
   const { data: materials = [], isLoading } = useReportMaterialProduction();
+  const { data: personMetrics } = useReportPersonMetrics(filters);
+  const { data: production, isLoading: loadingProduction } = useReportProductionByPerson(filters);
+  const { data: unassigned = [] } = useReportUnassignedMaterials();
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading || loadingProduction) return <LoadingState />;
 
-  const activeMaterials = materials.filter(m => m.total_required > 0);
-
-  if (activeMaterials.length === 0) return <EmptyState message="No hay materiales registrados" />;
+  const activeMaterials = materials.filter(m => m.materiales > 0);
+  const overall = personMetrics?.overall;
 
   const barData = activeMaterials.map(m => ({
     name: m.name.replace(/_/g, ' '),
     icon: m.icon,
-    completados: m.completed_tasks,
-    en_progreso: m.in_progress_tasks,
-    pendientes: Math.max(0, m.total_required - m.completed_tasks - m.in_progress_tasks),
-    total: m.total_required,
+    completadas: m.completadas,
+    en_proceso: m.en_proceso,
+    sin_asignar: m.sin_asignar,
+    total: m.materiales,
   }));
 
   const matConfig: ChartConfig = {
-    completados: { label: 'Completados', color: CHART_COLORS.teal },
-    en_progreso: { label: 'En progreso', color: CHART_COLORS.indigo },
-    pendientes: { label: 'Pendientes', color: CHART_COLORS.muted },
+    completadas: { label: 'Completadas', color: CHART_COLORS.teal },
+    en_proceso: { label: 'En proceso', color: CHART_COLORS.indigo },
+    sin_asignar: { label: 'Sin asignar', color: CHART_COLORS.muted },
   };
+
+  const topProducers = (production?.totals_by_person ?? []).slice(0, 10);
+  const materialTypeNames = Array.from(new Set((production?.rows ?? []).map(r => r.material_type_name)));
+  const producerBarData = topProducers.map(p => {
+    const base: Record<string, number | string> = { name: (p.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') };
+    materialTypeNames.forEach(typeName => {
+      const row = production?.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === typeName);
+      base[typeName] = row?.horas_completadas ?? 0;
+    });
+    return base;
+  });
+  const producerBarConfig: ChartConfig = materialTypeNames.reduce((acc, name, idx) => {
+    acc[name] = { label: name, color: RANKING_COLORS[idx % RANKING_COLORS.length] };
+    return acc;
+  }, {} as ChartConfig);
+
+  const totalHorasEntregadas = (production?.totals_by_person ?? []).reduce((s, p) => s + p.horas_completadas, 0);
+  const totalUnidadesCompletadas = (production?.totals_by_person ?? []).reduce((s, p) => s + p.unidades_completadas, 0);
 
   return (
     <div className="space-y-6">
-      {/* Bar chart: full width */}
-      <Card className={CARD_CLASS}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Producción por Tipo de Material</CardTitle>
-          <CardDescription>Completados · En progreso · Pendientes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={matConfig} className="h-[340px] w-full">
-            <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
-              <CartesianGrid horizontal={false} {...GRID_STYLE} />
-              <XAxis type="number" {...AXIS_STYLE} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                {...AXIS_STYLE}
-                width={130}
-                tick={{ fontSize: 11 }}
-              />
-              <ChartTooltip content={<CustomTooltip />} />
-              <Bar dataKey="completados" stackId="a" fill={CHART_COLORS.teal} name="Completados" />
-              <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.indigo} name="En progreso" />
-              <Bar dataKey="pendientes" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} name="Pendientes" />
-            </BarChart>
-          </ChartContainer>
-          {/* Legend */}
-          <div className="flex items-center gap-5 mt-3 justify-center">
-            {[
-              { color: CHART_COLORS.teal,   label: 'Completados' },
-              { color: CHART_COLORS.indigo, label: 'En progreso' },
-              { color: CHART_COLORS.muted,  label: 'Pendientes' },
-            ].map(({ color, label }) => (
-              <span key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: color }} />
-                {label}
-              </span>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {overall && (
+        <HeroBanner
+          eyebrow="Producción"
+          story={
+            <>
+              El equipo entregó <b className="text-white">{formatHours(totalHorasEntregadas)}</b> de trabajo (
+              <b className="text-white">{totalUnidadesCompletadas} unidades</b>) en el período, con{' '}
+              <b className="text-white">{overall.puntualidad_pct != null ? `${overall.puntualidad_pct}% de puntualidad` : 'puntualidad sin datos suficientes'}</b>.{' '}
+              {unassigned.length > 0 && <><b className="text-white">{unassigned.length} materiales</b> siguen sin asignar.</>}
+            </>
+          }
+          stats={[
+            { value: formatHours(totalHorasEntregadas), label: 'Horas entregadas' },
+            { value: totalUnidadesCompletadas, label: 'Unidades completadas' },
+            { value: unassigned.length, label: 'Materiales sin asignar' },
+          ]}
+        />
+      )}
+      <ReportScopeFilterBar projectId={projectId} onProjectChange={setProjectId} rangeKey={rangeKey} onRangeChange={setRangeKey} />
+
+      {activeMaterials.length > 0 && (
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Producción por Tipo de Material</CardTitle>
+            <CardDescription>Completadas · En proceso · Sin asignar (unidades consistentes: cada barra cuenta materiales, no tareas)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={matConfig} className="h-[340px] w-full">
+              <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
+                <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                <XAxis type="number" {...AXIS_STYLE} />
+                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={130} tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<CustomTooltip />} />
+                <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.teal} name="Completadas" />
+                <Bar dataKey="en_proceso" stackId="a" fill={CHART_COLORS.indigo} name="En proceso" />
+                <Bar dataKey="sin_asignar" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} name="Sin asignar" />
+              </BarChart>
+            </ChartContainer>
+            <div className="flex items-center gap-5 mt-3 justify-center">
+              {[
+                { color: CHART_COLORS.teal, label: 'Completadas' },
+                { color: CHART_COLORS.indigo, label: 'En proceso' },
+                { color: CHART_COLORS.muted, label: 'Sin asignar' },
+              ].map(({ color, label }) => (
+                <span key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: color }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Material progress cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {activeMaterials.map(m => {
-          const rate = m.completion_rate ?? 0;
-          const barColor = rate === 100 ? '#10b981' : rate >= 60 ? '#6366f1' : '#94a3b8';
-          return (
-            <Card key={m.id} className={`p-4 ${CARD_CLASS}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{m.icon}</span>
-                  <span className="font-medium text-sm capitalize">{m.name.replace(/_/g, ' ')}</span>
+      {activeMaterials.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {activeMaterials.map(m => {
+            const rate = m.completion_rate ?? 0;
+            const barColor = rate === 100 ? CHART_COLORS.green : rate >= 60 ? CHART_COLORS.indigoLight : axisTick.fill;
+            return (
+              <Card key={m.id} className={`p-4 ${CARD_CLASS}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{m.icon}</span>
+                    <span className="font-medium text-sm capitalize">{m.name.replace(/_/g, ' ')}</span>
+                  </div>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: barColor }}>{rate}%</span>
                 </div>
-                <span className="text-sm font-bold tabular-nums" style={{ color: barColor }}>{rate}%</span>
-              </div>
-              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-2">
-                <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: barColor }} />
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{m.completed_tasks} completados</span>
-                <span>{m.in_progress_tasks} en progreso</span>
-                <span>{m.total_required} total</span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-2">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: barColor }} />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{m.completadas} completadas</span>
+                  <span>{m.en_proceso} en proceso</span>
+                  <span>{m.materiales} total</span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Quién produce qué */}
+      {production && production.rows.length > 0 && (
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Quién produce qué</CardTitle>
+            <CardDescription>Horas entregadas por colaborador y tipo de material</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">Colaborador</th>
+                    {materialTypeNames.map(name => (
+                      <th key={name} className="text-center py-2 px-2 font-medium">{name}</th>
+                    ))}
+                    <th className="text-center py-2 px-2 font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProducers.map(p => {
+                    const maxHoras = Math.max(...materialTypeNames.map(t =>
+                      production.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === t)?.horas_completadas ?? 0
+                    ), 1);
+                    return (
+                      <tr key={p.profile_id} className="border-b last:border-0">
+                        <td className="py-2 px-2 font-medium truncate max-w-[150px]">{p.full_name}</td>
+                        {materialTypeNames.map(typeName => {
+                          const row = production.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === typeName);
+                          const horas = row?.horas_completadas ?? 0;
+                          const intensity = horas > 0 ? Math.min(0.15 + (horas / maxHoras) * 0.6, 0.75) : 0;
+                          return (
+                            <td
+                              key={typeName}
+                              className="text-center py-2 px-2 text-xs"
+                              style={{ backgroundColor: horas > 0 ? `rgba(13,217,208,${intensity})` : undefined }}
+                            >
+                              {horas > 0 ? formatHours(horas) : '-'}
+                            </td>
+                          );
+                        })}
+                        <td className="text-center py-2 px-2 font-semibold">{formatHours(p.horas_completadas)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Producción por colaborador */}
+      {producerBarData.length > 0 && (
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Producción por colaborador</CardTitle>
+            <CardDescription>Horas entregadas, top 10, apiladas por tipo de material</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={producerBarConfig} className="h-[280px] w-full">
+              <BarChart data={producerBarData} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <CartesianGrid horizontal={false} {...GRID_STYLE} />
+                <XAxis type="number" {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
+                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={110} tick={{ fill: axisTick.fill, fontSize: 12 }} />
+                <ChartTooltip content={<CustomTooltip />} />
+                {materialTypeNames.map((name, idx) => (
+                  <Bar
+                    key={name}
+                    dataKey={name}
+                    stackId="a"
+                    fill={RANKING_COLORS[idx % RANKING_COLORS.length]}
+                    radius={idx === materialTypeNames.length - 1 ? [0, BAR_RADIUS, BAR_RADIUS, 0] : [0, 0, 0, 0]}
+                  />
+                ))}
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Materiales sin asignar */}
+      {unassigned.length > 0 && (
+        <Card className={CARD_CLASS}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Materiales sin asignar</CardTitle>
+            <CardDescription>Aún no tienen un responsable asignado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">Tipo</th>
+                    <th className="text-left py-2 px-2 font-medium">Tema</th>
+                    <th className="text-left py-2 px-2 font-medium">Asignatura</th>
+                    <th className="text-left py-2 px-2 font-medium">Proyecto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassigned.slice(0, 50).map((u: UnassignedMaterial) => (
+                    <tr key={u.id} className="border-b last:border-0">
+                      <td className="py-2 px-2">{u.icon} {u.material_type}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{u.tema}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{u.asignatura}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{u.project_name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeMaterials.length === 0 && (production?.rows.length ?? 0) === 0 && (
+        <EmptyState message="No hay materiales registrados" />
+      )}
     </div>
   );
 }
@@ -1930,7 +2113,7 @@ function EficSectionHeader({ tag, title }: { tag: string; title: string }) {
 function BulletBar({ label, value, meta = 85 }: { label: string; value: number | null; meta?: number }) {
   const v = value ?? 0;
   const fillPct = Math.min(v, 100);
-  const color = v >= meta ? '#1A7A4A' : v >= 60 ? '#C05C0A' : '#B91C1C';
+  const color = v >= meta ? CHART_COLORS.green : v >= 60 ? CHART_COLORS.yellow : CHART_COLORS.coral;
   return (
     <div className="mb-3">
       <div className="flex justify-between text-[11px] mb-1">
@@ -1967,7 +2150,7 @@ function PhaseAnatomyBar({ person, phases }: { person: string; phases: TimeByPha
             <div
               key={p.status_name}
               className="flex items-center justify-center overflow-hidden"
-              style={{ width: `${pct}%`, backgroundColor: p.status_color || '#94A3B8' }}
+              style={{ width: `${pct}%`, backgroundColor: p.status_color || axisTick.fill }}
               title={`${p.status_name}: ${p.avg_hours.toFixed(1)}h (${pct.toFixed(0)}%)`}
             >
               {pct > 10 && <span className="text-[8px] font-bold text-white/90 px-1 truncate">{pct.toFixed(0)}%</span>}
@@ -2101,7 +2284,7 @@ function TabEficiencia() {
     const td = timeDistMap.get(id);
     return {
       id,
-      color:         td?.color ?? transColorMap.get(id) ?? '#94a3b8',
+      color:         td?.color ?? transColorMap.get(id) ?? axisTick.fill,
       avg_hours:     td ? (td.stats?.mean ?? 0) : undefined,
       task_count:    td?.count,
       display_order: td?.display_order ?? 99,
@@ -2200,11 +2383,11 @@ function TabEficiencia() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {([
-            { label: 'Proyectos activos', value: activeProjects, ctx: `de ${overview?.projects?.total ?? 0} total`, color: '#1564C0' },
-            { label: 'Tareas totales', value: totalTasks, ctx: 'en el sistema', color: '#7C3ABA' },
-            { label: 'Finalizadas (30d)', value: finalizadas30d, ctx: 'último mes', color: '#1A7A4A' },
-            { label: 'Puntualidad prom.', value: avgPuntualidad != null ? `${avgPuntualidad}%` : '—', ctx: 'entregas a tiempo', color: avgPuntualidad != null && avgPuntualidad >= 85 ? '#1A7A4A' : '#C05C0A' },
-            { label: 'Eficiencia prom.', value: avgEficiencia != null ? `${avgEficiencia}%` : '—', ctx: 'est. vs real', color: avgEficiencia != null && avgEficiencia >= 85 ? '#1A7A4A' : '#C05C0A' },
+            { label: 'Proyectos activos', value: activeProjects, ctx: `de ${overview?.projects?.total ?? 0} total`, color: CHART_COLORS.blue },
+            { label: 'Tareas totales', value: totalTasks, ctx: 'en el sistema', color: CHART_COLORS.magenta },
+            { label: 'Finalizadas (30d)', value: finalizadas30d, ctx: 'último mes', color: CHART_COLORS.green },
+            { label: 'Puntualidad prom.', value: avgPuntualidad != null ? `${avgPuntualidad}%` : '—', ctx: 'entregas a tiempo', color: avgPuntualidad != null && avgPuntualidad >= 85 ? CHART_COLORS.green : CHART_COLORS.yellow },
+            { label: 'Eficiencia prom.', value: avgEficiencia != null ? `${avgEficiencia}%` : '—', ctx: 'est. vs real', color: avgEficiencia != null && avgEficiencia >= 85 ? CHART_COLORS.green : CHART_COLORS.yellow },
           ] as { label: string; value: string | number; ctx: string; color: string }[]).map((k) => (
             <div key={k.label} className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${k.color}` }}>
               <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{k.label}</p>
@@ -2218,22 +2401,22 @@ function TabEficiencia() {
           <Card className={CARD_CLASS}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Composición de tareas por colaborador</CardTitle>
-              <CardDescription className="text-xs">Barras apiladas 100% · verde=completadas · azul=en curso · rojo=vencidas</CardDescription>
+              <CardDescription className="text-xs">Barras apiladas 100% · verde=completadas · teal=en curso · coral=vencidas</CardDescription>
             </CardHeader>
             <CardContent>
               {stackData.length > 0 ? (
                 <ChartContainer
-                  config={{ completadas: { label: 'Completadas', color: '#1A7A4A' }, en_curso: { label: 'En curso', color: '#1564C0' }, vencidas: { label: 'Vencidas', color: '#B91C1C' } }}
+                  config={{ completadas: { label: 'Completadas', color: CHART_COLORS.green }, en_curso: { label: 'En curso', color: CHART_COLORS.teal }, vencidas: { label: 'Vencidas', color: CHART_COLORS.coral } }}
                   className="w-full" style={{ height: Math.max(stackData.length * 38, 100) }}
                 >
                   <BarChart data={stackData} layout="vertical" margin={{ left: 8, right: 8 }}>
                     <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 11 }} />
                     <ChartTooltip content={<CustomTooltip />} />
-                    <Bar dataKey="completadas" stackId="a" fill="#1A7A4A" barSize={16} />
-                    <Bar dataKey="en_curso" stackId="a" fill="#1564C0" barSize={16} />
-                    <Bar dataKey="vencidas" stackId="a" fill="#B91C1C" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={16} />
+                    <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.green} barSize={16} />
+                    <Bar dataKey="en_curso" stackId="a" fill={CHART_COLORS.teal} barSize={16} />
+                    <Bar dataKey="vencidas" stackId="a" fill={CHART_COLORS.coral} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={16} />
                   </BarChart>
                 </ChartContainer>
               ) : <EmptyState message="Sin datos de equipo" />}
@@ -2422,8 +2605,8 @@ function TabEficiencia() {
                 >
                   <BarChart data={phaseChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
                     <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis type="number" tickFormatter={(v) => `${v}h`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <XAxis type="number" tickFormatter={(v) => `${v}h`} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 11 }} />
                     <ChartTooltip content={<CustomTooltip />} />
                     {allStatuses.map((s, i) => (
                       <Bar key={s} dataKey={s} fill={SERIES_COLORS[i % SERIES_COLORS.length]} barSize={10} radius={[0, 3, 3, 0]} />
@@ -2493,9 +2676,9 @@ function TabEficiencia() {
                   {radarPersons.length > 0 ? (
                     <ChartContainer config={radarConfig} className="h-[280px]">
                       <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="62%">
-                        <PolarGrid stroke="#e2e8f0" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} />
-                        <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 8, fill: '#94a3b8' }} />
+                        <PolarGrid stroke={gridColor} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: axisTick.fill }} />
+                        <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 8, fill: axisTick.fill }} />
                         {radarPersons.map((name, i) => (
                           <Radar
                             key={name}
@@ -2530,10 +2713,10 @@ function TabEficiencia() {
                     layout="vertical" margin={{ left: 8, right: 20 }}
                   >
                     <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis type="number" domain={[0, 120]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <XAxis type="number" domain={[0, 120]} tickFormatter={(v) => `${v}%`} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 11 }} />
                     <ChartTooltip content={<CustomTooltip />} />
-                    <ReferenceLine x={85} stroke="#1A7A4A" strokeDasharray="4 2" label={{ value: 'Meta 85%', position: 'insideTopRight', fontSize: 10, fill: '#1A7A4A' }} />
+                    <ReferenceLine x={85} stroke={CHART_COLORS.green} strokeDasharray="4 2" label={{ value: 'Meta 85%', position: 'insideTopRight', fontSize: 10, fill: CHART_COLORS.green }} />
                     <Bar dataKey="eficiencia_pct" fill={CHART_COLORS.indigo} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                     <Bar dataKey="puntualidad_pct" fill={CHART_COLORS.teal} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                   </BarChart>
@@ -2562,7 +2745,7 @@ function TabEficiencia() {
                   className="text-[11px] font-semibold px-4 py-1.5 rounded-full border transition-all"
                   style={activePerson === p.id
                     ? { background: SERIES_COLORS[i % SERIES_COLORS.length], color: '#fff', borderColor: 'transparent' }
-                    : { background: 'white', color: '#64748B', borderColor: '#E2E8F0' }}
+                    : { background: 'hsl(var(--card))', color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))' }}
                 >
                   {p.full_name.split(/\s+/).slice(0, 2).join(' ')}
                 </button>
@@ -2715,343 +2898,55 @@ function TabEficiencia() {
   );
 }
 
-// ---------- CargoPanel (Rendimiento por equipo) ----------
-function CargoPanel({
-  cargo,
-  members,
-  weeklyByCargo,
-  unassignedMaterials,
-}: {
-  cargo: string;
-  members: TeamMemberByCargo[];
-  weeklyByCargo: WeeklyByCargoPoint[];
-  unassignedMaterials: UnassignedMaterial[];
-}) {
-  const cargoMembers = members.filter((m) => m.cargo === cargo);
-  const activeMembers = cargoMembers.filter((m) => m.is_active);
-  const idleMembers = cargoMembers.filter((m) => !m.is_active);
-  const cargoWeekly = weeklyByCargo.filter((w) => w.cargo === cargo);
-
-  const barData = cargoMembers.map((m) => ({
-    nombre: m.full_name,
-    nombreCorto: m.full_name.split(/\s+/).slice(0, 2).join(' '),
-    completed_tasks: m.completed_tasks,
-    active_tasks: m.active_tasks,
-    overdue_tasks: m.overdue_tasks,
-  }));
-
-  const weeklyChartData = cargoWeekly.length > 0
-    ? cargoWeekly.map((w) => ({
-        week: w.week,
-        completed_count: w.completed_count,
-        label: new Date(w.week + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }),
-      }))
-    : [];
-
-  const weekConfig: ChartConfig = {
-    completed_count: { label: 'Completadas', color: CHART_COLORS.teal },
-  };
-
-  const maxBarHeight = Math.max(cargoMembers.length * 34, 100);
-  const PRESENTADORA_MAX_ROWS = 10;
-  const materialsSlice = unassignedMaterials.slice(0, PRESENTADORA_MAX_ROWS);
-  const hasMoreMaterials = unassignedMaterials.length > PRESENTADORA_MAX_ROWS;
-
-  return (
-    <div>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex flex-col">
-          <span className="font-semibold text-sm">{cargo}</span>
-          <span className="text-xs text-muted-foreground">
-            {activeMembers.length} activos · {idleMembers.length} sin carga · {cargoMembers.length} total
-          </span>
-        </div>
-        {activeMembers.some((m) => m.overdue_tasks > 0) && (
-          <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 text-[10px]">
-            ⚠ Tiene vencidas
-          </Badge>
-        )}
-        {activeMembers.length === 0 && (
-          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600 text-[10px]">
-            Sin actividad
-          </Badge>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className={CARD_CLASS}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Utilización del equipo</CardTitle>
-              <CardDescription className="text-xs">
-                Verde = activo · Rojo = tiene vencidas · Gris = sin carga
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-[10px] text-muted-foreground mb-1">
-                {activeMembers.length} activos / {cargoMembers.length} total
-              </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {cargoMembers.map((m) => {
-                  const color =
-                    m.overdue_tasks > 0 ? '#EF4444' : m.is_active ? CHART_COLORS.teal : '#CBD5E1';
-                  return (
-                    <div
-                      key={m.id}
-                      title={`${m.full_name}${m.is_active ? ` · ${m.completed_tasks} completadas` : ' · Sin tareas'}${m.overdue_tasks > 0 ? ` · ${m.overdue_tasks} vencidas` : ''}`}
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-[9px] font-bold text-white cursor-default transition-transform hover:scale-110"
-                      style={{ backgroundColor: color }}
-                    >
-                      {m.is_active ? (m.overdue_tasks > 0 ? '!' : '✓') : ''}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex gap-4 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: CHART_COLORS.teal }} /> Activo
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Con vencidas
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" /> Sin carga
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`lg:col-span-2 ${CARD_CLASS}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Velocidad diaria</CardTitle>
-              <CardDescription className="text-xs">
-                Tareas finalizadas por día (últimos 12 días)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {weeklyChartData.length > 0 ? (
-                <ChartContainer config={weekConfig} className="h-[160px] w-full">
-                  <LineChart data={weeklyChartData} margin={{ left: 10, right: 10 }}>
-                    <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                    <XAxis dataKey="label" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 10 }} interval={0} />
-                    <YAxis {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
-                    <ChartTooltip content={<CustomTooltip />} />
-                    <Line type="monotone" dataKey="completed_count" stroke={CHART_COLORS.teal} strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
-                </ChartContainer>
-              ) : (
-                <EmptyState message="Sin actividad registrada en los últimos 12 días" />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Productividad individual</CardTitle>
-            <CardDescription className="text-xs">
-              Tareas completadas y en curso por colaborador
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {cargoMembers.length === 0 ? (
-              <EmptyState message="Este equipo aún no tiene tareas asignadas en el sistema" />
-            ) : barData.every((b) => b.completed_tasks === 0 && b.active_tasks === 0) ? (
-              <EmptyState message="Este equipo aún no tiene tareas asignadas en el sistema" />
-            ) : (
-              <ChartContainer config={{ completed_tasks: { label: 'Completadas', color: CHART_COLORS.teal }, active_tasks: { label: 'En curso', color: CHART_COLORS.indigo } }} className="w-full" style={{ height: maxBarHeight }}>
-                <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                  <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                  <XAxis type="number" {...AXIS_STYLE} tick={{ fill: '#64748B', fontSize: 12 }} />
-                  <YAxis type="category" dataKey="nombreCorto" width={130} tick={{ fill: '#64748B', fontSize: 12 }} />
-                  <ChartTooltip content={<CustomTooltip />} />
-                  <Bar dataKey="completed_tasks" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} name="Completadas">
-                    {barData.map((_, index) => (
-                      <Cell key={index} fill={barData[index].overdue_tasks > 0 ? '#EF4444' : CHART_COLORS.teal} />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="active_tasks" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={14} name="En curso" />
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {cargoMembers.length <= 10 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cargoMembers.map((m) => {
-              const badge =
-                m.overdue_tasks > 0
-                  ? { label: 'RIESGO', cls: 'border-red-200 bg-red-50 text-red-700' }
-                  : !m.is_active
-                    ? { label: 'SIN CARGA', cls: 'border-slate-200 bg-slate-50 text-slate-600' }
-                    : { label: 'OK', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700' };
-              return (
-                <Card key={m.id} className={CARD_CLASS}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={m.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-xs">{m.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{m.full_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{m.cargo}</p>
-                      </div>
-                      <Badge variant="outline" className={`text-[10px] flex-shrink-0 ${badge.cls}`}>
-                        {badge.label}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
-                      <span>Total</span><span>{m.total_tasks}</span>
-                      <span>Completadas</span><span>{m.completed_tasks}</span>
-                      <span>Vencidas</span><span>{m.overdue_tasks}</span>
-                      <span>Ajustes</span><span>{m.ajustes_count}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {cargo === 'Presentadora' && (
-          <Card className={CARD_CLASS}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Materiales sin asignar</CardTitle>
-              <CardDescription className="text-xs">
-                Materiales que no tienen ningún colaborador asignado
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {unassignedMaterials.length === 0 ? (
-                <p className="text-sm text-emerald-700 flex items-center gap-2">
-                  <span>✓</span> Todos los materiales tienen colaboradores asignados.
-                </p>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b text-muted-foreground">
-                          <th className="text-left py-2 pr-2">Icon</th>
-                          <th className="text-left py-2 pr-2">Material</th>
-                          <th className="text-left py-2 pr-2">Asignatura</th>
-                          <th className="text-left py-2 pr-2">Proyecto</th>
-                          <th className="text-right py-2">Cant.</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {materialsSlice.map((row) => (
-                          <tr key={row.id} className="border-b hover:bg-muted/30">
-                            <td className="py-2 pr-2">{row.icon || '—'}</td>
-                            <td className="py-2 pr-2">{row.material_type}</td>
-                            <td className="py-2 pr-2">{row.asignatura}</td>
-                            <td className="py-2 pr-2">{row.project_name}</td>
-                            <td className="py-2 text-right">{row.cantidad}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {hasMoreMaterials && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Ver más ({unassignedMaterials.length - PRESENTADORA_MAX_ROWS} más)
-                    </p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ---------- Tab: Rendimiento individual ----------
 function IndividualPerformanceTab() {
-  const { data: projects = [] } = useProjects();
-
   const [selectedProject, setSelectedProject] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<string>('month');
+  const [rangeKey, setRangeKey] = useState<ReportRangeKey>('30d');
 
-  const getDateRange = () => {
-    const now = new Date();
-    if (dateRange === 'week') {
-      const from = new Date(now);
-      from.setDate(now.getDate() - 7);
-      return { date_from: from.toISOString().split('T')[0], date_to: now.toISOString().split('T')[0] };
-    }
-    if (dateRange === 'month') {
-      const from = new Date(now);
-      from.setMonth(now.getMonth() - 1);
-      return { date_from: from.toISOString().split('T')[0], date_to: now.toISOString().split('T')[0] };
-    }
-    if (dateRange === 'quarter') {
-      const from = new Date(now);
-      from.setMonth(now.getMonth() - 3);
-      return { date_from: from.toISOString().split('T')[0], date_to: now.toISOString().split('T')[0] };
-    }
-    return {};
-  };
-
-  const filters = {
+  const filters: ReportScopeFilters = {
     ...(selectedProject !== 'all' ? { project_id: selectedProject } : {}),
-    ...getDateRange(),
+    ...resolveRange(rangeKey),
   };
 
-  const { data: members = [], isLoading } = useReportIndividualPerformance(filters);
+  const { data: personMetrics, isLoading } = useReportPersonMetrics(filters);
+  const { data: capacity } = useReportCapacityForecast({ ...filters, weeks: 4 });
 
-  const activeMembers = members.filter((m) => m.total_tareas > 0);
-  const inactiveMembers = members.filter((m) => m.total_tareas === 0);
+  const members: PersonMetric[] = personMetrics?.people ?? [];
+  const activeMembers = [...members.filter((m) => m.unidades_asignadas > 0)]
+    .sort((a, b) => b.horas_completadas - a.horas_completadas);
+  const inactiveMembers = members.filter((m) => m.unidades_asignadas === 0);
+  const capacityById = new Map((capacity?.members ?? []).map(m => [m.id, m]));
 
-  const totalCompleted = members.reduce((s, m) => s + m.tareas_completadas, 0);
-  const withEficiencia = members.filter((m) => m.eficiencia_pct !== null);
-  const avgEficiencia =
-    withEficiencia.length > 0
-      ? Math.round(
-          withEficiencia.reduce((s, m) => s + (m.eficiencia_pct ?? 0), 0) / withEficiencia.length
-        )
-      : null;
-  const enRiesgo = members.filter((m) => m.eficiencia_pct !== null && m.eficiencia_pct < 70).length;
-
-  const eficienciaColor = (pct: number | null) => {
-    if (pct === null) return 'text-muted-foreground';
-    if (pct >= 90) return 'text-emerald-600';
-    if (pct >= 70) return 'text-amber-500';
-    return 'text-red-500';
-  };
-  const eficienciaBadge = (pct: number | null) => {
-    if (pct === null) return '—';
-    if (pct >= 90) return '🟢';
-    if (pct >= 70) return '🟡';
-    return '🔴';
-  };
+  const totalCompleted = members.reduce((s, m) => s + m.unidades_completadas, 0);
+  const overall = personMetrics?.overall;
+  // Baja puntualidad requiere una muestra mínima — una sola entrega tardía de una
+  // no debería marcar a alguien en rojo.
+  const enRiesgo = members.filter((m) => m.puntualidad_pct !== null && m.puntualidad_pct < 80 && m.entregas_evaluables >= 3).length;
 
   const completedChartData = activeMembers.slice(0, 10).map((m) => ({
     name: m.full_name.split(' ')[0],
-    completadas: m.tareas_completadas,
-    pendientes: m.tareas_pendientes,
+    unidades: m.unidades_completadas,
+    horas: m.horas_completadas,
   }));
 
   const horasChartData = activeMembers
-    .filter((m) => m.horas_estimadas_total > 0 || m.horas_reales_total > 0)
+    .filter((m) => m.horas_completadas > 0 || m.eficiencia_horas_pct != null)
     .slice(0, 10)
     .map((m) => ({
       name: m.full_name.split(' ')[0],
-      estimadas: m.horas_estimadas_total,
-      reales: m.horas_reales_total,
+      estimadas: m.horas_completadas,
+      efectivas: m.eficiencia_horas_pct != null && m.eficiencia_horas_pct > 0
+        ? Math.round((m.horas_completadas / (m.eficiencia_horas_pct / 100)) * 100) / 100
+        : 0,
     }));
 
   const chartConfigTasks: ChartConfig = {
-    completadas: { label: 'Completadas', color: SERIES_COLORS[0] },
-    pendientes: { label: 'Pendientes', color: SERIES_COLORS[3] },
+    unidades: { label: 'Unidades completadas', color: SERIES_COLORS[0] },
   };
 
   const chartConfigHoras: ChartConfig = {
     estimadas: { label: 'H. Estimadas', color: SERIES_COLORS[1] },
-    reales: { label: 'H. Reales', color: SERIES_COLORS[2] },
+    efectivas: { label: 'H. Efectivas (aprox.)', color: SERIES_COLORS[2] },
   };
 
   if (isLoading) {
@@ -3062,96 +2957,58 @@ function IndividualPerformanceTab() {
     );
   }
 
+  const rendimientoTone = overall?.puntualidad_pct == null ? 'info' : overall.puntualidad_pct >= 90 ? 'good' : overall.puntualidad_pct >= 80 ? 'warning' : 'critical';
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3 items-center">
-        <Select value={selectedProject} onValueChange={setSelectedProject}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Todos los proyectos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los proyectos</SelectItem>
-            {projects.map((p: ProjectWithDetails) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <HeroBanner
+        eyebrow="Rendimiento individual"
+        story={
+          <>
+            <b className="text-white">{activeMembers.length} colaboradores activos</b> entregaron{' '}
+            <b className="text-white">{totalCompleted} unidades</b> en el período, con{' '}
+            <b className="text-white">{overall?.puntualidad_pct != null ? `${overall.puntualidad_pct}% de puntualidad` : 'puntualidad sin datos suficientes'}</b>.{' '}
+            {enRiesgo > 0
+              ? <><b className="text-white">{enRiesgo} {enRiesgo === 1 ? 'persona' : 'personas'}</b> {enRiesgo === 1 ? 'tiene' : 'tienen'} baja puntualidad sostenida.</>
+              : 'Nadie muestra baja puntualidad sostenida.'}
+          </>
+        }
+        stats={[
+          { value: totalCompleted, label: 'Unidades completadas' },
+          { value: overall?.puntualidad_pct != null ? `${overall.puntualidad_pct}%` : '—', label: 'Puntualidad global' },
+          { value: enRiesgo, label: 'En riesgo' },
+        ]}
+      />
 
-        <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="week">Esta semana</SelectItem>
-            <SelectItem value="month">Este mes</SelectItem>
-            <SelectItem value="quarter">Último trimestre</SelectItem>
-            <SelectItem value="all">Todo el tiempo</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ReportScopeFilterBar
+        projectId={selectedProject}
+        onProjectChange={setSelectedProject}
+        rangeKey={rangeKey}
+        onRangeChange={setRangeKey}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className={CARD_CLASS}>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{totalCompleted}</p>
-                <p className="text-xs text-muted-foreground">Tareas completadas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={CARD_CLASS}>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{avgEficiencia !== null ? `${avgEficiencia}%` : '—'}</p>
-                <p className="text-xs text-muted-foreground">Eficiencia promedio</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={CARD_CLASS}>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeMembers.length}</p>
-                <p className="text-xs text-muted-foreground">Colaboradores activos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={CARD_CLASS}>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <Target className="h-5 w-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{enRiesgo}</p>
-                <p className="text-xs text-muted-foreground">En riesgo (&lt;70%)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <StatTile label="Unidades completadas" value={totalCompleted} />
+        <StatTile
+          label="Puntualidad global"
+          value={overall?.puntualidad_pct != null ? `${overall.puntualidad_pct}%` : '—'}
+          sub={overall ? `${overall.entregas_a_tiempo}/${overall.entregas_evaluables} a tiempo` : undefined}
+          pill={{ tone: rendimientoTone, label: rendimientoTone === 'good' ? 'Sólido' : rendimientoTone === 'warning' ? 'Atención' : rendimientoTone === 'critical' ? 'Riesgo' : 'Sin datos' }}
+        />
+        <StatTile label="Colaboradores activos" value={activeMembers.length} />
+        <StatTile
+          label="En riesgo"
+          value={enRiesgo}
+          sub="Puntualidad <80%, min. 3 entregas"
+          pill={enRiesgo > 0 ? { tone: 'critical', label: 'Revisar' } : { tone: 'good', label: 'OK' }}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className={CARD_CLASS}>
           <CardHeader>
-            <CardTitle className="text-base">Tareas por colaborador</CardTitle>
-            <CardDescription>Completadas vs pendientes</CardDescription>
+            <CardTitle className="text-base">Unidades de trabajo por colaborador</CardTitle>
+            <CardDescription>Completadas en el período</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfigTasks} className="h-[240px] w-full">
@@ -3160,13 +3017,7 @@ function IndividualPerformanceTab() {
                 <XAxis dataKey="name" {...AXIS_STYLE} />
                 <YAxis {...AXIS_STYLE} />
                 <ChartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="completadas" stackId="a" fill={SERIES_COLORS[0]} radius={[0, 0, 0, 0]} />
-                <Bar
-                  dataKey="pendientes"
-                  stackId="a"
-                  fill={SERIES_COLORS[3]}
-                  radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]}
-                />
+                <Bar dataKey="unidades" fill={SERIES_COLORS[0]} radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -3174,8 +3025,8 @@ function IndividualPerformanceTab() {
 
         <Card className={CARD_CLASS}>
           <CardHeader>
-            <CardTitle className="text-base">Horas estimadas vs reales</CardTitle>
-            <CardDescription>Comparativo por persona</CardDescription>
+            <CardTitle className="text-base">Horas estimadas vs. tiempo efectivo</CardTitle>
+            <CardDescription>Aproximado — solo tareas con un único responsable</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfigHoras} className="h-[240px] w-full">
@@ -3185,7 +3036,7 @@ function IndividualPerformanceTab() {
                 <YAxis {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
                 <ChartTooltip content={<CustomTooltip />} />
                 <Bar dataKey="estimadas" fill={SERIES_COLORS[1]} radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]} />
-                <Bar dataKey="reales" fill={SERIES_COLORS[2]} radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]} />
+                <Bar dataKey="efectivas" fill={SERIES_COLORS[2]} radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -3195,7 +3046,7 @@ function IndividualPerformanceTab() {
       <Card className={CARD_CLASS}>
         <CardHeader>
           <CardTitle className="text-base">Ranking de colaboradores</CardTitle>
-          <CardDescription>Ordenado por tareas completadas</CardDescription>
+          <CardDescription>Puntualidad primero (métrica principal) · ordenado por horas entregadas</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {activeMembers.length === 0 ? (
@@ -3211,52 +3062,54 @@ function IndividualPerformanceTab() {
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">#</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Colaborador</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cargo</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Tareas</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Asignaturas</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">H. Estim.</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">H. Reales</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Eficiencia</th>
                     <th className="text-center px-4 py-3 font-medium text-muted-foreground">Puntualidad</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Sem. actual</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Próx. semanas</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Unidades</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Horas entregadas</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Est./Efectivo</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">Sin est.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeMembers.map((m, idx) => (
-                    <tr key={m.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3 text-muted-foreground font-mono">{idx + 1}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-7 w-7">
-                            <AvatarImage src={m.avatar_url ?? undefined} />
-                            <AvatarFallback className="text-xs">
-                              {m.full_name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .slice(0, 2)
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{m.full_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{m.cargo ?? '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-semibold text-primary">{m.tareas_completadas}</span>
-                        <span className="text-muted-foreground text-xs"> /{m.total_tareas}</span>
-                      </td>
-                      <td className="px-4 py-3 text-center">{m.asignaturas_cubiertas}</td>
-                      <td className="px-4 py-3 text-center">{m.horas_estimadas_total}h</td>
-                      <td className="px-4 py-3 text-center">{m.horas_reales_total}h</td>
-                      <td
-                        className={`px-4 py-3 text-center font-semibold ${eficienciaColor(m.eficiencia_pct)}`}
-                      >
-                        {eficienciaBadge(m.eficiencia_pct)}{' '}
-                        {m.eficiencia_pct !== null ? `${m.eficiencia_pct}%` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">
-                        {m.puntualidad_pct !== null ? `${m.puntualidad_pct}%` : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {activeMembers.map((m, idx) => {
+                    const cap = capacityById.get(m.id);
+                    return (
+                      <tr key={m.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground font-mono">{idx + 1}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage src={m.avatar_url ?? undefined} />
+                              <AvatarFallback className="text-xs">
+                                {m.full_name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{m.full_name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.cargo ?? '—'}</td>
+                        <td className={`px-4 py-3 text-center font-semibold ${punctualityBandColor(m.puntualidad_pct)}`}>
+                          {m.puntualidad_pct !== null ? `${m.puntualidad_pct}%` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs">
+                          {cap ? `${cap.current.utilizacion_pct}%` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {cap ? <CapacityWeekStrip weeks={cap.weeks} /> : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-semibold text-primary">{m.unidades_completadas}</span>
+                          <span className="text-muted-foreground text-xs"> /{m.unidades_asignadas}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">{formatHours(m.horas_completadas)}</td>
+                        <td className={`px-4 py-3 text-center ${efficiencyBandColor(m.eficiencia_horas_pct)}`}>
+                          {m.eficiencia_horas_pct != null ? `${m.eficiencia_horas_pct}%` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-muted-foreground">{m.unidades_sin_estimacion}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

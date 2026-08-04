@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { Epic, useCreateEpic, useUpdateEpic } from '@/hooks/useEpics';
+import { useEquipos } from '@/hooks/useEquipos';
 
 interface CreateEpicDialogProps {
   projectId: string;
@@ -31,9 +32,12 @@ const STATUS_OPTIONS: Array<{ value: Epic['status']; label: string }> = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
+const NO_EQUIPO = 'none';
+
 export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: CreateEpicDialogProps) {
   const createEpic = useCreateEpic(projectId);
   const updateEpic = useUpdateEpic(projectId);
+  const { data: equipos = [] } = useEquipos();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -41,6 +45,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
   const [status, setStatus] = useState<Epic['status']>('open');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [equipoId, setEquipoId] = useState<string>(NO_EQUIPO);
 
   const toDateInput = (val: string | null | undefined) => {
     if (!val) return '';
@@ -56,6 +61,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
       setStatus(epic.status);
       setStartDate(toDateInput(epic.start_date));
       setEndDate(toDateInput(epic.end_date));
+      setEquipoId(epic.equipo_id ?? NO_EQUIPO);
       return;
     }
 
@@ -65,6 +71,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
     setStatus('open');
     setStartDate('');
     setEndDate('');
+    setEquipoId(NO_EQUIPO);
   }, [open, epic]);
 
   const isPending = createEpic.isPending || updateEpic.isPending;
@@ -80,6 +87,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
       status,
       start_date: startDate || undefined,
       end_date: endDate || undefined,
+      equipo_id: equipoId === NO_EQUIPO ? null : equipoId,
     };
 
     if (epic) {
@@ -180,7 +188,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="epic-end-date">Fecha fin</Label>
                 <Input
                   id="epic-end-date"
@@ -188,6 +196,23 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Equipo</Label>
+                <Select value={equipoId} onValueChange={setEquipoId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_EQUIPO}>Sin equipo</SelectItem>
+                    {equipos.map((equipo) => (
+                      <SelectItem key={equipo.id} value={equipo.id}>
+                        {equipo.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

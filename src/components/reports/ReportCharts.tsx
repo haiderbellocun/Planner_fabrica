@@ -3,42 +3,45 @@ import { chartColors, gridColor, axisTick, CHART_GRID_STYLE, CHART_AXIS_STYLE, B
 
 export { BAR_RADIUS };
 
-// Align with chartTheme — teal primary, no heavy gray
+// Align with chartTheme — teal + coral brand pair, fixed categorical order
 export const CHART_COLORS = {
-  indigo: chartColors.blue,
-  indigoLight: '#6366F1',
-  yellow: chartColors.yellow,
-  yellowLight: '#FCD34D',
   teal: chartColors.teal,
-  tealDark: '#0BBFB7',
+  tealDark: chartColors.tealDeep,
+  coral: chartColors.coral,
+  indigo: chartColors.blue,
+  indigoLight: chartColors.indigoLight,
+  yellow: chartColors.yellow,
+  yellowLight: '#F0BE5C',
+  green: chartColors.green,
+  magenta: chartColors.magenta,
   muted: chartColors.soft,
   mutedLight: chartColors.muted,
   bgPrimary: '#EAF6F8',
   bgCard: '#FFFFFF',
-  bgBorder: '#E2E8F0',
+  bgBorder: '#E2ECEB',
   grid: gridColor,
 } as const;
 
-// Ordered palette for series (donut/polar sequence — max 3 visible)
+// Fixed categorical order — teal first (brand), never re-cycled per filter
 export const SERIES_COLORS = [
+  CHART_COLORS.teal,
+  CHART_COLORS.coral,
   CHART_COLORS.indigo,
   CHART_COLORS.yellow,
-  CHART_COLORS.teal,
+  CHART_COLORS.magenta,
+  CHART_COLORS.green,
   CHART_COLORS.indigoLight,
   CHART_COLORS.yellowLight,
-  CHART_COLORS.tealDark,
-  CHART_COLORS.muted,
-  CHART_COLORS.mutedLight,
 ];
 
-// Status name → color mapping
+// Status name → color mapping (matches --status-* tokens in index.css)
 export const STATUS_COLORS: Record<string, string> = {
-  'Sin iniciar': CHART_COLORS.muted,
-  'En proceso': '#570d49',
+  'Sin iniciar': axisTick.fill,
+  'En proceso': CHART_COLORS.teal,
   'En pausa': CHART_COLORS.indigoLight,
   'En revisión': CHART_COLORS.yellow,
-  'Ajustes': CHART_COLORS.yellowLight,
-  'Finalizado': CHART_COLORS.teal,
+  'Ajustes': CHART_COLORS.coral,
+  'Finalizado': CHART_COLORS.green,
 };
 
 // Build a ChartConfig from status data

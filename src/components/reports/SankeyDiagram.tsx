@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { chartColors, axisTick } from '@/components/charts/chartTheme';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const NODE_W  = 100;
@@ -12,12 +13,12 @@ const V_GAP   = 36;
 
 // ── State colors (solid) ──────────────────────────────────────────────────────
 const NODE_COLORS: Record<string, string> = {
-  'Sin iniciar': '#9B9997',
-  'En proceso':  '#1564C0',
-  'En revisión': '#C05C0A',
-  'En pausa':    '#6B7280',
-  'Ajustes':     '#7C3ABA',
-  'Finalizado':  '#1A7A4A',
+  'Sin iniciar': axisTick.fill,
+  'En proceso':  chartColors.teal,
+  'En revisión': chartColors.yellow,
+  'En pausa':    chartColors.indigoLight,
+  'Ajustes':     chartColors.coral,
+  'Finalizado':  chartColors.green,
 };
 
 // ── Fixed column order (left → right) ─────────────────────────────────────────
@@ -106,7 +107,7 @@ function buildLayout(
         id,
         x,
         y:          startY + rowIdx * (NODE_H + V_GAP),
-        color:      n.color ?? NODE_COLORS[id] ?? '#94a3b8',
+        color:      n.color ?? NODE_COLORS[id] ?? axisTick.fill,
         avg_hours:  n.avg_hours,
         task_count: n.task_count,
       };
@@ -401,8 +402,8 @@ export default function SankeyDiagram({ nodes, links }: SankeyDiagramProps) {
                 position:    'absolute',
                 left:        tooltip.cx + 14,
                 top:         tooltip.cy - 32,
-                background:  'white',
-                border:      '1px solid #e2e8f0',
+                background:  'hsl(var(--card))',
+                border:      '1px solid hsl(var(--border))',
                 borderRadius: 8,
                 padding:     '7px 12px',
                 fontSize:    11,
@@ -412,11 +413,11 @@ export default function SankeyDiagram({ nodes, links }: SankeyDiagramProps) {
                 whiteSpace:  'nowrap',
               }}
             >
-              <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>
+              <div style={{ fontWeight: 700, color: 'hsl(var(--foreground))', marginBottom: 2 }}>
                 {tooltip.source} → {tooltip.target}
               </div>
-              <div style={{ color: '#64748b' }}>
-                <strong style={{ color: '#1e293b' }}>{tooltip.value}</strong> tareas en esta transición
+              <div style={{ color: 'hsl(var(--muted-foreground))' }}>
+                <strong style={{ color: 'hsl(var(--foreground))' }}>{tooltip.value}</strong> tareas en esta transición
               </div>
             </div>
           )}

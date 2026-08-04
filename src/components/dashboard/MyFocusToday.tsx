@@ -6,7 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, AlertCircle, Calendar, AlertTriangle, ListTodo, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
+import { StatTile } from '@/components/shared/StoryUI';
+import { Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { format, endOfWeek, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -107,15 +108,11 @@ export function MyFocusToday() {
   ].slice(0, 5);
 
   const hasOverdue = vencidas.length > 0;
-  const cardBase =
-    'rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-4 transition-all duration-200';
-  const cardRed =
-    'rounded-2xl border border-red-200 bg-red-50/50 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-4 transition-all duration-200';
 
   if (isLoading && focusTab === 'mine') {
     return (
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-[#0F172A]">👋 Tu foco hoy</h2>
+        <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
         {showTeamTab && (
           <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
             <button
@@ -123,7 +120,7 @@ export function MyFocusToday() {
               onClick={() => setFocusTab('mine')}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'mine' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+                focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Mi foco
@@ -133,7 +130,7 @@ export function MyFocusToday() {
               onClick={() => setFocusTab('team')}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'team' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+                focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Foco del equipo
@@ -152,7 +149,7 @@ export function MyFocusToday() {
   if (isError && focusTab === 'mine') {
     return (
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-[#0F172A]">👋 Tu foco hoy</h2>
+        <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
         {showTeamTab && (
           <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
             <button
@@ -160,7 +157,7 @@ export function MyFocusToday() {
               onClick={() => setFocusTab('mine')}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'mine' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+                focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Mi foco
@@ -170,7 +167,7 @@ export function MyFocusToday() {
               onClick={() => setFocusTab('team')}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'team' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+                focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               Foco del equipo
@@ -260,14 +257,14 @@ export function MyFocusToday() {
 
     return (
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-[#0F172A]">👋 Tu foco hoy</h2>
+        <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
         <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
           <button
             type="button"
             onClick={() => setFocusTab('mine')}
             className={cn(
               'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'mine' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+              focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Mi foco
@@ -277,7 +274,7 @@ export function MyFocusToday() {
             onClick={() => setFocusTab('team')}
             className={cn(
               'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'team' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+              focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Foco del equipo
@@ -285,22 +282,22 @@ export function MyFocusToday() {
         </div>
         {teamLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-[#0DD9D0]" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : teamError ? (
-          <p className="text-sm text-[#64748B]">No se pudo cargar el foco del equipo.</p>
+          <p className="text-sm text-muted-foreground">No se pudo cargar el foco del equipo.</p>
         ) : teamList.length === 0 ? (
-          <p className="text-sm text-[#64748B]">Sin tareas del equipo por vencer.</p>
+          <p className="text-sm text-muted-foreground">Sin tareas del equipo por vencer.</p>
         ) : (
           <>
             {showTeamTab && (
               <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <CardContent className="p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium mb-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">
                     CARGA POR PERSONA
                   </p>
                   {ranking.length === 0 ? (
-                    <p className="text-sm text-[#64748B]">Sin tareas del equipo por vencer.</p>
+                    <p className="text-sm text-muted-foreground">Sin tareas del equipo por vencer.</p>
                   ) : (
                     <>
                       <ul className="space-y-3">
@@ -318,16 +315,16 @@ export function MyFocusToday() {
                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
                                     {isExpanded
-                                      ? <ChevronDown className="h-3.5 w-3.5 text-[#64748B] shrink-0" />
-                                      : <ChevronRight className="h-3.5 w-3.5 text-[#64748B] shrink-0" />
+                                      ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                      : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                     }
                                     <div className="min-w-0">
-                                      <p className="font-semibold text-sm text-[#0F172A] truncate">{person.name}</p>
+                                      <p className="font-semibold text-sm text-foreground truncate">{person.name}</p>
                                       {person.cargo && (
-                                        <p className="text-[12px] text-[#64748B] truncate">{person.cargo}</p>
+                                        <p className="text-[12px] text-muted-foreground truncate">{person.cargo}</p>
                                       )}
                                       {person.projects.length > 0 && (
-                                        <p className="text-[11px] text-[#94A3B8] truncate">
+                                        <p className="text-[11px] text-muted-foreground/70 truncate">
                                           {person.projects.length === 1
                                             ? person.projects[0]
                                             : `${person.projects[0]} +${person.projects.length - 1} proyectos`}
@@ -339,23 +336,23 @@ export function MyFocusToday() {
                                     <span className={cn('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium', risk.className)}>
                                       {risk.label}
                                     </span>
-                                    <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border', person.overdue > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-black/5 text-[#64748B] border-black/10')}>
+                                    <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border', person.overdue > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-black/5 text-muted-foreground border-black/10')}>
                                       Vencidas {person.overdue}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Hoy {person.dueToday}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Semana {person.dueThisWeek}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-[#64748B] border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Pend. {person.pending}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="h-2 w-full rounded-xl border border-black/5 bg-black/5 overflow-hidden">
                                   <div
-                                    className={cn('h-full rounded-xl transition-all', person.overdue > 0 ? 'bg-red-500/40' : 'bg-[#0DD9D0]/60')}
+                                    className={cn('h-full rounded-xl transition-all', person.overdue > 0 ? 'bg-red-500/40' : 'bg-primary/60')}
                                     style={{ width: `${barWidth}%` }}
                                   />
                                 </div>
@@ -377,14 +374,14 @@ export function MyFocusToday() {
                                           <button
                                             type="button"
                                             onClick={() => openTask(task.id, task.project?.key ?? '')}
-                                            className="w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-[#0DD9D0]/10 transition-colors group"
+                                            className="w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-primary/10 transition-colors group"
                                           >
-                                            <span className="flex-1 text-sm text-[#0F172A] truncate group-hover:text-[#0BBFB7]">{task.title}</span>
-                                            <span className="text-[11px] text-[#94A3B8] shrink-0">
+                                            <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary-deep">{task.title}</span>
+                                            <span className="text-[11px] text-muted-foreground/70 shrink-0">
                                               {task.project?.key ?? ''}
                                             </span>
                                             {due && (
-                                              <span className={cn('text-[11px] shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-[#64748B]')}>
+                                              <span className={cn('text-[11px] shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground')}>
                                                 {format(due, 'd MMM', { locale: es })}
                                               </span>
                                             )}
@@ -408,7 +405,7 @@ export function MyFocusToday() {
                         <button
                           type="button"
                           onClick={() => setShowAllRanking((v) => !v)}
-                          className="mt-2 text-xs font-medium text-[#0DD9D0] hover:underline"
+                          className="mt-2 text-xs font-medium text-primary hover:underline"
                         >
                           {showAllRanking ? 'Ver menos' : 'Ver todas'}
                         </button>
@@ -421,7 +418,7 @@ export function MyFocusToday() {
 
             <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <CardContent className="p-4">
-                <p className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium mb-3">Foco del equipo</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">Foco del equipo</p>
                 <ul className="space-y-2">
                   {teamList.slice(0, 5).map((task: LeadersFocusTask) => {
                     const parsed = parseDue(task.due_date);
@@ -432,14 +429,14 @@ export function MyFocusToday() {
                         <button
                           type="button"
                           onClick={() => openTask(task.id, task.project?.key ?? '')}
-                          className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors group"
+                          className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-primary/5 transition-colors group"
                         >
-                          <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate group-hover:text-[#0BBFB7]">{task.title}</span>
-                          <span className="text-xs text-[#64748B]">
+                          <span className="font-medium text-sm text-foreground flex-1 min-w-0 truncate group-hover:text-primary-deep">{task.title}</span>
+                          <span className="text-xs text-muted-foreground">
                             {task.assignee?.full_name ?? task.assignee?.email ?? '—'}
                             {task.assignee?.cargo ? ` · ${task.assignee.cargo}` : ''}
                           </span>
-                          <span className="text-xs text-[#64748B]">{task.project?.name ?? task.project?.key ?? '—'}</span>
+                          <span className="text-xs text-muted-foreground">{task.project?.name ?? task.project?.key ?? '—'}</span>
                           <span className={cn('text-xs', isOverdue && 'text-red-600 font-medium')}>{dueFormatted}</span>
                           <Badge
                             variant="secondary"
@@ -473,7 +470,7 @@ export function MyFocusToday() {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold text-[#0F172A]">👋 Tu foco hoy</h2>
+      <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
       {showTeamTab && (
         <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
           <button
@@ -481,7 +478,7 @@ export function MyFocusToday() {
             onClick={() => setFocusTab('mine')}
             className={cn(
               'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'mine' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+              focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Mi foco
@@ -491,7 +488,7 @@ export function MyFocusToday() {
             onClick={() => setFocusTab('team')}
             className={cn(
               'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'team' ? 'bg-white shadow text-[#0F172A]' : 'text-[#64748B] hover:text-[#0F172A]'
+              focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Foco del equipo
@@ -499,63 +496,22 @@ export function MyFocusToday() {
         </div>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className={cardBase}>
-          <CardContent className="p-4 flex flex-row items-start justify-between">
-            <div>
-              <div className="text-2xl font-semibold text-[#0F172A]">{vencenHoy.length}</div>
-              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencen hoy</p>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Calendar className="h-5 w-5 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={hasOverdue ? cardRed : cardBase}>
-          <CardContent className="p-4 flex flex-row items-start justify-between">
-            <div>
-              <div className={`text-2xl font-semibold ${hasOverdue ? 'text-red-600' : 'text-[#0F172A]'}`}>
-                {vencidas.length}
-              </div>
-              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Vencidas</p>
-            </div>
-            <div className={cn(
-              'h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
-              hasOverdue ? 'bg-red-100' : 'bg-primary/10'
-            )}>
-              <AlertTriangle className={cn('h-5 w-5', hasOverdue ? 'text-red-600' : 'text-primary')} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardBase}>
-          <CardContent className="p-4 flex flex-row items-start justify-between">
-            <div>
-              <div className="text-2xl font-semibold text-[#0F172A]">{enCurso.length}</div>
-              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">En curso</p>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <ListTodo className="h-5 w-5 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardBase}>
-          <CardContent className="p-4 flex flex-row items-start justify-between">
-            <div>
-              <div className="text-2xl font-semibold text-[#0F172A]">{estaSemana.length}</div>
-              <p className="text-[11px] uppercase tracking-wide text-[#64748B] mt-0.5">Esta semana</p>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <CalendarDays className="h-5 w-5 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile label="Vencen hoy" value={vencenHoy.length} />
+        <StatTile
+          label="Vencidas"
+          value={vencidas.length}
+          pill={hasOverdue ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
+        />
+        <StatTile label="En curso" value={enCurso.length} />
+        <StatTile label="Esta semana" value={estaSemana.length} />
       </div>
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-[#64748B]">No tienes tareas asignadas.</p>
+        <p className="text-sm text-muted-foreground">No tienes tareas asignadas.</p>
       ) : priorityList.length > 0 ? (
         <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
           <CardContent className="p-4">
-            <p className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium mb-3">Tareas prioritarias</p>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">Tareas prioritarias</p>
             <ul className="space-y-2">
               {priorityList.map((task) => {
                 const parsed = parseDue(task.due_date ?? null);
@@ -566,11 +522,11 @@ export function MyFocusToday() {
                     <button
                       type="button"
                       onClick={() => openTask(task.id, task.project?.key ?? '')}
-                      className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-[#0DD9D0]/5 transition-colors group"
+                      className="w-full text-left flex flex-wrap items-center gap-2 py-2 px-3 rounded-lg hover:bg-primary/5 transition-colors group"
                     >
-                      <span className="font-medium text-sm text-[#0F172A] flex-1 min-w-0 truncate group-hover:text-[#0BBFB7]">{task.title}</span>
-                      <span className="text-xs text-[#64748B]">{task.project?.name ?? task.project?.key ?? '—'}</span>
-                      <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-[#64748B]'}`}>
+                      <span className="font-medium text-sm text-foreground flex-1 min-w-0 truncate group-hover:text-primary-deep">{task.title}</span>
+                      <span className="text-xs text-muted-foreground">{task.project?.name ?? task.project?.key ?? '—'}</span>
+                      <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
                         {dueFormatted}
                       </span>
                       <Badge

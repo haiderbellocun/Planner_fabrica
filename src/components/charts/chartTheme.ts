@@ -3,17 +3,23 @@
  * Use for Recharts: CartesianGrid, XAxis, YAxis, Bar radius, tooltips.
  */
 export const chartColors = {
-  teal: '#18C7C1',
+  teal: '#0DD9D0',
+  tealDeep: '#067A76',
+  coral: '#FF6B4A',
   blue: '#4F46E5',
-  yellow: '#FBBF24',
+  indigoLight: '#6366F1',
+  yellow: '#E8A317',
+  green: '#0CA35A',
+  magenta: '#E0619A',
+  info: '#0EA5E9',
   soft: '#DDF6F7',
   muted: '#DDF6F7',
 } as const;
 
-export const gridColor = '#E6FAFA';
+export const gridColor = '#E1EFEE';
 
 export const axisTick = {
-  fill: '#64748B',
+  fill: '#6B7F7C',
   fontSize: 12,
 } as const;
 

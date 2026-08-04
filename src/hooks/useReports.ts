@@ -53,10 +53,11 @@ export interface MaterialProduction {
   name: string;
   icon: string;
   display_order: number;
-  total_required: number;
+  materiales: number;
   total_quantity: number;
-  completed_tasks: number;
-  in_progress_tasks: number;
+  completadas: number;
+  en_proceso: number;
+  sin_asignar: number;
   completion_rate: number;
 }
 
@@ -138,13 +139,17 @@ export interface CapacityMember {
   tasks_sin_estimacion: number;
   pending_horas: number;
   completed_horas: number;
+  horas_sin_fecha: number;
+  horas_vencidas: number;
+  horas_semana_actual: number;
+  carga_semana_actual: number;
   estimated_work_days: number;
   estimated_completion_date: string | null;
   utilization_pct: number;
-  capacity_gap_hours: number;
-  risk_level: 'ok' | 'warning' | 'over';
-  risk_label: 'OK' | 'RIESGO' | 'SOBRECARGADO';
-  risk_color: 'emerald' | 'amber' | 'red';
+  holgura_horas: number;
+  risk_level: 'available' | 'ok' | 'warning' | 'over';
+  risk_label: 'DISPONIBLE' | 'OK' | 'RIESGO' | 'SOBRECARGADO';
+  risk_color: 'sky' | 'emerald' | 'amber' | 'red';
 }
 
 export interface TeamCapacity {
@@ -201,9 +206,11 @@ export interface UserMiniReport {
     high_priority_tasks: number;
     pending_horas: number;
     completed_horas: number;
+    horas_vencidas: number;
+    horas_semana_actual: number;
+    carga_semana_actual: number;
     weekly_hours_capacity: number;
     utilization_pct: number;
-    capacity_gap_hours: number;
     holgura_horas: number;
   };
   health: {
@@ -487,6 +494,178 @@ export function useReportOntimeByEquipo() {
   return useQuery({
     queryKey: ['report-ontime-by-equipo'],
     queryFn: () => api.get<OntimeByEquipo[]>('/api/reports/ontime-by-equipo'),
+    staleTime: STALE_TIME,
+  });
+}
+
+// --- Reformulated per-person metrics (Resumen/Proyectos/Equipo/Producción/Rendimiento) ---
+
+export interface ReportScopeFilters {
+  project_id?: string;
+  date_from?: string;
+  date_to?: string;
+  cargo?: string;
+}
+
+function scopeToQuery(filters: ReportScopeFilters = {}): string {
+  const params = new URLSearchParams();
+  if (filters.project_id) params.set('project_id', filters.project_id);
+  if (filters.date_from) params.set('date_from', filters.date_from);
+  if (filters.date_to) params.set('date_to', filters.date_to);
+  if (filters.cargo) params.set('cargo', filters.cargo);
+  return params.toString();
+}
+
+export interface PersonMetric {
+  id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  email: string;
+  unidades_asignadas: number;
+  unidades_completadas: number;
+  unidades_pendientes: number;
+  unidades_vencidas: number;
+  unidades_sin_estimacion: number;
+  horas_pendientes: number;
+  horas_completadas: number;
+  proyectos_cubiertos: number;
+  entregas_evaluables: number;
+  entregas_a_tiempo: number;
+  sin_evento_cierre: number;
+  puntualidad_pct: number | null;
+  cobertura_esfuerzo_pct: number;
+  eficiencia_horas_pct: number | null;
+}
+
+export interface PersonMetricsResponse {
+  people: PersonMetric[];
+  overall: {
+    entregas_evaluables: number;
+    entregas_a_tiempo: number;
+    puntualidad_pct: number | null;
+  };
+}
+
+export function useReportPersonMetrics(filters: ReportScopeFilters = {}) {
+  const qs = scopeToQuery(filters);
+  return useQuery({
+    queryKey: ['report-person-metrics', filters],
+    queryFn: () => api.get<PersonMetricsResponse>(`/api/reports/person-metrics${qs ? `?${qs}` : ''}`),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface CapacityForecastWeek {
+  week_start: string;
+  horas: number;
+  utilizacion_pct: number;
+  holgura_horas: number;
+  risk_level: 'available' | 'ok' | 'warning' | 'over';
+  risk_label: string;
+  risk_color: 'sky' | 'emerald' | 'amber' | 'red';
+}
+
+export interface CapacityForecastMember {
+  id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  weekly_hours_capacity: number;
+  current: {
+    horas_vencidas: number;
+    horas_semana_actual: number;
+    carga_semana_actual: number;
+    utilizacion_pct: number;
+    holgura_horas: number;
+    risk_level: 'available' | 'ok' | 'warning' | 'over';
+    risk_label: string;
+    risk_color: 'sky' | 'emerald' | 'amber' | 'red';
+  };
+  weeks: CapacityForecastWeek[];
+  backlog: {
+    horas_total: number;
+    horas_sin_fecha: number;
+    unidades_sin_estimacion: number;
+    dias_para_vaciar: number;
+    fecha_backlog_vacio: string | null;
+  };
+}
+
+export interface CapacityForecastResponse {
+  schedule: { mon_thu_hours: number; friday_hours: number; weekly_hours: number; avg_daily_hours: number };
+  members: CapacityForecastMember[];
+  overall: {
+    carga_semana_actual: number;
+    capacidad_total: number;
+    utilizacion_pct: number;
+    holgura_horas: number;
+    risk_counts: { available: number; ok: number; warning: number; over: number };
+  };
+}
+
+export function useReportCapacityForecast(filters: ReportScopeFilters & { weeks?: number } = {}) {
+  const qs = scopeToQuery(filters);
+  const params = new URLSearchParams(qs);
+  if (filters.weeks) params.set('weeks', String(filters.weeks));
+  const finalQs = params.toString();
+  return useQuery({
+    queryKey: ['report-capacity-forecast', filters],
+    queryFn: () => api.get<CapacityForecastResponse>(`/api/reports/capacity-forecast${finalQs ? `?${finalQs}` : ''}`),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface ThroughputPoint {
+  key: string;
+  label: string;
+  avatar_url: string | null;
+  bucket_start: string;
+  unidades: number;
+  horas: number;
+  unidades_sin_estimacion: number;
+}
+
+export function useReportThroughput(
+  filters: ReportScopeFilters & { bucket?: 'day' | 'week' | 'month'; group_by?: 'person' | 'cargo' } = {}
+) {
+  const qs = scopeToQuery(filters);
+  const params = new URLSearchParams(qs);
+  if (filters.bucket) params.set('bucket', filters.bucket);
+  if (filters.group_by) params.set('group_by', filters.group_by);
+  const finalQs = params.toString();
+  return useQuery({
+    queryKey: ['report-throughput', filters],
+    queryFn: () => api.get<ThroughputPoint[]>(`/api/reports/throughput${finalQs ? `?${finalQs}` : ''}`),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface ProductionByPersonRow {
+  profile_id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  material_type_id: string;
+  material_type_name: string;
+  icon: string | null;
+  unidades_completadas: number;
+  horas_completadas: number;
+  unidades_en_proceso: number;
+  horas_pendientes: number;
+}
+
+export interface ProductionByPersonResponse {
+  rows: ProductionByPersonRow[];
+  totals_by_person: { profile_id: string; full_name: string; cargo: string | null; avatar_url: string | null; horas_completadas: number; unidades_completadas: number }[];
+  totals_by_type: { material_type_id: string; material_type_name: string; icon: string | null; horas_completadas: number; unidades_completadas: number }[];
+}
+
+export function useReportProductionByPerson(filters: ReportScopeFilters = {}) {
+  const qs = scopeToQuery(filters);
+  return useQuery({
+    queryKey: ['report-production-by-person', filters],
+    queryFn: () => api.get<ProductionByPersonResponse>(`/api/reports/production-by-person${qs ? `?${qs}` : ''}`),
     staleTime: STALE_TIME,
   });
 }

@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useReportOntimeByEquipo } from '@/hooks/useReports';
+import { chartColors, axisTick, gridColor } from '@/components/charts/chartTheme';
 import { Loader2 } from 'lucide-react';
 
-const PALETTE = ['#0BBFB7', '#6366F1'] as const;
+const PALETTE = [chartColors.tealDeep, chartColors.blue] as const;
 
 function Figure({ cx, color }: { cx: number; color: string }) {
   return (
@@ -30,7 +31,7 @@ export function EquipoOntimeChart() {
   return (
     <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-[#0F172A]">Entregas a tiempo</CardTitle>
+        <CardTitle className="text-sm font-semibold text-foreground">Entregas a tiempo</CardTitle>
         <CardDescription className="text-xs">
           Tareas completadas antes del vencimiento, por equipo
         </CardDescription>
@@ -53,8 +54,8 @@ export function EquipoOntimeChart() {
             role="img"
           >
             {/* Tinted territory halves */}
-            <rect x="0"   y="0" width="160" height="210" fill="#E6FAF9" />
-            <rect x="160" y="0" width="160" height="210" fill="#EEF0FD" />
+            <rect x="0"   y="0" width="160" height="210" fill={leftColor}  fillOpacity={0.08} />
+            <rect x="160" y="0" width="160" height="210" fill={rightColor} fillOpacity={0.08} />
 
             {/* Top accent stripe */}
             <rect x="0"   y="0" width="160" height="3" fill={leftColor}  />
@@ -83,7 +84,7 @@ export function EquipoOntimeChart() {
             )}
 
             {/* Vertical hairline */}
-            <line x1="160" y1="10" x2="160" y2="190" stroke="#CBD5E1" strokeWidth="0.75" />
+            <line x1="160" y1="10" x2="160" y2="190" stroke={gridColor} strokeWidth="0.75" />
 
             {/* Figures */}
             {left  && <Figure cx={80}  color={leftColor}  />}
@@ -102,7 +103,7 @@ export function EquipoOntimeChart() {
                 </text>
                 <text
                   x="80" y="197" textAnchor="middle"
-                  fontSize="8.5" fontWeight="500" fill="#64748B"
+                  fontSize="8.5" fontWeight="500" fill={axisTick.fill}
                   letterSpacing="0.8"
                   fontFamily="-apple-system,'Helvetica Neue',Arial,sans-serif"
                 >
@@ -124,7 +125,7 @@ export function EquipoOntimeChart() {
                 </text>
                 <text
                   x="240" y="197" textAnchor="middle"
-                  fontSize="8.5" fontWeight="500" fill="#64748B"
+                  fontSize="8.5" fontWeight="500" fill={axisTick.fill}
                   letterSpacing="0.8"
                   fontFamily="-apple-system,'Helvetica Neue',Arial,sans-serif"
                 >
@@ -137,7 +138,7 @@ export function EquipoOntimeChart() {
             {!right && left && (
               <text
                 x="240" y="120" textAnchor="middle"
-                fontSize="10" fill="#94A3B8"
+                fontSize="10" fill={axisTick.fill}
                 fontFamily="-apple-system,'Helvetica Neue',Arial,sans-serif"
               >
                 Sin segundo equipo

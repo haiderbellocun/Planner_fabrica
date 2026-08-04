@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useProjects, ProjectWithDetails } from '@/hooks/useProjects';
+import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,31 +29,6 @@ function formatEndDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr + 'T00:00:00');
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function AvatarStack({ members }: { members: ProjectWithDetails['members'] }) {
-  const shown = members.slice(0, 3);
-  const extra = members.length - shown.length;
-  return (
-    <div className="flex items-center -space-x-2">
-      {shown.map((m) => (
-        <div
-          key={m.id}
-          className="h-6 w-6 rounded-full ring-2 ring-white bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden"
-          title={m.profile?.full_name ?? ''}
-        >
-          {m.profile?.avatar_url
-            ? <img src={m.profile.avatar_url} alt="" className="h-full w-full object-cover" />
-            : (m.profile?.full_name?.charAt(0) ?? '?')}
-        </div>
-      ))}
-      {extra > 0 && (
-        <div className="h-6 w-6 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-          +{extra}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ProjectsPage() {
@@ -273,18 +248,15 @@ export default function ProjectsPage() {
                       </div>
                     </div>
 
-                    {/* Row 4: end date + avatars */}
-                    <div className="flex items-center justify-between mt-auto pt-1">
-                      {endDate ? (
+                    {/* Row 4: end date */}
+                    {endDate && (
+                      <div className="flex items-center mt-auto pt-1">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <CalendarClock className="h-3.5 w-3.5" />
                           Entrega {endDate}
                         </span>
-                      ) : (
-                        <span />
-                      )}
-                      <AvatarStack members={project.members} />
-                    </div>
+                      </div>
+                    )}
 
                   </CardContent>
                 </Card>

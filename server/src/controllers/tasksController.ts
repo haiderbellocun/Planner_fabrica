@@ -4,6 +4,11 @@ import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 import { sendTaskAssignedEmail, buildTaskAssignedHtml } from '../services/emailService.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
+const oneOf = (v: unknown): string | undefined => (Array.isArray(v) ? v[0] as string : (v as string | undefined));
+
 /**
  * GET /api/projects/:projectId/tasks
  * List all tasks for a project with full details
@@ -27,13 +32,17 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       console.log('Profile ID:', profileId);
       console.log('User role:', userRole);
       console.log('Is leader:', isLeader);
+      console.log('Filters:', req.query);
     }
 
-    // Build WHERE clause based on user role
-    // Admins and project leaders deben ver todas las tareas del proyecto.
-    // Solo los usuarios normales tienen filtros de visibilidad.
-    let whereClause = 't.project_id = $1';
-    const params: any[] = [projectId];
+    // Build WHERE clause. Visibility is one condition among many so filters
+    // can only narrow the result set, never widen it beyond what the role allows.
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let i = 1;
+
+    conditions.push(`t.project_id = $${i++}`);
+    params.push(projectId);
 
     if (userRole === 'admin' || userRole === 'project_leader' || isLeader) {
       if (env.NODE_ENV !== 'production') {
@@ -41,14 +50,86 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       }
     } else {
       // Normal users: ONLY see tasks explicitly assigned to them, regardless of project category
-      whereClause += ` AND (
-        t.assignee_id = $2
-        OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
-        OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
-      )`;
+      conditions.push(`(
+        t.assignee_id = $${i}
+        OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $${i})
+        OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $${i})
+      )`);
       params.push(profileId);
+      i++;
       if (env.NODE_ENV !== 'production') {
         console.log('Visibility filter applied for normal user');
+      }
+    }
+
+    // --- Optional filters (all bound as parameters, never string-concatenated) ---
+    const statusIdRaw = oneOf(req.query.status_id);
+    if (statusIdRaw) {
+      const ids = statusIdRaw.split(',').map((s) => s.trim()).filter(isUuid);
+      if (ids.length > 0) {
+        conditions.push(`t.status_id = ANY($${i++}::uuid[])`);
+        params.push(ids);
+      }
+    }
+
+    const priorityRaw = oneOf(req.query.priority);
+    if (priorityRaw) {
+      const values = priorityRaw.split(',').map((s) => s.trim()).filter((v) => PRIORITIES.includes(v));
+      if (values.length > 0) {
+        conditions.push(`t.priority = ANY($${i++}::task_priority[])`);
+        params.push(values);
+      }
+    }
+
+    const assigneeRaw = oneOf(req.query.assignee_id);
+    if (assigneeRaw === 'unassigned') {
+      conditions.push('t.assignee_id IS NULL');
+    } else if (isUuid(assigneeRaw)) {
+      conditions.push(`t.assignee_id = $${i++}::uuid`);
+      params.push(assigneeRaw);
+    }
+
+    const epicRaw = oneOf(req.query.epic_id);
+    if (epicRaw === 'none') {
+      conditions.push('t.epic_id IS NULL');
+    } else if (isUuid(epicRaw)) {
+      conditions.push(`t.epic_id = $${i++}::uuid`);
+      params.push(epicRaw);
+    }
+
+    const teamRaw = oneOf(req.query.team_id);
+    if (teamRaw === 'none') {
+      conditions.push('t.team_id IS NULL');
+    } else if (isUuid(teamRaw)) {
+      conditions.push(`t.team_id = $${i++}::uuid`);
+      params.push(teamRaw);
+    }
+
+    const sprintRaw = oneOf(req.query.sprint_id);
+    if (sprintRaw === 'none') {
+      conditions.push('t.sprint_id IS NULL');
+    } else if (isUuid(sprintRaw)) {
+      conditions.push(`t.sprint_id = $${i++}::uuid`);
+      params.push(sprintRaw);
+    }
+
+    const tagRaw = oneOf(req.query.tag);
+    if (tagRaw) {
+      conditions.push(`$${i++} = ANY(t.tags)`);
+      params.push(tagRaw);
+    }
+
+    const searchRaw = oneOf(req.query.search);
+    if (searchRaw && searchRaw.trim()) {
+      const q = searchRaw.trim();
+      if (/^\d+$/.test(q)) {
+        conditions.push(`(t.title ILIKE $${i} OR t.description ILIKE $${i} OR t.task_number = $${i + 1}::int)`);
+        params.push(`%${q}%`, parseInt(q, 10));
+        i += 2;
+      } else {
+        conditions.push(`(t.title ILIKE $${i} OR t.description ILIKE $${i})`);
+        params.push(`%${q}%`);
+        i++;
       }
     }
 
@@ -56,6 +137,8 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       `SELECT
         t.*,
         t.epic_id,
+        t.board_rank::float8 AS board_rank,
+        t.backlog_rank::float8 AS backlog_rank,
         ts.id as status_id, ts.name as status_name, ts.color as status_color,
         ts.display_order as status_order, ts.is_completed as status_is_completed,
         assignee.id as assignee_id, assignee.full_name as assignee_name,
@@ -68,7 +151,8 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         asig.id as asignatura_id, asig.name as asignatura_name, asig.code as asignatura_code, asig.semestre as asignatura_semestre,
         prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo,
         ep.id as ep_epic_id, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status,
-        tm.id as tm_team_id, tm.name as team_name, tm.color as team_color
+        tm.id as tm_team_id, tm.name as team_name, tm.color as team_color,
+        sp.id as sp_sprint_id, sp.name as sprint_name, sp.status as sprint_status
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
@@ -80,8 +164,9 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
        LEFT JOIN public.programas prog ON prog.id = asig.programa_id
        LEFT JOIN public.epics ep ON ep.id = t.epic_id
        LEFT JOIN public.teams tm ON tm.id = t.team_id
-       WHERE ${whereClause}
-       ORDER BY t.created_at DESC`,
+       LEFT JOIN public.sprints sp ON sp.id = t.sprint_id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY t.board_rank ASC NULLS LAST, t.created_at DESC`,
       params
     );
 
@@ -112,6 +197,8 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       due_date: row.due_date,
       tags: row.tags,
       task_number: row.task_number,
+      board_rank: row.board_rank,
+      backlog_rank: row.backlog_rank,
       created_at: row.created_at,
       updated_at: row.updated_at,
       material_requerido_id: row.material_requerido_id,
@@ -190,6 +277,14 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
             color: row.team_color,
           }
         : null,
+      sprint_id: row.sprint_id,
+      sprint: row.sp_sprint_id
+        ? {
+            id: row.sp_sprint_id,
+            name: row.sprint_name,
+            status: row.sprint_status,
+          }
+        : null,
     }));
 
     if (env.NODE_ENV !== 'production') {
@@ -215,6 +310,8 @@ export const getTask = async (req: AuthRequest, res: Response) => {
     const result = await query(
       `SELECT
         t.*,
+        t.board_rank::float8 AS board_rank,
+        t.backlog_rank::float8 AS backlog_rank,
         ts.id as status_id, ts.name as status_name, ts.color as status_color,
         ts.display_order as status_order, ts.is_completed as status_is_completed,
         ep.id as epic_id_ref, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status,
@@ -227,11 +324,13 @@ export const getTask = async (req: AuthRequest, res: Response) => {
         tema.id as tema_id, tema.title as tema_title,
         asig.id as asignatura_id, asig.name as asignatura_name, asig.code as asignatura_code, asig.semestre as asignatura_semestre,
         prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo,
-        tm.id as team_id_ref, tm.name as team_name, tm.color as team_color
+        tm.id as team_id_ref, tm.name as team_name, tm.color as team_color,
+        sp.id as sprint_id_ref, sp.name as sprint_name, sp.status as sprint_status
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        LEFT JOIN public.epics ep ON ep.id = t.epic_id
        LEFT JOIN public.teams tm ON tm.id = t.team_id
+       LEFT JOIN public.sprints sp ON sp.id = t.sprint_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
        LEFT JOIN public.profiles reporter ON reporter.id = t.reporter_id
        LEFT JOIN public.materiales_requeridos mr ON mr.id = t.material_requerido_id
@@ -262,6 +361,8 @@ export const getTask = async (req: AuthRequest, res: Response) => {
       due_date: row.due_date,
       tags: row.tags,
       task_number: row.task_number,
+      board_rank: row.board_rank,
+      backlog_rank: row.backlog_rank,
       created_at: row.created_at,
       updated_at: row.updated_at,
       material_requerido_id: row.material_requerido_id,
@@ -281,6 +382,14 @@ export const getTask = async (req: AuthRequest, res: Response) => {
             id: row.team_id_ref,
             name: row.team_name,
             color: row.team_color,
+          }
+        : null,
+      sprint_id: row.sprint_id,
+      sprint: row.sprint_id_ref
+        ? {
+            id: row.sprint_id_ref,
+            name: row.sprint_name,
+            status: row.sprint_status,
           }
         : null,
       status: {
@@ -469,7 +578,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id, sprint_id } = req.body;
     const reporterId = req.user?.profileId;
     const userRole = req.user?.role;
 
@@ -504,10 +613,19 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     const statusId = statusResult.rows[0].id;
 
-    // Insert task
+    // Insert task. New tasks land at the top of their board column and backlog
+    // (MIN(rank) - 1000), matching today's newest-first ordering.
     const result = await query(
-      `INSERT INTO public.tasks (project_id, title, description, priority, status_id, assignee_id, reporter_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO public.tasks (
+         project_id, title, description, priority, status_id, assignee_id, reporter_id,
+         due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id, sprint_id,
+         board_rank, backlog_rank
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+         COALESCE((SELECT MIN(board_rank) FROM public.tasks WHERE project_id = $1 AND status_id = $5), 1000) - 1000,
+         COALESCE((SELECT MIN(backlog_rank) FROM public.tasks WHERE project_id = $1), 1000) - 1000
+       )
        RETURNING *`,
       [
         projectId,
@@ -523,6 +641,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
         asignatura_id || null,
         epic_id || null,
         team_id || null,
+        sprint_id || null,
       ]
     );
 
@@ -584,7 +703,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id, sprint_id } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -654,6 +773,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     if (team_id !== undefined) {
       updates.push(`team_id = $${paramCount++}`);
       values.push(team_id);
+    }
+    if (sprint_id !== undefined) {
+      updates.push(`sprint_id = $${paramCount++}`);
+      values.push(sprint_id);
     }
 
     if (updates.length === 0) {
@@ -836,6 +959,97 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * PATCH /api/tasks/:id/rank
+ * Reorder a task within its Kanban column ('board') or its backlog ('backlog'),
+ * using fractional (midpoint) ranking so a single drag only ever writes one row —
+ * this matters because a plain member only sees a subset of a project's tasks,
+ * and a full-list renumber would silently corrupt the rank of tasks they can't see.
+ */
+export const updateTaskRank = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { list, prev_task_id, next_task_id } = req.body;
+    const column = list === 'backlog' ? 'backlog_rank' : 'board_rank';
+
+    const taskResult = await query(
+      'SELECT id, project_id, status_id FROM public.tasks WHERE id = $1',
+      [id]
+    );
+    if (taskResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    const { project_id: projectId, status_id: statusId } = taskResult.rows[0];
+
+    const neighbourIds = [prev_task_id, next_task_id].filter(isUuid);
+    let prevRank: number | null = null;
+    let nextRank: number | null = null;
+
+    if (neighbourIds.length > 0) {
+      const neighbours = await query(
+        `SELECT id, ${column}::float8 AS rank FROM public.tasks WHERE id = ANY($1::uuid[]) AND project_id = $2`,
+        [neighbourIds, projectId]
+      );
+      const byId = new Map(neighbours.rows.map((r: any) => [r.id, r.rank]));
+      if (isUuid(prev_task_id)) prevRank = byId.get(prev_task_id) ?? null;
+      if (isUuid(next_task_id)) nextRank = byId.get(next_task_id) ?? null;
+    }
+
+    let newRank: number;
+    if (prevRank === null && nextRank === null) {
+      newRank = 1000;
+    } else if (prevRank === null) {
+      newRank = (nextRank as number) - 1000;
+    } else if (nextRank === null) {
+      newRank = prevRank + 1000;
+    } else if (nextRank - prevRank < 1e-6) {
+      // Gap exhausted: rebalance this scope, then recompute the midpoint.
+      if (column === 'board_rank') {
+        await query(
+          `WITH r AS (
+             SELECT id, 1000 * ROW_NUMBER() OVER (ORDER BY board_rank ASC NULLS LAST, created_at DESC) AS rk
+             FROM public.tasks WHERE project_id = $1 AND status_id = $2
+           )
+           UPDATE public.tasks t SET board_rank = r.rk FROM r WHERE r.id = t.id`,
+          [projectId, statusId]
+        );
+      } else {
+        await query(
+          `WITH r AS (
+             SELECT id, 1000 * ROW_NUMBER() OVER (ORDER BY backlog_rank ASC NULLS LAST, created_at DESC) AS rk
+             FROM public.tasks WHERE project_id = $1
+           )
+           UPDATE public.tasks t SET backlog_rank = r.rk FROM r WHERE r.id = t.id`,
+          [projectId]
+        );
+      }
+      const refreshed = await query(
+        `SELECT id, ${column}::float8 AS rank FROM public.tasks WHERE id = ANY($1::uuid[]) AND project_id = $2`,
+        [neighbourIds, projectId]
+      );
+      const byId = new Map(refreshed.rows.map((r: any) => [r.id, r.rank]));
+      const p = isUuid(prev_task_id) ? byId.get(prev_task_id) ?? null : null;
+      const n = isUuid(next_task_id) ? byId.get(next_task_id) ?? null : null;
+      newRank = p !== null && n !== null ? (p + n) / 2 : p !== null ? p + 1000 : (n as number) - 1000;
+    } else {
+      newRank = (prevRank + nextRank) / 2;
+    }
+
+    const result = await query(
+      `UPDATE public.tasks
+       SET ${column} = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, project_id, status_id, board_rank::float8 AS board_rank, backlog_rank::float8 AS backlog_rank`,
+      [newRank, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update task rank error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
  * DELETE /api/tasks/:id
  * Delete task
  */
@@ -955,6 +1169,25 @@ export const getTaskActivity = async (req: AuthRequest, res: Response) => {
     res.json(activity);
   } catch (error) {
     console.error('Get task activity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/projects/:projectId/tasks/tags
+ * Distinct list of tags used across the project's tasks (for filter/autocomplete UIs).
+ */
+export const listProjectTags = async (req: AuthRequest, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const result = await query(
+      `SELECT DISTINCT tag FROM public.tasks t, UNNEST(t.tags) AS tag
+       WHERE t.project_id = $1 AND tag <> '' ORDER BY tag`,
+      [projectId]
+    );
+    res.json(result.rows.map((r) => r.tag));
+  } catch (error) {
+    console.error('List project tags error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

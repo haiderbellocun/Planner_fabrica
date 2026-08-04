@@ -27,6 +27,9 @@ export const taskCreateSchema = z.object({
   due_date: z.string().optional(),
   tags: z.array(z.string()).optional(),
   material_requerido_id: z.string().uuid().optional(),
+  epic_id: z.string().uuid().optional().nullable(),
+  team_id: z.string().uuid().optional().nullable(),
+  sprint_id: z.string().uuid().optional().nullable(),
 });
 
 export const taskUpdateSchema = z.object({
@@ -36,6 +39,9 @@ export const taskUpdateSchema = z.object({
   assignee_id: z.string().uuid().optional().nullable(),
   due_date: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
+  epic_id: z.string().uuid().optional().nullable(),
+  team_id: z.string().uuid().optional().nullable(),
+  sprint_id: z.string().uuid().optional().nullable(),
 });
 
 // Middleware factory for validation

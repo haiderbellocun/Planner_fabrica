@@ -14,12 +14,17 @@ import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgr
 import { EpicsPanel } from '@/components/epics/EpicsPanel';
 import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
 import { TeamsPanel } from '@/components/teams/TeamsPanel';
+import { BacklogPanel } from '@/components/sprints/BacklogPanel';
+import { useSprints } from '@/hooks/useSprints';
+import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
+import { TaskListView } from '@/components/tasks/TaskListView';
+import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters } from '@/lib/taskFilters';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatTile } from '@/components/shared/StoryUI';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,41 +33,28 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-const priorityConfig = {
-  low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  medium: { label: 'Media', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  high: { label: 'Alta', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-};
-
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: project, isLoading: projectLoading } = useProject(projectId);
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId);
+  const [taskFilters, setTaskFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId, taskFilters);
   const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
   const { data: epics = [] } = useEpics(projectId);
+  const { data: sprints = [] } = useSprints(projectId);
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'checklist'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -112,16 +104,6 @@ export default function ProjectDetailPage() {
   const handleCreatePrograma = () => {
     setSelectedPrograma(null);
     setProgramaDialogOpen(true);
-  };
-
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   if (projectLoading) {
@@ -337,7 +319,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'teams' | 'checklist')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
@@ -350,9 +332,31 @@ export default function ProjectDetailPage() {
           {isDesarrolloProject && (
             <TabsTrigger value="teams">Equipos</TabsTrigger>
           )}
+          {isDesarrolloProject && (
+            <TabsTrigger value="backlog">Backlog ({sprints.length})</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="tasks" className="space-y-4">
+          {/* Snapshot: task-status narrative strip */}
+          {tasks.length > 0 && (() => {
+            const completed = tasks.filter(t => t.status?.is_completed).length;
+            const today = new Date().toISOString().slice(0, 10);
+            const overdue = tasks.filter(t => !t.status?.is_completed && t.due_date && t.due_date.slice(0, 10) < today).length;
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatTile label="Tareas totales" value={tasks.length} />
+                <StatTile label="Completadas" value={completed} sub={`${Math.round((completed / tasks.length) * 100)}% del total`} />
+                <StatTile label="En curso" value={tasks.length - completed - overdue} />
+                <StatTile
+                  label="Vencidas"
+                  value={overdue}
+                  pill={overdue > 0 ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
+                />
+              </div>
+            );
+          })()}
+
           {/* View Toggle */}
           <div className="flex items-center gap-2">
             <Button
@@ -373,91 +377,32 @@ export default function ProjectDetailPage() {
             </Button>
           </div>
 
+          <TaskFilterBar
+            projectId={projectId!}
+            filters={taskFilters}
+            onChange={setTaskFilters}
+            isDesarrollo={isDesarrolloProject}
+          />
+
           {/* Content */}
           {view === 'board' ? (
             <KanbanBoard
               tasks={tasks}
               projectKey={project.key}
+              projectId={projectId!}
               onTaskClick={handleTaskClick}
               isLoading={tasksLoading}
             />
           ) : (
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Clave</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead className="w-[100px]">Estado</TableHead>
-                <TableHead className="w-[100px]">Prioridad</TableHead>
-                <TableHead className="w-[150px]">Responsable</TableHead>
-                <TableHead className="w-[120px]">Fecha límite</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tasks.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No hay tareas en este proyecto
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tasks.map((task) => (
-                  <TableRow
-                    key={task.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleTaskClick(task)}
-                  >
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {project.key}-{task.task_number}
-                    </TableCell>
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        style={{
-                          backgroundColor: `${task.status?.color}15`,
-                          color: task.status?.color,
-                          borderColor: task.status?.color,
-                        }}
-                      >
-                        {task.status?.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn('text-xs', priorityConfig[task.priority].className)}>
-                        {priorityConfig[task.priority].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {task.assignee ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={task.assignee.avatar_url || undefined} />
-                            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                              {getInitials(task.assignee.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm truncate max-w-[100px]">
-                            {task.assignee.full_name}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Sin asignar</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {task.due_date
-                        ? format(new Date(task.due_date), 'd MMM yyyy', { locale: es })
-                        : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+            <TaskListView
+              tasks={tasks}
+              projectKey={project.key}
+              onTaskClick={handleTaskClick}
+              isDesarrollo={isDesarrolloProject}
+              isLoading={tasksLoading}
+              hasActiveFilters={hasActiveFilters(taskFilters)}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="programas" className="space-y-4">
@@ -520,6 +465,18 @@ export default function ProjectDetailPage() {
               projectId={projectId!}
               canManage={canManageTeams ?? false}
               members={project.members}
+              tasks={tasks}
+              onTaskClick={handleTaskClick}
+            />
+          </TabsContent>
+        )}
+
+        {isDesarrolloProject && (
+          <TabsContent value="backlog" className="space-y-4">
+            <BacklogPanel
+              projectId={projectId!}
+              projectKey={project.key}
+              canManage={canManageEpics ?? false}
               tasks={tasks}
               onTaskClick={handleTaskClick}
             />

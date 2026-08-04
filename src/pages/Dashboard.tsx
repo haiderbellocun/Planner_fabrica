@@ -1,24 +1,19 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
-import { useTasks, useTaskStatuses } from '@/hooks/useTasks';
+import { useTaskStatuses } from '@/hooks/useTasks';
 import { MyFocusToday } from '@/components/dashboard/MyFocusToday';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { HeroBanner, StatTile } from '@/components/shared/StoryUI';
 import {
   FolderKanban,
-  ListTodo,
-  TrendingUp,
   Bell,
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import projectsImg from '@/assets/dashboard/projects.png';
-import tasksImg from '@/assets/dashboard/tasks.png';
-import notificationsImg from '@/assets/dashboard/notifications.png.png';
-import productivityImg from '@/assets/dashboard/productivity.png';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -62,80 +57,43 @@ export default function DashboardPage() {
     );
   }
 
+  const firstName = profile?.full_name?.split(' ')[0] || 'Usuario';
+  const activeProjectsCount = projects.filter((p) => !p.is_completed).length;
+
   return (
-    <div className="page-container relative">
-      {/* Ocean decorations */}
-      <img src="./deco_medusa.png" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
-      <img src="./deco_manta.png" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
-      <img src="./deco_cangrejo.png" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
-      <img src="./deco_estrella.png" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+    <div className="page-container">
+      <HeroBanner
+        eyebrow={greeting()}
+        story={
+          <>
+            Hola <b className="text-white">{firstName}</b> — tienes{' '}
+            <b className="text-white">{activeProjectsCount} proyectos activos</b> con{' '}
+            <b className="text-white">{totalTasks} tareas</b> en total.
+            {unreadNotifications.length > 0 && (
+              <> Tienes <b className="text-white">{unreadNotifications.length} notificaciones</b> sin leer.</>
+            )}
+          </>
+        }
+        stats={[
+          { value: totalProjects, label: 'Proyectos totales' },
+          { value: totalTasks, label: 'Tareas en curso' },
+          { value: unreadNotifications.length, label: 'Notificaciones nuevas' },
+        ]}
+      />
 
-      {/* Welcome - Snapshot style */}
-      <div className="page-header">
-        <h1 className="page-title">
-          {greeting()}, {profile?.full_name?.split(' ')[0] || 'Usuario'}
-        </h1>
-        <p className="page-description">
-          Bienvenido al centro de control. Aquí tienes un resumen de tu actividad.
-        </p>
-      </div>
-
-      <div className="space-y-8">
+      <div className="space-y-8 mt-8">
       <MyFocusToday />
-      {/* Stats Cards — KPI recipe: rounded-2xl, shadow, icon badge */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 md:gap-8">
-        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)] overflow-hidden">
-          <img src="./deco_foca.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
-          <img src="./deco_alga2.png" alt="" className="absolute left-0 bottom-0 h-24 w-auto object-contain opacity-40 pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
-            <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
-              Proyectos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-3">
-            <div className="text-3xl font-semibold text-[#0F172A]">{totalProjects}</div>
-            <p className="text-xs text-[#64748B] mt-0.5">Proyectos activos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src="./deco_cangrejo.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
-            <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
-              Tareas Totales
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-3">
-            <div className="text-3xl font-semibold text-[#0F172A]">{totalTasks}</div>
-            <p className="text-xs text-[#64748B] mt-0.5">En todos los proyectos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src="./deco_medusa.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
-            <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
-              Notificaciones
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-3">
-            <div className="text-3xl font-semibold text-[#0F172A]">{unreadNotifications.length}</div>
-            <p className="text-xs text-[#64748B] mt-0.5">Sin leer</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-6 transition-all duration-200 hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <img src="./deco_manta.png" alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0">
-            <CardTitle className="text-[11px] uppercase tracking-wide text-[#64748B] font-medium">
-              Productividad
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-3">
-            <div className="text-3xl font-semibold text-[#0F172A]">—</div>
-            <p className="text-xs text-[#64748B] mt-0.5">Próximamente</p>
-          </CardContent>
-        </Card>
+      {/* Stats — instrument-panel tiles, no illustration */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile label="Proyectos" value={totalProjects} sub="Proyectos activos" />
+        <StatTile label="Tareas totales" value={totalTasks} sub="En todos los proyectos" />
+        <StatTile
+          label="Notificaciones"
+          value={unreadNotifications.length}
+          sub="Sin leer"
+          pill={unreadNotifications.length > 0 ? { tone: 'info', label: 'Nuevo' } : undefined}
+        />
+        <StatTile label="Productividad" value="—" sub="Próximamente" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7 md:gap-8">
@@ -147,8 +105,8 @@ export default function DashboardPage() {
                 <CardTitle className="text-base">Proyectos Recientes</CardTitle>
                 <CardDescription className="text-sm mt-0.5">Tus proyectos activos</CardDescription>
               </div>
-              <Link to="/projects" className="text-[#0DD9D0] hover:text-[#0BBFB7] no-underline hover:underline">
-                <Button variant="ghost" size="sm" className="text-[#0DD9D0] hover:text-[#0BBFB7] font-medium p-0 h-auto">
+              <Link to="/projects" className="text-primary-deep hover:text-primary no-underline hover:underline">
+                <Button variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
                   Ver todos
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
@@ -213,8 +171,8 @@ export default function DashboardPage() {
                 <CardTitle className="text-base">Notificaciones</CardTitle>
                 <CardDescription className="text-sm mt-0.5">Actividad reciente</CardDescription>
               </div>
-              <Link to="/notifications" className="text-[#0DD9D0] hover:text-[#0BBFB7] no-underline hover:underline">
-                <Button variant="ghost" size="sm" className="text-[#0DD9D0] hover:text-[#0BBFB7] font-medium p-0 h-auto">
+              <Link to="/notifications" className="text-primary-deep hover:text-primary no-underline hover:underline">
+                <Button variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
                   Ver todas
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>

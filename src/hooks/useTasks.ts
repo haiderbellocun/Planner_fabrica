@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Task, TaskStatus, Profile } from '@/types/database';
+import { TaskFilters, taskFiltersToQuery } from '@/lib/taskFilters';
 import { toast } from 'sonner';
 
 export interface TaskWithDetails extends Task {
@@ -19,12 +20,14 @@ export function useTaskStatuses() {
   });
 }
 
-export function useTasks(projectId: string | undefined) {
+export function useTasks(projectId: string | undefined, filters?: TaskFilters) {
+  const qs = taskFiltersToQuery(filters);
   return useQuery({
-    queryKey: ['tasks', projectId],
+    // No filters -> key identical to before, so every existing caller/invalidation is unaffected.
+    queryKey: qs ? ['tasks', projectId, qs] : ['tasks', projectId],
     queryFn: async (): Promise<TaskWithDetails[]> => {
       if (!projectId) return [];
-      const tasks = await api.get<TaskWithDetails[]>(`/api/projects/${projectId}/tasks`);
+      const tasks = await api.get<TaskWithDetails[]>(`/api/projects/${projectId}/tasks${qs ? `?${qs}` : ''}`);
       if (import.meta.env.DEV) {
         console.log('🔍 useTasks received from API:', {
           projectId,
@@ -33,6 +36,18 @@ export function useTasks(projectId: string | undefined) {
         });
       }
       return tasks;
+    },
+    enabled: !!projectId,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useProjectTags(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['project-tags', projectId],
+    queryFn: async (): Promise<string[]> => {
+      if (!projectId) return [];
+      return api.get<string[]>(`/api/projects/${projectId}/tasks/tags`);
     },
     enabled: !!projectId,
   });
@@ -140,6 +155,65 @@ export function useUpdateTaskStatus() {
     },
     onError: (error: any) => {
       toast.error('Error al cambiar estado: ' + error.message);
+    },
+  });
+}
+
+export interface UpdateTaskRankVars {
+  taskId: string;
+  projectId: string;
+  list?: 'board' | 'backlog';
+  prev_task_id: string | null;
+  next_task_id: string | null;
+  statusId?: string;
+}
+
+export function useUpdateTaskRank() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ taskId, list, prev_task_id, next_task_id }: UpdateTaskRankVars) =>
+      api.patch(`/api/tasks/${taskId}/rank`, { list, prev_task_id, next_task_id }),
+    onMutate: async (vars) => {
+      const filter = { queryKey: ['tasks', vars.projectId] };
+      await queryClient.cancelQueries(filter);
+      const snapshot = queryClient.getQueriesData<TaskWithDetails[]>(filter);
+
+      const rankField: 'board_rank' | 'backlog_rank' = vars.list === 'backlog' ? 'backlog_rank' : 'board_rank';
+      // Look up the neighbours' current ranks from whatever cached list we have.
+      let neighbourPrev: number | null = null;
+      let neighbourNext: number | null = null;
+      for (const [, tasks] of snapshot) {
+        if (!tasks) continue;
+        for (const t of tasks) {
+          if (vars.prev_task_id && t.id === vars.prev_task_id) neighbourPrev = t[rankField] ?? null;
+          if (vars.next_task_id && t.id === vars.next_task_id) neighbourNext = t[rankField] ?? null;
+        }
+      }
+      const newRank =
+        neighbourPrev === null && neighbourNext === null
+          ? 1000
+          : neighbourPrev === null
+            ? (neighbourNext as number) - 1000
+            : neighbourNext === null
+              ? neighbourPrev + 1000
+              : (neighbourPrev + neighbourNext) / 2;
+
+      queryClient.setQueriesData<TaskWithDetails[]>(filter, (old) =>
+        old?.map((t) =>
+          t.id === vars.taskId
+            ? { ...t, [rankField]: newRank, ...(vars.statusId ? { status_id: vars.statusId } : {}) }
+            : t
+        )
+      );
+
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: (_data, _err, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', vars.projectId] });
     },
   });
 }

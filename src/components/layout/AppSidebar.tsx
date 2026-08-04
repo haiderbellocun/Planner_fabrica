@@ -29,6 +29,7 @@ import {
   CalendarClock,
   CalendarDays,
   PackageCheck,
+  Users,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ const leaderNavItems = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
   { title: 'Próximos Proyectos', url: '/proximos-programas', icon: CalendarClock },
   { title: 'Registro de Entregas', url: '/entregas', icon: PackageCheck },
+  { title: 'Equipos', url: '/equipos', icon: Users },
 ];
 
 const adminFlowNavItems = [
@@ -85,7 +87,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/10 bg-[#0DD9D0]">
+    <Sidebar collapsible="icon" className="border-r border-white/10 bg-sidebar">
         <SidebarHeader className="border-b border-white/20 px-3 py-4">
           <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -100,15 +102,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent
-        className="px-2 py-3"
-        style={!collapsed ? {
-          backgroundImage: 'linear-gradient(rgba(13,217,208,0.55), rgba(13,217,208,0.55)), url(./deco_coral.png)',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'bottom center',
-          backgroundSize: '100% auto',
-        } : undefined}
-      >
+      <SidebarContent className="px-2 py-3">
         <SidebarGroup>
           <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -148,7 +142,7 @@ export function AppSidebar() {
                     <div className="relative">
                       <Bell className="h-[18px] w-[18px]" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 text-[10px] font-medium text-white flex items-center justify-center">
+                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-coral text-[10px] font-medium text-white flex items-center justify-center">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}

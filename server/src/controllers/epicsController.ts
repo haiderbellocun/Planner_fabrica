@@ -6,9 +6,10 @@ export const listEpics = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
     const result = await query(
-      `SELECT e.*, p.full_name as creator_name
+      `SELECT e.*, p.full_name as creator_name, eq.name as equipo_name, eq.color as equipo_color
        FROM public.epics e
        LEFT JOIN public.profiles p ON p.id = e.created_by
+       LEFT JOIN public.equipos eq ON eq.id = e.equipo_id
        WHERE e.project_id = $1
        ORDER BY e.display_order ASC, e.created_at ASC`,
       [projectId]
@@ -24,13 +25,13 @@ export const createEpic = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
     const profileId = req.user?.profileId;
-    const { title, description, color, status, start_date, end_date } = req.body;
+    const { title, description, color, status, start_date, end_date, equipo_id } = req.body;
 
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
     const result = await query(
-      `INSERT INTO public.epics (project_id, title, description, color, status, start_date, end_date, created_by)
-       VALUES ($1, $2, $3, $4, COALESCE($5, 'open'), $6, $7, $8)
+      `INSERT INTO public.epics (project_id, title, description, color, status, start_date, end_date, created_by, equipo_id)
+       VALUES ($1, $2, $3, $4, COALESCE($5, 'open'), $6, $7, $8, $9)
        RETURNING *`,
       [
         projectId,
@@ -41,6 +42,7 @@ export const createEpic = async (req: AuthRequest, res: Response) => {
         start_date || null,
         end_date || null,
         profileId || null,
+        equipo_id || null,
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -53,7 +55,7 @@ export const createEpic = async (req: AuthRequest, res: Response) => {
 export const updateEpic = async (req: AuthRequest, res: Response) => {
   try {
     const { epicId } = req.params;
-    const { title, description, color, status, start_date, end_date, display_order } = req.body;
+    const { title, description, color, status, start_date, end_date, display_order, equipo_id } = req.body;
 
     const updates: string[] = ['updated_at = NOW()'];
     const values: unknown[] = [];
@@ -66,6 +68,7 @@ export const updateEpic = async (req: AuthRequest, res: Response) => {
     if (start_date !== undefined)    { updates.push(`start_date = $${i++}`);    values.push(start_date || null); }
     if (end_date !== undefined)      { updates.push(`end_date = $${i++}`);      values.push(end_date || null); }
     if (display_order !== undefined) { updates.push(`display_order = $${i++}`); values.push(display_order); }
+    if (equipo_id !== undefined)     { updates.push(`equipo_id = $${i++}`);     values.push(equipo_id || null); }
 
     values.push(epicId);
     const result = await query(

@@ -124,6 +124,23 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
                           <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
                             {epicTasks.length} {epicTasks.length === 1 ? 'tarea' : 'tareas'}
                           </span>
+                          {epic.equipo_name && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate max-w-[140px]"
+                              style={{
+                                backgroundColor: `${epic.equipo_color}20`,
+                                color: epic.equipo_color ?? undefined,
+                                border: `1px solid ${epic.equipo_color}40`,
+                              }}
+                              title={epic.equipo_name}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: epic.equipo_color ?? undefined }}
+                              />
+                              {epic.equipo_name}
+                            </span>
+                          )}
                         </div>
                         {epic.description && (
                           <p className="text-sm text-muted-foreground">{epic.description}</p>

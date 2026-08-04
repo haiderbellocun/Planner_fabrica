@@ -25,6 +25,8 @@ import healthRoutes from './routes/health.js';
 import profileRoutes from './routes/profile.js';
 import epicsRoutes from './routes/epics.js';
 import teamsRoutes from './routes/teams.js';
+import equiposRoutes from './routes/equipos.js';
+import sprintsRoutes from './routes/sprints.js';
 import searchRoutes from './routes/search.js';
 import proximosProgramasRoutes from './routes/proximosProgramas.js';
 import checklistRoutes from './routes/checklist.js';
@@ -106,12 +108,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects/:projectId/tasks', projectTasksRouter);
 app.use('/api/projects/:projectId/epics', epicsRoutes);
 app.use('/api/projects/:projectId/teams', teamsRoutes);
+app.use('/api/projects/:projectId/sprints', sprintsRoutes);
 
 // Then mount other routes
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/task-statuses', taskStatusesRoutes);
 app.use('/api/profiles', profilesRoutes);
+app.use('/api/equipos', equiposRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api', programasRoutes);
 app.use('/api', asignaturasRoutes);

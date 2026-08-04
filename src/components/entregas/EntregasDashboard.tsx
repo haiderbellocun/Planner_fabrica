@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
-import { chartColors, BAR_RADIUS } from '@/components/charts/chartTheme';
+import { chartColors, axisTick, BAR_RADIUS } from '@/components/charts/chartTheme';
 import { AXIS_STYLE, GRID_STYLE } from '@/components/reports/ReportCharts';
 import { parseTags, type Entrega } from '@/hooks/useEntregas';
 import type { EntregaMaterialResumenRow } from '@/hooks/useEntregaMateriales';
@@ -29,10 +29,10 @@ const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_r
 const MATERIALES_POR_MATERIA = 5;
 
 const ESTADO_META: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  aceptado:          { label: 'Aceptado',          color: '#1A7A4A', icon: CheckCircle2 },
-  con_observaciones: { label: 'Con observaciones', color: '#C05C0A', icon: AlertTriangle },
-  pendiente:         { label: 'Pendiente',         color: '#64748B', icon: Clock },
-  rechazado:         { label: 'Rechazado',         color: '#B91C1C', icon: XCircle },
+  aceptado:          { label: 'Aceptado',          color: chartColors.green, icon: CheckCircle2 },
+  con_observaciones: { label: 'Con observaciones', color: chartColors.yellow, icon: AlertTriangle },
+  pendiente:         { label: 'Pendiente',         color: axisTick.fill, icon: Clock },
+  rechazado:         { label: 'Rechazado',         color: chartColors.coral, icon: XCircle },
 };
 
 const NIVEL_LABELS_SHORT: Record<string, string> = {
@@ -58,7 +58,7 @@ function TruncatedYAxisTick({ x, y, payload }: { x?: number; y?: number; payload
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{text}</title>
-      <text x={0} y={0} dy={4} textAnchor="end" fontSize={10} fill="#64748B">
+      <text x={0} y={0} dy={4} textAnchor="end" fontSize={10} fill={axisTick.fill}>
         {truncated}
       </text>
     </g>
@@ -192,14 +192,14 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
         <SectionHeader tag="① Resumen" title="Estado de las entregas" />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: '3px solid #1564C0' }}>
+          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.blue}` }}>
             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total</p>
-            <p className="text-2xl font-black leading-none" style={{ color: '#1564C0' }}>{entregas.length}</p>
+            <p className="text-2xl font-black leading-none" style={{ color: chartColors.blue }}>{entregas.length}</p>
             <p className="text-[10px] text-muted-foreground mt-1">entregas registradas</p>
           </div>
-          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: '3px solid #0BBFB7' }}>
+          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.tealDeep}` }}>
             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Materiales</p>
-            <p className="text-2xl font-black leading-none" style={{ color: '#0BBFB7' }}>{totalMaterialesEntregados}</p>
+            <p className="text-2xl font-black leading-none" style={{ color: chartColors.tealDeep }}>{totalMaterialesEntregados}</p>
             <p className="text-[10px] text-muted-foreground mt-1">entregados (5 por materia)</p>
           </div>
           {(Object.keys(ESTADO_META) as (keyof typeof ESTADO_META)[]).map((k) => {
@@ -307,7 +307,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="value" name="Entregas" fill={chartColors.teal} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={16}>
-                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F172A' }} />
+                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F1A1A' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -335,11 +335,11 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                       axisLine={false}
                       tickLine={false}
                       interval={0}
-                      tick={{ fontSize: 11, fill: '#64748B' }}
+                      tick={{ fontSize: 11, fill: axisTick.fill }}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="value" name="Entregas" fill={chartColors.blue} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={22}>
-                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F172A' }} />
+                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F1A1A' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -385,7 +385,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                           </div>
                         </td>
                         <td className="px-2 py-2 text-right">
-                          <span className="inline-flex items-center justify-center rounded-md bg-[#1564C0]/10 text-[#1564C0] font-bold px-2 py-0.5 tabular-nums">
+                          <span className="inline-flex items-center justify-center rounded-md bg-info/10 text-info font-bold px-2 py-0.5 tabular-nums">
                             {row.total}
                           </span>
                         </td>

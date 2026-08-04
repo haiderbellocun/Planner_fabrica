@@ -9,6 +9,7 @@ interface PolarAreaDataItem {
 interface PolarAreaChartProps {
   data: PolarAreaDataItem[];
   height?: number;
+  logScale?: boolean;
 }
 
 const RADIAN = Math.PI / 180;
@@ -28,35 +29,48 @@ function describeArc(cx: number, cy: number, radius: number, startAngle: number,
   return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
 }
 
-export default function PolarAreaChart({ data, height = 320 }: PolarAreaChartProps) {
+export default function PolarAreaChart({ data, height = 320, logScale = false }: PolarAreaChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const chartData = useMemo(() => {
-    if (data.length === 0) return { slices: [], gridCircles: [], maxValue: 0 };
+    if (data.length === 0) return { slices: [], gridCircles: [], maxValue: 0, maxScaled: 0 };
 
     const maxValue = Math.max(...data.map(d => d.value));
     const angleStep = 360 / data.length;
 
+    // log1p-style transform: compresses the dominant category so smaller
+    // sectors stay legible instead of collapsing to slivers next to it.
+    const scaleValue = (v: number) => (logScale ? Math.log10(v + 1) : v);
+    const maxScaled = scaleValue(maxValue);
+
     const slices = data.map((d, i) => {
       const startAngle = i * angleStep;
       const endAngle = (i + 1) * angleStep;
-      const radius = maxValue > 0 ? (d.value / maxValue) : 0;
+      const radius = maxScaled > 0 ? scaleValue(d.value) / maxScaled : 0;
       const midAngle = startAngle + angleStep / 2;
       return { ...d, startAngle, endAngle, radius, midAngle, index: i };
     });
 
-    // Grid circles (3-4 concentric)
-    const step = maxValue <= 4 ? 1 : Math.ceil(maxValue / 4);
-    const gridCircles: number[] = [];
-    for (let v = step; v <= maxValue; v += step) {
-      gridCircles.push(v);
-    }
-    if (gridCircles[gridCircles.length - 1] !== maxValue && maxValue > 0) {
-      gridCircles.push(maxValue);
+    let gridCircles: number[];
+    if (logScale) {
+      // Nice ticks at powers of 10, plus the max itself so the outer ring is labeled.
+      gridCircles = [];
+      for (let p = 10; p < maxValue; p *= 10) gridCircles.push(p);
+      if (maxValue > 0 && gridCircles[gridCircles.length - 1] !== maxValue) gridCircles.push(maxValue);
+    } else {
+      // Grid circles (3-4 concentric)
+      const step = maxValue <= 4 ? 1 : Math.ceil(maxValue / 4);
+      gridCircles = [];
+      for (let v = step; v <= maxValue; v += step) {
+        gridCircles.push(v);
+      }
+      if (gridCircles[gridCircles.length - 1] !== maxValue && maxValue > 0) {
+        gridCircles.push(maxValue);
+      }
     }
 
-    return { slices, gridCircles, maxValue };
-  }, [data]);
+    return { slices, gridCircles, maxValue, maxScaled };
+  }, [data, logScale]);
 
   if (data.length === 0 || chartData.maxValue === 0) {
     return (
@@ -77,7 +91,9 @@ export default function PolarAreaChart({ data, height = 320 }: PolarAreaChartPro
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
         {/* Grid circles */}
         {chartData.gridCircles.map(v => {
-          const r = (v / chartData.maxValue) * maxRadius;
+          const scaled = logScale ? Math.log10(v + 1) : v;
+          const denom = logScale ? chartData.maxScaled : chartData.maxValue;
+          const r = denom > 0 ? (scaled / denom) * maxRadius : 0;
           return (
             <g key={`grid-${v}`}>
               <circle

@@ -14,15 +14,15 @@ export function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-white border border-black/5 shadow-lg rounded-xl p-3 min-w-[140px]">
+    <div className="bg-card border border-black/5 shadow-lg rounded-xl p-3 min-w-[140px]">
       {label != null && (
-        <p className="text-sm font-medium text-[#0F172A] mb-2">{String(label)}</p>
+        <p className="figure text-sm font-medium text-foreground mb-2">{String(label)}</p>
       )}
       <div className="space-y-1">
         {payload.map((item, i) => (
           <div key={i} className="flex justify-between gap-3 text-sm">
-            <span className="text-[#64748B]">{item.name ?? item.dataKey ?? ''}</span>
-            <span className="font-medium text-[#0F172A]">
+            <span className="text-muted-foreground">{item.name ?? item.dataKey ?? ''}</span>
+            <span className="figure font-medium text-foreground">
               {typeof item.value === 'number' ? item.value.toLocaleString() : String(item.value ?? '')}
             </span>
           </div>

@@ -36,9 +36,11 @@ export function PersonSparkline({ data, color }: { data: PersonSparklinePoint[];
         points={polyPoints}
         fill="none"
         stroke={stroke}
-        strokeWidth={1.5}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <circle cx={lastX} cy={lastY} r={2} fill={stroke} />
+      <circle cx={lastX} cy={lastY} r={2.5} fill={stroke} />
     </svg>
   );
 }

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Calculator, CalendarDays, Users, Clock, BookOpen, Package, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { chartColors } from '@/components/charts/chartTheme';
 
 // Work schedule constants (same as backend)
 const MON_THU_HOURS = 8.25;
@@ -349,7 +350,7 @@ export default function ProjectCalculator() {
                 label="Total Materiales"
                 value={results.totalMaterials.toString()}
                 sublabel={`${numSubjects} asignaturas`}
-                color="#4F46E5"
+                color={chartColors.blue}
               />
               <ResultCard
                 label="Horas-Persona"
@@ -361,13 +362,13 @@ export default function ProjectCalculator() {
                 label="Horas/Persona"
                 value={`${results.hoursPerPerson}h`}
                 sublabel={`÷ ${teamSize} personas`}
-                color="#0DD9D0"
+                color={chartColors.teal}
               />
               <ResultCard
                 label="Días Laborales"
                 value={`${results.workDaysPerPerson}`}
                 sublabel={`a ${Math.round(AVG_DAILY_HOURS * 100) / 100}h/día`}
-                color="#0dd9d0"
+                color={chartColors.tealDeep}
               />
               <ResultCard
                 label="Semanas"

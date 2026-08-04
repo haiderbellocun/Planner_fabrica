@@ -13,9 +13,12 @@ export interface Epic {
   end_date: string | null;
   display_order: number;
   created_by: string | null;
+  equipo_id: string | null;
   created_at: string;
   updated_at: string;
   creator_name?: string | null;
+  equipo_name?: string | null;
+  equipo_color?: string | null;
 }
 
 export interface CreateEpicData {
@@ -25,6 +28,7 @@ export interface CreateEpicData {
   status?: Epic['status'];
   start_date?: string;
   end_date?: string;
+  equipo_id?: string | null;
 }
 
 export function useEpics(projectId: string | undefined) {

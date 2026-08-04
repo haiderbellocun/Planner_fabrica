@@ -166,7 +166,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
                   <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-coral" />
                   )}
                 </Button>
               </Link>
@@ -207,15 +207,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenu>
             </div>
           </header>
-          <main
-            className="flex-1 relative"
-            style={{
-              backgroundImage: 'url(./bg_app.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'bottom center',
-              backgroundAttachment: 'fixed',
-            }}
-          >
+          <main className="flex-1 relative bg-background">
             {children}
             <LuminaWidget />
           </main>

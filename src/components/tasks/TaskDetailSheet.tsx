@@ -30,6 +30,8 @@ import { useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTa
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useTeams } from '@/hooks/useTeams';
+import { useSprints } from '@/hooks/useSprints';
+import { TagsEditor } from './TagsEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
@@ -49,6 +51,21 @@ const priorityConfig = {
   urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700' },
 };
 
+// `profiles` only lists active users (disabled accounts can't be assigned new
+// work). If a task is already assigned to someone since disabled, they'd be
+// missing from that list and the Select would render blank — so we splice the
+// current assignee back in, shown but not re-selectable.
+function buildAssigneeOptions(
+  profiles: { id: string; full_name: string | null; email: string | null }[],
+  current?: { id: string; full_name: string | null; email?: string | null } | null
+) {
+  const options = profiles.map((p) => ({ id: p.id, label: p.full_name || p.email || 'Usuario', disabled: false }));
+  if (current && !profiles.some((p) => p.id === current.id)) {
+    options.push({ id: current.id, label: `${current.full_name || current.email || 'Usuario'} (deshabilitado)`, disabled: true });
+  }
+  return options;
+}
+
 export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDetailSheetProps) {
   // Fetch full task details with temas_materiales
   const { data: fullTask } = useTask(task?.id);
@@ -58,6 +75,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const { data: profiles = [] } = useProfiles();
   const { data: project } = useProject(task?.project_id);
   const { data: teams = [] } = useTeams(task?.project_id);
+  const { data: sprints = [] } = useSprints(task?.project_id);
   const { data: comments = [] } = useTaskComments(task?.id);
   const { user } = useAuth();
   const updateTask = useUpdateTask();
@@ -179,6 +197,10 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
 
   const handleTeamChange = (teamId: string) => {
     updateTask.mutate({ id: taskData.id, team_id: teamId || null });
+  };
+
+  const handleSprintChange = (sprintId: string) => {
+    updateTask.mutate({ id: taskData.id, sprint_id: sprintId || null });
   };
 
   // Check which status transitions are allowed for current user
@@ -328,9 +350,9 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Sin asignar</SelectItem>
-                  {profiles.map((profile) => (
-                    <SelectItem key={profile.id} value={profile.id}>
-                      {profile.full_name || profile.email}
+                  {buildAssigneeOptions(profiles, taskData.assignee).map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id} disabled={opt.disabled}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -375,7 +397,33 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                 )}
               </div>
             )}
+
+            {isDesarrolloProject && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sprint</label>
+                <Select
+                  value={taskData.sprint_id || 'none'}
+                  onValueChange={(v) => handleSprintChange(v === 'none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin sprint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin sprint (backlog)</SelectItem>
+                    {sprints
+                      .filter((s) => s.status !== 'completed')
+                      .map((sprint) => (
+                        <SelectItem key={sprint.id} value={sprint.id}>
+                          {sprint.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
+          <TagsEditor taskId={taskData.id} projectId={taskData.project_id} tags={taskData.tags || []} />
 
           {/* Dates */}
           <div className="flex flex-wrap gap-4 text-sm">
@@ -512,9 +560,9 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                    {profiles.map((profile) => (
-                                      <SelectItem key={profile.id} value={profile.id}>
-                                        {profile.full_name}{profile.cargo ? ` - ${profile.cargo}` : ''}
+                                    {buildAssigneeOptions(profiles, tema.assignee).map((opt) => (
+                                      <SelectItem key={opt.id} value={opt.id} disabled={opt.disabled}>
+                                        {opt.label}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -565,9 +613,9 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                            {profiles.map((profile: any) => (
-                                              <SelectItem key={profile.id} value={profile.id}>
-                                                {profile.full_name}{profile.cargo ? ` - ${profile.cargo}` : ''}
+                                            {buildAssigneeOptions(profiles, material.assignee).map((opt) => (
+                                              <SelectItem key={opt.id} value={opt.id} disabled={opt.disabled}>
+                                                {opt.label}
                                               </SelectItem>
                                             ))}
                                           </SelectContent>

@@ -9,7 +9,10 @@ import { query } from '../config/database.js';
 export const listProfiles = async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(
-      'SELECT id, full_name, avatar_url, email, cargo, created_at FROM public.profiles ORDER BY full_name ASC'
+      `SELECT p.id, p.full_name, p.avatar_url, p.email, p.cargo, p.created_at
+       FROM public.profiles p
+       JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+       ORDER BY p.full_name ASC`
     );
 
     res.json(result.rows);

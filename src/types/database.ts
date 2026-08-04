@@ -77,6 +77,7 @@ export interface Epic {
   end_date: string | null;
   display_order: number;
   created_by: string | null;
+  equipo_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -98,11 +99,45 @@ export interface Team {
   }[];
 }
 
+export interface Equipo {
+  id: string;
+  slot: number;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+  members: {
+    id: string;
+    profile_id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  }[];
+}
+
+export interface Sprint {
+  id: string;
+  project_id: string;
+  name: string;
+  goal: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: 'planned' | 'active' | 'completed';
+  display_order: number;
+  created_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  creator_name?: string | null;
+  task_count?: number;
+  completed_count?: number;
+}
+
 export interface Task {
   id: string;
   project_id: string;
   epic_id: string | null;
   team_id: string | null;
+  sprint_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;
@@ -113,6 +148,8 @@ export interface Task {
   due_date: string | null;
   tags: string[];
   task_number: number | null;
+  board_rank?: number | null;
+  backlog_rank?: number | null;
   material_requerido_id: string | null;
   asignatura_id: string | null;
   parent_task_id: string | null;
@@ -143,6 +180,22 @@ export interface Task {
     name: string;
     code: string | null;
     tipo_programa: string | null;
+  } | null;
+  sprint?: {
+    id: string;
+    name: string;
+    status: Sprint['status'];
+  } | null;
+  epic?: {
+    id: string;
+    title: string;
+    color: string;
+    status: string;
+  } | null;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
   } | null;
   // All temas and materiales for the asignatura (for task detail view)
   temas_materiales?: Array<{

@@ -187,10 +187,10 @@ export default function CalendarPage() {
               onClick={() => setShowProjects(v => !v)}
               className={cn(
                 'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors',
-                showProjects ? 'bg-[#0DD9D0]/10 text-[#0BBFB7]' : 'text-muted-foreground hover:bg-muted'
+                showProjects ? 'bg-primary/10 text-primary-deep' : 'text-muted-foreground hover:bg-muted'
               )}
             >
-              <span className="h-3 w-3 rounded-full bg-[#0DD9D0] shrink-0" />
+              <span className="h-3 w-3 rounded-full bg-primary shrink-0" />
               <FolderKanban className="h-4 w-4 shrink-0" />
               Proyectos
             </button>
@@ -263,7 +263,7 @@ export default function CalendarPage() {
           <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-1.5">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Leyenda</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="h-2.5 w-5 rounded-sm bg-[#0DD9D0]" />
+              <span className="h-2.5 w-5 rounded-sm bg-primary" />
               Fin de proyecto
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -412,7 +412,7 @@ function MonthView({
                   <div
                     key={p.id}
                     title={`${p.name} — ${p.completion_rate}% completado`}
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate bg-[#0DD9D0]/20 text-[#0BBFB7] cursor-default"
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate bg-primary/20 text-primary-deep cursor-default"
                   >
                     <FolderKanban className="h-2.5 w-2.5 shrink-0" />
                     <span className="truncate">{p.key}</span>
@@ -498,14 +498,14 @@ function WeekView({
                 {proj.map(p => (
                   <div
                     key={p.id}
-                    className="p-1.5 rounded-lg bg-[#0DD9D0]/15 border border-[#0DD9D0]/30"
+                    className="p-1.5 rounded-lg bg-primary/15 border border-primary/30"
                   >
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-[#0BBFB7]">
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-primary-deep">
                       <FolderKanban className="h-3 w-3 shrink-0" />
                       <span className="truncate">{p.key}</span>
                     </div>
-                    <p className="text-[10px] text-[#0BBFB7]/80 truncate mt-0.5">{p.name}</p>
-                    <p className="text-[10px] text-[#0BBFB7]/60 mt-0.5">{p.completion_rate}% completado</p>
+                    <p className="text-[10px] text-primary-deep/80 truncate mt-0.5">{p.name}</p>
+                    <p className="text-[10px] text-primary-deep/60 mt-0.5">{p.completion_rate}% completado</p>
                   </div>
                 ))}
                 {tsk.map(t => {
@@ -632,13 +632,13 @@ function AgendaView({
             {/* Events */}
             <div className="flex-1 space-y-1.5 pb-4 border-b">
               {proj.map(p => (
-                <div key={p.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-[#0DD9D0]/10 border border-[#0DD9D0]/20">
-                  <FolderKanban className="h-4 w-4 text-[#0BBFB7] mt-0.5 shrink-0" />
+                <div key={p.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                  <FolderKanban className="h-4 w-4 text-primary-deep mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#0BBFB7] truncate">{p.name}</p>
-                    <p className="text-xs text-[#0BBFB7]/70">{p.key} · {p.completion_rate}% completado · {p.status}</p>
+                    <p className="text-sm font-semibold text-primary-deep truncate">{p.name}</p>
+                    <p className="text-xs text-primary-deep/70">{p.key} · {p.completion_rate}% completado · {p.status}</p>
                   </div>
-                  <Badge variant="outline" className="ml-auto shrink-0 text-[10px] border-[#0DD9D0]/40 text-[#0BBFB7]">
+                  <Badge variant="outline" className="ml-auto shrink-0 text-[10px] border-primary/40 text-primary-deep">
                     Proyecto
                   </Badge>
                 </div>

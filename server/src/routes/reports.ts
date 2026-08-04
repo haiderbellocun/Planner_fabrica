@@ -22,6 +22,10 @@ import {
   getTimeByPhase,
   getTasksDetail,
   getOntimeByEquipo,
+  getPersonMetrics,
+  getCapacityForecast,
+  getThroughput,
+  getProductionByPerson,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -50,5 +54,9 @@ router.get('/individual-performance', getIndividualPerformance);
 router.get('/time-by-phase', getTimeByPhase);
 router.get('/tasks-detail', getTasksDetail);
 router.get('/ontime-by-equipo', getOntimeByEquipo);
+router.get('/person-metrics', getPersonMetrics);
+router.get('/capacity-forecast', getCapacityForecast);
+router.get('/throughput', getThroughput);
+router.get('/production-by-person', getProductionByPerson);
 
 export default router;

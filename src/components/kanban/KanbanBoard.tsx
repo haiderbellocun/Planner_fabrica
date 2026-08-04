@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { TaskWithDetails, useTaskStatuses, useUpdateTaskStatus } from '@/hooks/useTasks';
+import { TaskWithDetails, useTaskStatuses, useUpdateTaskStatus, useUpdateTaskRank } from '@/hooks/useTasks';
 import { TaskStatus } from '@/types/database';
 import { TaskCard } from './TaskCard';
 import { Loader2 } from 'lucide-react';
@@ -9,14 +10,16 @@ import { useAuth } from '@/contexts/AuthContext';
 interface KanbanBoardProps {
   tasks: TaskWithDetails[];
   projectKey: string;
+  projectId: string;
   onTaskClick: (task: TaskWithDetails) => void;
   isLoading?: boolean;
 }
 
-export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, projectKey, projectId, onTaskClick, isLoading }: KanbanBoardProps) {
   const { user } = useAuth();
   const { data: statuses = [], isLoading: statusesLoading } = useTaskStatuses();
   const updateTaskStatus = useUpdateTaskStatus();
+  const updateTaskRank = useUpdateTaskRank();
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const topScrollContentRef = useRef<HTMLDivElement | null>(null);
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
@@ -29,6 +32,14 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
       if (list) list.push(task);
       else map.set(task.status_id, [task]);
     }
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        const ra = a.board_rank ?? Infinity;
+        const rb = b.board_rank ?? Infinity;
+        if (ra !== rb) return ra - rb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
     return map;
   }, [tasks]);
 
@@ -40,8 +51,30 @@ export function KanbanBoard({ tasks, projectKey, onTaskClick, isLoading }: Kanba
       return;
     }
 
-    const newStatusId = destination.droppableId;
-    updateTaskStatus.mutate({ taskId: draggableId, statusId: newStatusId });
+    const destStatusId = destination.droppableId;
+    const sameColumn = destStatusId === source.droppableId;
+    // destination.index is expressed against the list with the dragged card already removed.
+    const destList = (tasksByStatus.get(destStatusId) ?? []).filter((t) => t.id !== draggableId);
+    const prev = destList[destination.index - 1] ?? null;
+    const next = destList[destination.index] ?? null;
+    const rankArgs = {
+      taskId: draggableId,
+      projectId,
+      list: 'board' as const,
+      prev_task_id: prev?.id ?? null,
+      next_task_id: next?.id ?? null,
+      statusId: destStatusId,
+    };
+
+    if (sameColumn) {
+      updateTaskRank.mutate(rankArgs);
+      return;
+    }
+
+    updateTaskStatus.mutate(
+      { taskId: draggableId, statusId: destStatusId, projectId },
+      { onSuccess: () => updateTaskRank.mutate(rankArgs) }
+    );
   };
 
   useEffect(() => {
@@ -170,20 +203,28 @@ function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: Kanb
                   index={index}
                   isDragDisabled={isDragDisabled}
                 >
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                    >
-                      <TaskCard
-                        task={task}
-                        projectKey={projectKey}
-                        onClick={() => onTaskClick(task)}
-                        isDragging={snapshot.isDragging}
-                      />
-                    </div>
-                  )}
+                  {(provided, snapshot) => {
+                    const card = (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={snapshot.isDragging ? 'z-[9999]' : undefined}
+                      >
+                        <TaskCard
+                          task={task}
+                          projectKey={projectKey}
+                          onClick={() => onTaskClick(task)}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </div>
+                    );
+                    // The column has a backdrop-blur background, which creates a new
+                    // containing block for position:fixed elements — that breaks the
+                    // library's drag layer positioning. Render the dragged card in a
+                    // portal so it escapes that containing block.
+                    return snapshot.isDragging ? createPortal(card, document.body) : card;
+                  }}
                 </Draggable>
               );
             })}

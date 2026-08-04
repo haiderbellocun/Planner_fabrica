@@ -9,155 +9,172 @@
 
 @layer base {
   :root {
-    /* Ice-Blue Dashboard — teal/indigo/yellow palette
-       Reference: rounded cards, teal sidebar, generous spacing */
+    /* "Panel de instrumentos" — teal + coral, cifras en monoespaciada.
+       Neutrals carry a deliberate teal bias (never pure gray) so the whole
+       app reads as one system, not shadcn defaults with a teal accent bolted on. */
 
-    /* Core backgrounds — #F7FCFC limpio */
-    --background: 180 25% 98%;
-    --foreground: 222 47% 11%;
+    /* Core backgrounds — cool teal-tinted white */
+    --background: 178 22% 97%;
+    --foreground: 180 25% 8%;
 
     /* Cards — pure white, big radius */
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 180 25% 8%;
 
     /* Popovers / dropdowns */
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 180 25% 8%;
 
-    /* Primary — teal #0DD9D0, hover #0BBFB7, active #0AA8A1 */
+    /* Primary — brand teal #0DD9D0 (buttons, sidebar, active states) */
     --primary: 177 88% 45%;
     --primary-foreground: 0 0% 100%;
+    /* Deep teal — for TEXT on white (headlines, hero figures, links):
+       the bright primary fails contrast as text, this is its readable twin */
+    --primary-deep: 177 90% 25%;
 
     /* Secondary — teal soft */
     --secondary: 177 60% 94%;
-    --secondary-foreground: 177 89% 45%;
+    --secondary-foreground: 177 89% 30%;
 
-    /* Muted */
-    --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted — teal-biased gray, never neutral slate */
+    --muted: 180 16% 94%;
+    --muted-foreground: 180 10% 40%;
 
     /* Accent — teal highlight */
     --accent: 177 50% 92%;
-    --accent-foreground: 177 89% 40%;
+    --accent-foreground: 177 89% 30%;
 
-    /* Destructive */
-    --destructive: 0 84% 60%;
+    /* Coral — warm counter-accent: attention states, secondary highlights */
+    --coral: 12 100% 64%;
+    --coral-foreground: 0 0% 100%;
+    --coral-tint: 14 100% 95%;
+
+    /* Destructive / critical */
+    --destructive: 3 74% 55%;
     --destructive-foreground: 0 0% 100%;
 
     /* Form elements — ring teal (no blue) */
-    --border: 214 32% 91%;
-    --input: 214 32% 95%;
+    --border: 180 14% 89%;
+    --input: 180 16% 93%;
     --ring: 177 88% 45%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Sidebar — solid teal #0DD9D0 */
+    /* Sidebar — solid brand teal */
     --sidebar-background: 177 88% 45%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
     --sidebar-primary-foreground: 177 88% 45%;
-    --sidebar-accent: 177 89% 40%;
+    --sidebar-accent: 177 89% 38%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 177 88% 38%;
     --sidebar-ring: 0 0% 100%;
 
-    /* Accent colors */
+    /* Legacy accents (unused — kept only so old class references don't break) */
     --sage: 133 14% 58%;
     --sand: 26 33% 84%;
     --lavender: 257 67% 85%;
     --lavender-light: 257 67% 91%;
 
-    /* Task status colors */
-    --status-pending: 215 16% 47%;
+    /* Task status colors — 4 visually distinct steps, not near-duplicates */
+    --status-pending: 180 8% 55%;
     --status-in-progress: 177 88% 45%;
-    --status-in-review: 43 96% 56%;
-    --status-completed: 177 89% 45%;
+    --status-in-review: 40 90% 52%;
+    --status-completed: 152 65% 34%;
 
     /* Priority colors */
-    --priority-low: 215 16% 47%;
-    --priority-medium: 43 96% 56%;
-    --priority-high: 25 95% 53%;
-    --priority-urgent: 0 84% 60%;
+    --priority-low: 180 8% 55%;
+    --priority-medium: 40 90% 52%;
+    --priority-high: 20 90% 55%;
+    --priority-urgent: 3 74% 55%;
 
-    /* Success, warning, info */
-    --success: 177 89% 45%;
+    /* Status palette — good/warning/critical, DISTINCT from primary & each other
+       (previously --success and --info were both identical to --primary) */
+    --success: 152 65% 34%;
     --success-foreground: 0 0% 100%;
-    --warning: 43 96% 56%;
-    --warning-foreground: 0 0% 100%;
-    --info: 177 88% 45%;
+    --warning: 40 90% 52%;
+    --warning-foreground: 180 25% 10%;
+    --info: 205 85% 48%;
     --info-foreground: 0 0% 100%;
 
-    /* Chart palette tokens */
-    --chart-indigo: #4F46E5;
-    --chart-yellow: #FBBF24;
+    /* Chart palette — single source of truth (hex, for JS/Recharts consumers) */
     --chart-teal: #0DD9D0;
+    --chart-teal-deep: #067A76;
+    --chart-coral: #FF6B4A;
+    --chart-indigo: #4F46E5;
+    --chart-amber: #E8A317;
+    --chart-green: #0CA35A;
+    --chart-magenta: #E0619A;
     --chart-grid: #E6FAFA;
   }
 
   .dark {
-    /* Dark mode - blue accent kept */
-    --background: 220 20% 9%;
-    --foreground: 220 15% 96%;
+    /* Same brand hues, stepped for the dark surface — not the old blue-accent
+       palette (dark mode is currently force-disabled in App.tsx; this exists
+       so re-enabling it later isn't a jarring mismatch). */
+    --background: 180 18% 8%;
+    --foreground: 180 20% 96%;
 
-    --card: 220 18% 12%;
-    --card-foreground: 220 15% 96%;
+    --card: 180 16% 11%;
+    --card-foreground: 180 20% 96%;
 
-    --popover: 220 18% 12%;
-    --popover-foreground: 220 15% 96%;
+    --popover: 180 16% 11%;
+    --popover-foreground: 180 20% 96%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 175 80% 52%;
+    --primary-foreground: 180 25% 8%;
+    --primary-deep: 175 70% 78%;
 
-    --secondary: 220 18% 16%;
-    --secondary-foreground: 220 15% 96%;
+    --secondary: 180 16% 16%;
+    --secondary-foreground: 180 20% 92%;
 
-    --muted: 220 18% 16%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 180 14% 16%;
+    --muted-foreground: 180 10% 65%;
 
-    --accent: 217 50% 22%;
-    --accent-foreground: 217 90% 75%;
+    --accent: 177 40% 20%;
+    --accent-foreground: 175 70% 78%;
 
-    --destructive: 0 62% 50%;
+    --coral: 14 100% 68%;
+    --coral-foreground: 180 25% 8%;
+    --coral-tint: 14 60% 18%;
+
+    --destructive: 3 70% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 18% 20%;
-    --input: 220 18% 16%;
-    --ring: 217 91% 60%;
+    --border: 180 14% 20%;
+    --input: 180 14% 18%;
+    --ring: 175 80% 52%;
 
-    --sidebar-background: 220 20% 11%;
-    --sidebar-foreground: 220 15% 96%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 50% 20%;
-    --sidebar-accent-foreground: 217 90% 75%;
-    --sidebar-border: 220 18% 18%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 180 20% 10%;
+    --sidebar-foreground: 180 20% 94%;
+    --sidebar-primary: 175 80% 52%;
+    --sidebar-primary-foreground: 180 25% 8%;
+    --sidebar-accent: 177 40% 20%;
+    --sidebar-accent-foreground: 175 70% 78%;
+    --sidebar-border: 180 14% 18%;
+    --sidebar-ring: 175 80% 52%;
 
-    /* Accent colors for dark mode */
     --sage: 133 14% 55%;
     --sand: 26 25% 70%;
     --lavender: 257 50% 70%;
     --lavender-light: 257 50% 75%;
 
-    /* Status colors - slightly brighter for dark mode */
-    --status-pending: 240 10% 60%;
-    --status-in-progress: 268 80% 65%;
-    --status-in-review: 38 92% 55%;
-    --status-completed: 133 40% 55%;
+    --status-pending: 180 8% 55%;
+    --status-in-progress: 175 80% 52%;
+    --status-in-review: 40 85% 58%;
+    --status-completed: 152 55% 48%;
 
-    /* Priority colors */
-    --priority-low: 240 10% 55%;
-    --priority-medium: 38 92% 55%;
-    --priority-high: 25 95% 58%;
-    --priority-urgent: 0 84% 65%;
+    --priority-low: 180 8% 55%;
+    --priority-medium: 40 85% 58%;
+    --priority-high: 20 85% 60%;
+    --priority-urgent: 3 70% 62%;
 
-    /* Success, warning, info */
-    --success: 142 71% 50%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 100%;
-    --info: 217 91% 65%;
-    --info-foreground: 0 0% 100%;
+    --success: 152 55% 48%;
+    --success-foreground: 180 25% 8%;
+    --warning: 40 85% 58%;
+    --warning-foreground: 180 25% 8%;
+    --info: 205 80% 62%;
+    --info-foreground: 180 25% 8%;
   }
 }
 
@@ -178,11 +195,13 @@
     min-height: 100vh;
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image: url("./assets/FONDO.png");
-    background-repeat: no-repeat;
-    background-position: center bottom;
-    background-size: 100% auto;
-    background-attachment: fixed;
+  }
+
+  /* Data figures (hero numbers, stat tiles, table numeric columns) — an
+     "instrument panel" reading, distinct from the UI sans used everywhere else. */
+  .figure {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
   }
   
   /* Smooth scrolling */
@@ -212,7 +231,7 @@
 @layer components {
   /* Kanban column styling - Snapshot style */
   .kanban-column {
-    @apply bg-white/65 dark:bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)];
+    @apply bg-muted/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)];
   }
 
   .kanban-column-header {
@@ -285,19 +304,17 @@
 
   /* Stat card icon circle — teal filled (non-KPI) */
   .stat-icon-circle {
-    @apply h-11 w-11 rounded-2xl flex items-center justify-center flex-shrink-0;
-    background: linear-gradient(135deg, #0DD9D0, #0BBFB7);
-    color: white;
+    @apply h-11 w-11 rounded-2xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary to-[hsl(177,88%,38%)] text-primary-foreground;
   }
 
   /* KPI card icon badge — teal soft */
   .kpi-icon-badge {
-    @apply h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#0DD9D0]/10 text-[#0DD9D0];
+    @apply h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary-deep;
   }
 
   /* Focus ring teal (no blue) */
   .focus-ring-teal:focus-visible {
-    @apply outline-none ring-2 ring-[#0DD9D0]/30 border-[#0DD9D0]/40;
+    @apply outline-none ring-2 ring-primary/30 border-primary/40;
   }
 
   /* Widget card base — big radius, soft shadow */
@@ -308,6 +325,67 @@
   .widget-card:hover {
     @apply shadow-[0_4px_16px_rgba(0,0,0,0.07)];
   }
+
+  /* ---- Storytelling primitives (shared across the whole app) ---- */
+
+  /* Stat tile — label, monospace figure, optional sparkline + status pill.
+     Replaces the old KpiCard's decorative-illustration recipe. */
+  .stat-tile {
+    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 transition-shadow duration-200;
+  }
+  .stat-tile:hover {
+    @apply shadow-[0_1px_2px_rgba(10,20,20,0.05),0_12px_28px_rgba(10,20,20,0.08)];
+  }
+  .stat-tile-label {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .stat-tile-value {
+    @apply figure text-[26px] font-bold text-foreground leading-none;
+  }
+
+  /* Hero banner — the narrative "so what" strip at the top of a story page */
+  .hero-banner {
+    @apply rounded-[20px] p-8 text-primary-foreground relative overflow-hidden;
+    background: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(180, 60%, 16%) 130%);
+  }
+  .hero-banner::after {
+    content: "";
+    position: absolute; right: -60px; top: -60px; width: 260px; height: 260px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, hsl(var(--coral) / 0.18), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Spotlight card — an individual/team callout, not a table row */
+  .spotlight-card {
+    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 flex flex-col gap-3;
+  }
+
+  /* Attention item — an actionable callout, severity carried by the stripe */
+  .attn-item {
+    @apply flex items-center gap-3.5 rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] px-4 py-3.5;
+  }
+  .attn-stripe {
+    @apply w-1 self-stretch rounded-full flex-shrink-0;
+  }
+  .attn-stripe-critical { @apply bg-destructive; }
+  .attn-stripe-warning { @apply bg-warning; }
+  .attn-stripe-good { @apply bg-success; }
+
+  /* Status pill — state as form + label, never color alone */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold;
+  }
+  .status-pill::before {
+    content: "";
+    @apply h-1.5 w-1.5 rounded-full flex-shrink-0;
+    background: currentColor;
+  }
+  .status-pill-good { @apply bg-success/10 text-success; }
+  .status-pill-warning { @apply bg-warning/15 text-[hsl(32,75%,38%)]; }
+  .status-pill-critical { @apply bg-destructive/10 text-destructive; }
+  .status-pill-info { @apply bg-info/10 text-info; }
+  .status-pill-available { @apply bg-[hsl(205,85%,48%)]/10 text-[hsl(205,85%,38%)]; }
 }
 
 @layer utilities {

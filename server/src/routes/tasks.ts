@@ -5,9 +5,11 @@ import {
   createTask,
   updateTask,
   updateTaskStatus,
+  updateTaskRank,
   deleteTask,
   getTaskHistory,
   getTaskActivity,
+  listProjectTags,
 } from '../controllers/tasksController.js';
 import {
   getTaskComments,
@@ -38,6 +40,9 @@ router.get('/:id', getTask);
 // Update task status (specific endpoint)
 router.patch('/:id/status', updateTaskStatus);
 
+// Reorder task within its board column or backlog
+router.patch('/:id/rank', updateTaskRank);
+
 // Update task
 router.patch('/:id', validateTaskUpdate, updateTask);
 
@@ -48,6 +53,7 @@ router.delete('/:id', projectLeaderMiddleware, deleteTask);
 // List tasks for project - will be mounted as /api/projects/:projectId/tasks
 export const projectTasksRouter = express.Router({ mergeParams: true }); // mergeParams allows access to :projectId
 projectTasksRouter.use(authMiddleware); // Apply auth middleware
+projectTasksRouter.get('/tags', projectMemberMiddleware, listProjectTags);
 projectTasksRouter.get('/', projectMemberMiddleware, listTasks);
 projectTasksRouter.post('/', projectMemberMiddleware, validateTaskCreate, createTask);
 
