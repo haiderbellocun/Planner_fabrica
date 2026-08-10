@@ -28,6 +28,11 @@ export default function DashboardPage() {
   // Calculate stats
   const totalProjects = projects.length;
   const totalTasks = projects.reduce((acc, p) => acc + Number(p.tasks_count ?? 0), 0);
+  // "En curso" = total - completadas, not the same figure as "Tareas totales" below.
+  const pendingTasksCount = projects.reduce(
+    (acc, p) => acc + Math.max(Number(p.tasks_count ?? 0) - Number(p.completed_tasks ?? 0), 0),
+    0
+  );
   const completedStatus = statuses.find((s) => s.is_completed);
 
   const greeting = () => {
@@ -58,7 +63,7 @@ export default function DashboardPage() {
   }
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Usuario';
-  const activeProjectsCount = projects.filter((p) => !p.is_completed).length;
+  const activeProjectsCount = projects.filter((p) => p.status !== 'completed').length;
 
   return (
     <div className="page-container">
@@ -68,7 +73,7 @@ export default function DashboardPage() {
           <>
             Hola <b className="text-white">{firstName}</b> — tienes{' '}
             <b className="text-white">{activeProjectsCount} proyectos activos</b> con{' '}
-            <b className="text-white">{totalTasks} tareas</b> en total.
+            <b className="text-white">{pendingTasksCount} tareas activas</b>.
             {unreadNotifications.length > 0 && (
               <> Tienes <b className="text-white">{unreadNotifications.length} notificaciones</b> sin leer.</>
             )}
@@ -76,7 +81,7 @@ export default function DashboardPage() {
         }
         stats={[
           { value: totalProjects, label: 'Proyectos totales' },
-          { value: totalTasks, label: 'Tareas en curso' },
+          { value: pendingTasksCount, label: 'Tareas en curso' },
           { value: unreadNotifications.length, label: 'Notificaciones nuevas' },
         ]}
       />
@@ -85,8 +90,8 @@ export default function DashboardPage() {
       <MyFocusToday />
       {/* Stats — instrument-panel tiles, no illustration */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatTile label="Proyectos" value={totalProjects} sub="Proyectos activos" />
-        <StatTile label="Tareas totales" value={totalTasks} sub="En todos los proyectos" />
+        <StatTile label="Proyectos" value={totalProjects} sub={`${activeProjectsCount} activos`} />
+        <StatTile label="Tareas totales" value={totalTasks} sub={`${pendingTasksCount} activas`} />
         <StatTile
           label="Notificaciones"
           value={unreadNotifications.length}

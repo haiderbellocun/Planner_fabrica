@@ -40,7 +40,6 @@ import {
 import {
   useReportOverview,
   useReportProjectsProgress,
-  useReportMaterialProduction,
   useReportTimeDistribution,
   useReportWorkflowTransitions,
   useReportWorkloadByCargo,
@@ -58,11 +57,9 @@ import {
   type IndividualPerformance,
   type TimeByPhase,
   type TaskDetail,
-  type UnassignedMaterial,
   useReportPersonMetrics,
   useReportCapacityForecast,
   useReportThroughput,
-  useReportProductionByPerson,
   type ReportScopeFilters,
   type PersonMetric,
 } from '@/hooks/useReports';
@@ -242,6 +239,9 @@ function TabResumen() {
 
   const tasks = overview.tasks ?? {};
   const byStatus = tasks.by_status ?? [];
+  // "Activas" = no completadas todavía — tasks.total incluye tareas de proyectos ya
+  // finalizados hace tiempo, lo que infla el número sin decir nada sobre el trabajo real.
+  const activeTasksCount = byStatus.filter(s => !s.is_completed).reduce((acc, s) => acc + (s.count ?? 0), 0);
   const projectsData = overview.projects ?? { total: 0, active: 0 };
   const materialsData = overview.materials ?? { total: 0, completed: 0, completion_rate: 0 };
   const teamData = overview.team ?? { active_members: 0 };
@@ -323,14 +323,14 @@ function TabResumen() {
         story={
           <>
             <b className="text-white">{projectsData.active}</b> proyectos activos generan{' '}
-            <b className="text-white">{tasks.total ?? 0} tareas</b>, con{' '}
+            <b className="text-white">{activeTasksCount} tareas activas</b>, con{' '}
             <b className="text-white">{puntualidadGlobal != null ? `${puntualidadGlobal}% de puntualidad` : 'puntualidad aún sin datos suficientes'}</b>{' '}
             en las entregas evaluables del equipo.
           </>
         }
         stats={[
           { value: projectsData.active, label: `Proyectos activos de ${projectsData.total}` },
-          { value: `${materialsData.completion_rate ?? 0}%`, label: 'Materiales completados' },
+          { value: puntualidadGlobal != null ? `${puntualidadGlobal}%` : '—', label: 'Puntualidad global' },
           { value: teamData.active_members, label: 'Personas activas' },
         ]}
       />
@@ -1838,265 +1838,6 @@ function CapacidadResumen({ report }: { report: UserMiniReport }) {
   );
 }
 
-// ---------- Tab: Producción ----------
-function TabProduccion() {
-  const [projectId, setProjectId] = useState('all');
-  const [rangeKey, setRangeKey] = useState<ReportRangeKey>('30d');
-  const filters: ReportScopeFilters = {
-    ...(projectId !== 'all' ? { project_id: projectId } : {}),
-    ...resolveRange(rangeKey),
-  };
-
-  const { data: materials = [], isLoading } = useReportMaterialProduction();
-  const { data: personMetrics } = useReportPersonMetrics(filters);
-  const { data: production, isLoading: loadingProduction } = useReportProductionByPerson(filters);
-  const { data: unassigned = [] } = useReportUnassignedMaterials();
-
-  if (isLoading || loadingProduction) return <LoadingState />;
-
-  const activeMaterials = materials.filter(m => m.materiales > 0);
-  const overall = personMetrics?.overall;
-
-  const barData = activeMaterials.map(m => ({
-    name: m.name.replace(/_/g, ' '),
-    icon: m.icon,
-    completadas: m.completadas,
-    en_proceso: m.en_proceso,
-    sin_asignar: m.sin_asignar,
-    total: m.materiales,
-  }));
-
-  const matConfig: ChartConfig = {
-    completadas: { label: 'Completadas', color: CHART_COLORS.teal },
-    en_proceso: { label: 'En proceso', color: CHART_COLORS.indigo },
-    sin_asignar: { label: 'Sin asignar', color: CHART_COLORS.muted },
-  };
-
-  const topProducers = (production?.totals_by_person ?? []).slice(0, 10);
-  const materialTypeNames = Array.from(new Set((production?.rows ?? []).map(r => r.material_type_name)));
-  const producerBarData = topProducers.map(p => {
-    const base: Record<string, number | string> = { name: (p.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') };
-    materialTypeNames.forEach(typeName => {
-      const row = production?.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === typeName);
-      base[typeName] = row?.horas_completadas ?? 0;
-    });
-    return base;
-  });
-  const producerBarConfig: ChartConfig = materialTypeNames.reduce((acc, name, idx) => {
-    acc[name] = { label: name, color: RANKING_COLORS[idx % RANKING_COLORS.length] };
-    return acc;
-  }, {} as ChartConfig);
-
-  const totalHorasEntregadas = (production?.totals_by_person ?? []).reduce((s, p) => s + p.horas_completadas, 0);
-  const totalUnidadesCompletadas = (production?.totals_by_person ?? []).reduce((s, p) => s + p.unidades_completadas, 0);
-
-  return (
-    <div className="space-y-6">
-      {overall && (
-        <HeroBanner
-          eyebrow="Producción"
-          story={
-            <>
-              El equipo entregó <b className="text-white">{formatHours(totalHorasEntregadas)}</b> de trabajo (
-              <b className="text-white">{totalUnidadesCompletadas} unidades</b>) en el período, con{' '}
-              <b className="text-white">{overall.puntualidad_pct != null ? `${overall.puntualidad_pct}% de puntualidad` : 'puntualidad sin datos suficientes'}</b>.{' '}
-              {unassigned.length > 0 && <><b className="text-white">{unassigned.length} materiales</b> siguen sin asignar.</>}
-            </>
-          }
-          stats={[
-            { value: formatHours(totalHorasEntregadas), label: 'Horas entregadas' },
-            { value: totalUnidadesCompletadas, label: 'Unidades completadas' },
-            { value: unassigned.length, label: 'Materiales sin asignar' },
-          ]}
-        />
-      )}
-      <ReportScopeFilterBar projectId={projectId} onProjectChange={setProjectId} rangeKey={rangeKey} onRangeChange={setRangeKey} />
-
-      {activeMaterials.length > 0 && (
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Producción por Tipo de Material</CardTitle>
-            <CardDescription>Completadas · En proceso · Sin asignar (unidades consistentes: cada barra cuenta materiales, no tareas)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={matConfig} className="h-[340px] w-full">
-              <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
-                <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                <XAxis type="number" {...AXIS_STYLE} />
-                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={130} tick={{ fontSize: 11 }} />
-                <ChartTooltip content={<CustomTooltip />} />
-                <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.teal} name="Completadas" />
-                <Bar dataKey="en_proceso" stackId="a" fill={CHART_COLORS.indigo} name="En proceso" />
-                <Bar dataKey="sin_asignar" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} name="Sin asignar" />
-              </BarChart>
-            </ChartContainer>
-            <div className="flex items-center gap-5 mt-3 justify-center">
-              {[
-                { color: CHART_COLORS.teal, label: 'Completadas' },
-                { color: CHART_COLORS.indigo, label: 'En proceso' },
-                { color: CHART_COLORS.muted, label: 'Sin asignar' },
-              ].map(({ color, label }) => (
-                <span key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: color }} />
-                  {label}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Material progress cards */}
-      {activeMaterials.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {activeMaterials.map(m => {
-            const rate = m.completion_rate ?? 0;
-            const barColor = rate === 100 ? CHART_COLORS.green : rate >= 60 ? CHART_COLORS.indigoLight : axisTick.fill;
-            return (
-              <Card key={m.id} className={`p-4 ${CARD_CLASS}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{m.icon}</span>
-                    <span className="font-medium text-sm capitalize">{m.name.replace(/_/g, ' ')}</span>
-                  </div>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: barColor }}>{rate}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-2">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: barColor }} />
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{m.completadas} completadas</span>
-                  <span>{m.en_proceso} en proceso</span>
-                  <span>{m.materiales} total</span>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Quién produce qué */}
-      {production && production.rows.length > 0 && (
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Quién produce qué</CardTitle>
-            <CardDescription>Horas entregadas por colaborador y tipo de material</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left py-2 px-2 font-medium">Colaborador</th>
-                    {materialTypeNames.map(name => (
-                      <th key={name} className="text-center py-2 px-2 font-medium">{name}</th>
-                    ))}
-                    <th className="text-center py-2 px-2 font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topProducers.map(p => {
-                    const maxHoras = Math.max(...materialTypeNames.map(t =>
-                      production.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === t)?.horas_completadas ?? 0
-                    ), 1);
-                    return (
-                      <tr key={p.profile_id} className="border-b last:border-0">
-                        <td className="py-2 px-2 font-medium truncate max-w-[150px]">{p.full_name}</td>
-                        {materialTypeNames.map(typeName => {
-                          const row = production.rows.find(r => r.profile_id === p.profile_id && r.material_type_name === typeName);
-                          const horas = row?.horas_completadas ?? 0;
-                          const intensity = horas > 0 ? Math.min(0.15 + (horas / maxHoras) * 0.6, 0.75) : 0;
-                          return (
-                            <td
-                              key={typeName}
-                              className="text-center py-2 px-2 text-xs"
-                              style={{ backgroundColor: horas > 0 ? `rgba(13,217,208,${intensity})` : undefined }}
-                            >
-                              {horas > 0 ? formatHours(horas) : '-'}
-                            </td>
-                          );
-                        })}
-                        <td className="text-center py-2 px-2 font-semibold">{formatHours(p.horas_completadas)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Producción por colaborador */}
-      {producerBarData.length > 0 && (
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Producción por colaborador</CardTitle>
-            <CardDescription>Horas entregadas, top 10, apiladas por tipo de material</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={producerBarConfig} className="h-[280px] w-full">
-              <BarChart data={producerBarData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                <CartesianGrid horizontal={false} {...GRID_STYLE} />
-                <XAxis type="number" {...AXIS_STYLE} tickFormatter={(v) => `${v}h`} />
-                <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={110} tick={{ fill: axisTick.fill, fontSize: 12 }} />
-                <ChartTooltip content={<CustomTooltip />} />
-                {materialTypeNames.map((name, idx) => (
-                  <Bar
-                    key={name}
-                    dataKey={name}
-                    stackId="a"
-                    fill={RANKING_COLORS[idx % RANKING_COLORS.length]}
-                    radius={idx === materialTypeNames.length - 1 ? [0, BAR_RADIUS, BAR_RADIUS, 0] : [0, 0, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Materiales sin asignar */}
-      {unassigned.length > 0 && (
-        <Card className={CARD_CLASS}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Materiales sin asignar</CardTitle>
-            <CardDescription>Aún no tienen un responsable asignado</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left py-2 px-2 font-medium">Tipo</th>
-                    <th className="text-left py-2 px-2 font-medium">Tema</th>
-                    <th className="text-left py-2 px-2 font-medium">Asignatura</th>
-                    <th className="text-left py-2 px-2 font-medium">Proyecto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unassigned.slice(0, 50).map((u: UnassignedMaterial) => (
-                    <tr key={u.id} className="border-b last:border-0">
-                      <td className="py-2 px-2">{u.icon} {u.material_type}</td>
-                      <td className="py-2 px-2 text-muted-foreground">{u.tema}</td>
-                      <td className="py-2 px-2 text-muted-foreground">{u.asignatura}</td>
-                      <td className="py-2 px-2 text-muted-foreground">{u.project_name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeMaterials.length === 0 && (production?.rows.length ?? 0) === 0 && (
-        <EmptyState message="No hay materiales registrados" />
-      )}
-    </div>
-  );
-}
-
 // ---------- Tab: Eficiencia — helpers ----------
 
 function EficSectionHeader({ tag, title }: { tag: string; title: string }) {
@@ -3199,11 +2940,10 @@ export default function ReportsPage() {
         </div>
 
         <Tabs defaultValue="resumen" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-6 max-w-[780px]">
+          <TabsList className="grid w-full grid-cols-5 max-w-[680px]">
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
             <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
-            <TabsTrigger value="produccion">Producción</TabsTrigger>
             <TabsTrigger value="eficiencia">Eficiencia</TabsTrigger>
             <TabsTrigger value="rendimiento">Rendimiento</TabsTrigger>
           </TabsList>
@@ -3218,10 +2958,6 @@ export default function ReportsPage() {
 
           <TabsContent value="equipo">
             <TabEquipo />
-          </TabsContent>
-
-          <TabsContent value="produccion">
-            <TabProduccion />
           </TabsContent>
 
           <TabsContent value="eficiencia">

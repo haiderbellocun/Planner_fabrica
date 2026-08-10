@@ -48,19 +48,6 @@ export interface TeamMember {
   completion_rate: number;
 }
 
-export interface MaterialProduction {
-  id: string;
-  name: string;
-  icon: string;
-  display_order: number;
-  materiales: number;
-  total_quantity: number;
-  completadas: number;
-  en_proceso: number;
-  sin_asignar: number;
-  completion_rate: number;
-}
-
 export interface TimeDistribution {
   status_name: string;
   color: string;
@@ -281,14 +268,6 @@ export function useReportTeamPerformance() {
   return useQuery({
     queryKey: ['report-team-performance'],
     queryFn: () => api.get<TeamMember[]>('/api/reports/team-performance'),
-    staleTime: STALE_TIME,
-  });
-}
-
-export function useReportMaterialProduction() {
-  return useQuery({
-    queryKey: ['report-material-production'],
-    queryFn: () => api.get<MaterialProduction[]>('/api/reports/material-production'),
     staleTime: STALE_TIME,
   });
 }
@@ -637,35 +616,6 @@ export function useReportThroughput(
   return useQuery({
     queryKey: ['report-throughput', filters],
     queryFn: () => api.get<ThroughputPoint[]>(`/api/reports/throughput${finalQs ? `?${finalQs}` : ''}`),
-    staleTime: STALE_TIME,
-  });
-}
-
-export interface ProductionByPersonRow {
-  profile_id: string;
-  full_name: string;
-  cargo: string | null;
-  avatar_url: string | null;
-  material_type_id: string;
-  material_type_name: string;
-  icon: string | null;
-  unidades_completadas: number;
-  horas_completadas: number;
-  unidades_en_proceso: number;
-  horas_pendientes: number;
-}
-
-export interface ProductionByPersonResponse {
-  rows: ProductionByPersonRow[];
-  totals_by_person: { profile_id: string; full_name: string; cargo: string | null; avatar_url: string | null; horas_completadas: number; unidades_completadas: number }[];
-  totals_by_type: { material_type_id: string; material_type_name: string; icon: string | null; horas_completadas: number; unidades_completadas: number }[];
-}
-
-export function useReportProductionByPerson(filters: ReportScopeFilters = {}) {
-  const qs = scopeToQuery(filters);
-  return useQuery({
-    queryKey: ['report-production-by-person', filters],
-    queryFn: () => api.get<ProductionByPersonResponse>(`/api/reports/production-by-person${qs ? `?${qs}` : ''}`),
     staleTime: STALE_TIME,
   });
 }

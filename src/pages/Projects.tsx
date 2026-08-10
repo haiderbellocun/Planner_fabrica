@@ -27,7 +27,11 @@ const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
 
 function formatEndDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
-  const d = new Date(dateStr + 'T00:00:00');
+  // end_date can arrive as a plain "YYYY-MM-DD" or a full ISO timestamp — slice to
+  // the date part first, otherwise appending T00:00:00 to a timestamp that already
+  // has a time component produces an invalid date (renders as "NaN undefined NaN").
+  const d = new Date(dateStr.slice(0, 10) + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return null;
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 

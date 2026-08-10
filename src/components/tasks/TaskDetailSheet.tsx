@@ -87,6 +87,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const deleteComment = useDeleteTaskComment(task?.id || '');
   const [newComment, setNewComment] = useState('');
   const [editingDueDate, setEditingDueDate] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
   const { data: tiempoTarea } = useTiempoTarea(task?.id);
 
   // Use full task data if available, otherwise fall back to prop
@@ -299,7 +300,35 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
                   </Button>
                 )}
               </div>
-              <DialogTitle className="text-base font-bold text-foreground leading-snug">{taskData.title}</DialogTitle>
+              <DialogTitle className="text-base font-bold text-foreground leading-snug">
+                {user?.role === 'admin' && editingTitle ? (
+                  <input
+                    type="text"
+                    className="w-full border border-border rounded px-2 py-1 text-base font-bold bg-background text-foreground"
+                    defaultValue={taskData.title}
+                    autoFocus
+                    onBlur={(e) => {
+                      setEditingTitle(false);
+                      const newTitle = e.target.value.trim();
+                      if (newTitle && newTitle !== taskData.title) {
+                        updateTask.mutate({ id: taskData.id, projectId: taskData.project_id, title: newTitle });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setEditingTitle(false);
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
+                  />
+                ) : (
+                  <span
+                    className={user?.role === 'admin' ? 'cursor-pointer hover:text-primary' : ''}
+                    onClick={() => user?.role === 'admin' && setEditingTitle(true)}
+                    title={user?.role === 'admin' ? 'Clic para editar el nombre' : undefined}
+                  >
+                    {taskData.title}
+                  </span>
+                )}
+              </DialogTitle>
               {taskData.description && (
                 <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   {taskData.description}

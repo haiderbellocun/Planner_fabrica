@@ -54,12 +54,20 @@ export const getOverview = async (req: AuthRequest, res: Response) => {
         LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
       `),
 
-      // Active team members
+      // Active team members. Previously counted public.project_members — but that
+      // table only gets a row when someone is explicitly "added" to a project
+      // (createProject's default leaders + the manual addMember action). Actually
+      // doing task/material work never requires a project_members row, so that
+      // query undercounted real active people (verified: 12 vs. ~40 actual users).
+      // Fixed to count everyone with at least one task/material assignment instead,
+      // via the same ASSIGNED_WORK_CTE every other per-person report metric uses.
       query(`
-        SELECT COUNT(DISTINCT pm.user_id) as count
-        FROM public.project_members pm
-        JOIN public.profiles p ON p.id = pm.user_id
+        WITH ${ASSIGNED_WORK_CTE}
+        SELECT COUNT(DISTINCT aw.profile_id) as count
+        FROM assigned_work aw
+        JOIN public.profiles p ON p.id = aw.profile_id
         JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+        WHERE aw.profile_id IS NOT NULL
       `),
 
       // Real lead time (created -> real completion event), replacing the old query
