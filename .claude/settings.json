@@ -73,7 +73,9 @@
       "Bash(git checkout *)",
       "Bash(node run-equipo-plan-migration.js)",
       "Bash(node diag_plan_query.js)",
-      "Bash(node diag_camilo.js)"
+      "Bash(node diag_camilo.js)",
+      "Bash(cd c:/app_planner/server && npx tsc --noEmit 2>&1 | head -40 && cd .. && npx tsc --noEmit 2>&1 | head -40)",
+      "Read(//c//**)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

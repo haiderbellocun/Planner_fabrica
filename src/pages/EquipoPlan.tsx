@@ -96,6 +96,9 @@ export default function EquipoPlanPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {plan?.sections.map((section) => {
                 const sectionCompleted = section.items.filter((i) => i.task.status.is_completed).length;
+                // Las finalizadas ya no hay que "planear" nada con ellas -- se cuentan
+                // arriba para el avance, pero no ensucian la lista de pendientes.
+                const pendingItems = section.items.filter((i) => !i.task.status.is_completed);
                 return (
                   <Card key={section.profile_id}>
                     <CardContent className="p-4 space-y-3">
@@ -121,11 +124,13 @@ export default function EquipoPlanPage() {
                         )}
                       </div>
 
-                      {section.items.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-2">Sin tareas planificadas esta semana</p>
+                      {pendingItems.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-2">
+                          {sectionCompleted > 0 ? 'Todo lo planificado ya está finalizado' : 'Sin tareas planificadas esta semana'}
+                        </p>
                       ) : (
                         <ul className="space-y-1.5">
-                          {section.items.map((item) => {
+                          {pendingItems.map((item) => {
                             const dueDate = parseDateOnly(item.task.due_date);
                             return (
                               <li key={item.id} className="flex items-center gap-2 p-2 rounded-lg border border-border">

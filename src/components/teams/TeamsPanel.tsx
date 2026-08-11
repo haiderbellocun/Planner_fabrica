@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { useTeams, useDeleteTeam } from '@/hooks/useTeams';
@@ -107,15 +108,12 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
                         {team.members.length > 0 ? (
                           <div className="flex items-center -space-x-2">
                             {team.members.slice(0, 6).map((m) => (
-                              <div
-                                key={m.id}
-                                className="h-6 w-6 rounded-full ring-2 ring-white bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden"
-                                title={m.full_name ?? ''}
-                              >
-                                {m.avatar_url
-                                  ? <img src={m.avatar_url} alt="" className="h-full w-full object-cover" />
-                                  : (m.full_name?.charAt(0) ?? '?')}
-                              </div>
+                              <Avatar key={m.id} className="h-6 w-6 ring-2 ring-white" title={m.full_name ?? ''}>
+                                <AvatarImage src={m.avatar_url || undefined} />
+                                <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                                  {m.full_name?.charAt(0) ?? '?'}
+                                </AvatarFallback>
+                              </Avatar>
                             ))}
                             {team.members.length > 6 && (
                               <div className="h-6 w-6 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">

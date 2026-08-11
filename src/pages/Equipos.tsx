@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Pencil, CalendarDays } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEquipos } from '@/hooks/useEquipos';
+import { useProfiles } from '@/hooks/useProfiles';
 import { EditEquipoDialog } from '@/components/equipos/EditEquipoDialog';
 import { StatTile } from '@/components/shared/StoryUI';
 import type { Equipo } from '@/types/database';
@@ -11,8 +13,14 @@ import type { Equipo } from '@/types/database';
 export default function Equipos() {
   const navigate = useNavigate();
   const { data: equipos = [], isLoading } = useEquipos();
+  const { data: profiles = [] } = useProfiles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null);
+
+  const assignedProfileIds = new Set(equipos.flatMap((e) => e.members.map((m) => m.profile_id)));
+  const unassignedProfiles = profiles
+    .filter((p) => !assignedProfileIds.has(p.id))
+    .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''));
 
   const handleEdit = (equipo: Equipo) => {
     setSelectedEquipo(equipo);
@@ -37,13 +45,18 @@ export default function Equipos() {
         </Card>
       ) : (
         <>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatTile label="Equipos formados" value={`${equipos.length}/5`} />
           <StatTile label="Personas asignadas" value={equipos.reduce((s, e) => s + e.members.length, 0)} />
           <StatTile
             label="Sin miembros"
             value={equipos.filter(e => e.members.length === 0).length}
             pill={equipos.some(e => e.members.length === 0) ? { tone: 'warning', label: 'Pendiente' } : { tone: 'good', label: 'Completo' }}
+          />
+          <StatTile
+            label="Personas sin equipo"
+            value={unassignedProfiles.length}
+            pill={unassignedProfiles.length > 0 ? { tone: 'warning', label: 'Pendiente' } : { tone: 'good', label: 'Completo' }}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -78,15 +91,12 @@ export default function Equipos() {
                   {equipo.members.length > 0 ? (
                     <div className="flex items-center -space-x-2">
                       {equipo.members.slice(0, 6).map((m) => (
-                        <div
-                          key={m.id}
-                          className="h-7 w-7 rounded-full ring-2 ring-white bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden"
-                          title={m.full_name ?? ''}
-                        >
-                          {m.avatar_url
-                            ? <img src={m.avatar_url} alt="" className="h-full w-full object-cover" />
-                            : (m.full_name?.charAt(0) ?? '?')}
-                        </div>
+                        <Avatar key={m.id} className="h-7 w-7 ring-2 ring-white" title={m.full_name ?? ''}>
+                          <AvatarImage src={m.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                            {m.full_name?.charAt(0) ?? '?'}
+                          </AvatarFallback>
+                        </Avatar>
                       ))}
                       {equipo.members.length > 6 && (
                         <div className="h-7 w-7 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
@@ -102,6 +112,30 @@ export default function Equipos() {
             </Card>
           ))}
         </div>
+
+        {unassignedProfiles.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="font-medium mb-3">Personas sin equipo ({unassignedProfiles.length})</h3>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {unassignedProfiles.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={p.avatar_url || undefined} />
+                      <AvatarFallback className="text-[10px] font-semibold bg-muted text-muted-foreground">
+                        {p.full_name?.charAt(0) ?? '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-sm truncate">{p.full_name ?? p.email}</p>
+                      {p.cargo && <p className="text-xs text-muted-foreground truncate">{p.cargo}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         </>
       )}
 

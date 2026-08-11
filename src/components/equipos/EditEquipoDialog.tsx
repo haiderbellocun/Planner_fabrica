@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
 import { useEquipos, useUpdateEquipo, useSetEquipoMembers } from '@/hooks/useEquipos';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -138,11 +139,12 @@ export function EditEquipoDialog({ equipo, open, onOpenChange }: EditEquipoDialo
                           checked={selectedProfileIds.includes(p.id)}
                           onCheckedChange={() => toggleProfile(p.id)}
                         />
-                        <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden flex-shrink-0">
-                          {p.avatar_url
-                            ? <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
-                            : (p.full_name?.charAt(0) ?? '?')}
-                        </div>
+                        <Avatar className="h-6 w-6 flex-shrink-0">
+                          <AvatarImage src={p.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                            {p.full_name?.charAt(0) ?? '?'}
+                          </AvatarFallback>
+                        </Avatar>
                         <span className="truncate flex-1">{p.full_name ?? p.email}</span>
                         {otherEquipo && (
                           <span className="text-xs text-muted-foreground flex-shrink-0">

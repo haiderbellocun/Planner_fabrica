@@ -26,13 +26,17 @@ export const listEquipoPlan = async (req: AuthRequest, res: Response) => {
     // agregar a mano lo que ya esta planificado en Planner. Si la persona ya
     // tiene al menos un item (agregado a mano o por esta misma siembra antes),
     // no se vuelve a tocar su seccion -- se respeta lo que el lider haya
-    // curado desde entonces (incluyendo si borro todo a proposito).
+    // curado desde entonces (incluyendo si borro todo a proposito). Tareas ya
+    // finalizadas no se siembran -- no tiene sentido "planear" algo que ya
+    // esta hecho.
     await query(
       `INSERT INTO public.equipo_plan_items (equipo_id, profile_id, task_id, week_start, added_by)
        SELECT $1, t.assignee_id, t.id, $2, NULL
        FROM public.tasks t
+       JOIN public.task_statuses ts ON ts.id = t.status_id
        WHERE t.assignee_id IN (SELECT profile_id FROM public.equipo_members WHERE equipo_id = $1)
          AND t.due_date BETWEEN $2::date AND ($2::date + INTERVAL '6 days')
+         AND ts.is_completed = false
          AND t.assignee_id NOT IN (
            SELECT profile_id FROM public.equipo_plan_items WHERE equipo_id = $1 AND week_start = $2
          )

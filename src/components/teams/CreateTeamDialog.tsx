@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
 import { useCreateTeam, useUpdateTeam, useSetTeamMembers } from '@/hooks/useTeams';
 import type { Team } from '@/types/database';
@@ -140,11 +141,12 @@ export function CreateTeamDialog({ projectId, team, members, open, onOpenChange 
                         checked={selectedProfileIds.includes(m.profile.id)}
                         onCheckedChange={() => toggleProfile(m.profile.id)}
                       />
-                      <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary overflow-hidden flex-shrink-0">
-                        {m.profile.avatar_url
-                          ? <img src={m.profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                          : (m.profile.full_name?.charAt(0) ?? '?')}
-                      </div>
+                      <Avatar className="h-6 w-6 flex-shrink-0">
+                        <AvatarImage src={m.profile.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                          {m.profile.full_name?.charAt(0) ?? '?'}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="truncate">{m.profile.full_name ?? m.profile.email}</span>
                     </label>
                   ))}
