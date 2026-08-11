@@ -35,6 +35,7 @@ interface ProgramaCardProps {
   programa: Programa;
   onEdit: () => void;
   onDelete: () => void;
+  canManage?: boolean;
 }
 
 function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; programaId: string }) {
@@ -213,6 +214,7 @@ export function ProgramaCardComplete({
   programa,
   onEdit,
   onDelete,
+  canManage = true,
 }: ProgramaCardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [asignaturaDialogOpen, setAsignaturaDialogOpen] = useState(false);
@@ -259,14 +261,16 @@ export function ProgramaCardComplete({
               )}
             </div>
 
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={onEdit}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onDelete}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
+            {canManage && (
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={onEdit}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onDelete}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
 

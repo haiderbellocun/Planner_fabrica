@@ -13,6 +13,16 @@ function ensureAdminOrLeader(req: AuthRequest, res: Response) {
   return true;
 }
 
+// Activar/desactivar cuentas queda exclusivo de admin -- un project_leader no
+// debe poder deshabilitar la cuenta de otra persona (incluido otro admin).
+function ensureAdmin(req: AuthRequest, res: Response) {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({ error: 'Solo administradores pueden activar o desactivar cuentas' });
+    return false;
+  }
+  return true;
+}
+
 /**
  * GET /api/admin/users
  * Lista básica de usuarios con estado y rol
@@ -139,7 +149,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
  */
 export const updateUserActive = async (req: AuthRequest, res: Response) => {
   try {
-    if (!ensureAdminOrLeader(req, res)) return;
+    if (!ensureAdmin(req, res)) return;
 
     const { id } = req.params;
     const { is_active } = req.body as { is_active?: boolean };

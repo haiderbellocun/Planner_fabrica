@@ -382,27 +382,31 @@ export default function SettingsPage() {
                               </span>
                             </td>
                             <td className="py-2 px-2 text-right">
-                              <Button
-                                size="sm"
-                                variant={u.is_active ? 'outline' : 'default'}
-                                onClick={async () => {
-                                  try {
-                                    await toggleActiveMutation.mutateAsync({
-                                      id: u.id,
-                                      is_active: !u.is_active,
-                                    });
-                                    toast.success(
-                                      u.is_active
-                                        ? 'Usuario deshabilitado.'
-                                        : 'Usuario habilitado.'
-                                    );
-                                  } catch (error: any) {
-                                    toast.error(error?.message || 'Error al actualizar usuario.');
-                                  }
-                                }}
-                              >
-                                {u.is_active ? 'Deshabilitar' : 'Habilitar'}
-                              </Button>
+                              {isAdmin ? (
+                                <Button
+                                  size="sm"
+                                  variant={u.is_active ? 'outline' : 'default'}
+                                  onClick={async () => {
+                                    try {
+                                      await toggleActiveMutation.mutateAsync({
+                                        id: u.id,
+                                        is_active: !u.is_active,
+                                      });
+                                      toast.success(
+                                        u.is_active
+                                          ? 'Usuario deshabilitado.'
+                                          : 'Usuario habilitado.'
+                                      );
+                                    } catch (error: any) {
+                                      toast.error(error?.message || 'Error al actualizar usuario.');
+                                    }
+                                  }}
+                                >
+                                  {u.is_active ? 'Deshabilitar' : 'Habilitar'}
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
                             </td>
                           </tr>
                         ))}

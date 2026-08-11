@@ -416,20 +416,24 @@ export default function ProjectDetailPage() {
                 <p className="text-muted-foreground text-center">
                   Este proyecto no tiene programas configurados aún
                 </p>
-                <Button className="mt-4" onClick={handleCreatePrograma}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Primer Programa
-                </Button>
+                {canManageAsignaturas && (
+                  <Button className="mt-4" onClick={handleCreatePrograma}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Primer Programa
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
             <>
-              <div className="flex justify-end">
-                <Button onClick={handleCreatePrograma}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Programa
-                </Button>
-              </div>
+              {canManageAsignaturas && (
+                <div className="flex justify-end">
+                  <Button onClick={handleCreatePrograma}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Programa
+                  </Button>
+                </div>
+              )}
               <div className="grid gap-4">
                 {programas.map((programa: any) => (
                   <ProgramaCardComplete
@@ -437,6 +441,7 @@ export default function ProjectDetailPage() {
                     programa={programa}
                     onEdit={() => handleEditPrograma(programa)}
                     onDelete={() => handleDeletePrograma(programa)}
+                    canManage={canManageAsignaturas}
                   />
                 ))}
               </div>

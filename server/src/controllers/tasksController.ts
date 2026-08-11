@@ -707,33 +707,53 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
+    const taskLookup = await query('SELECT project_id FROM public.tasks WHERE id = $1', [id]);
+    if (taskLookup.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    const projectId = taskLookup.rows[0].project_id;
+
+    // General permission: editing ANY field of a task (title, description, due
+    // date, etc.) requires an actual relationship to its project -- admin,
+    // global/per-project leader, a real project member, or someone with work
+    // assigned in this project. Previously only the assignee_id change below
+    // was checked, so any authenticated user could rename/reschedule a task
+    // in a project they have nothing to do with.
+    let isProjectLeaderForTask = userRole === 'admin' || userRole === 'project_leader';
+    if (!isProjectLeaderForTask) {
+      const accessResult = await query(
+        `SELECT
+           public.is_project_member($1::UUID, $2::UUID) as is_member,
+           public.is_project_leader($1::UUID, $2::UUID) as is_leader`,
+        [projectId, profileId]
+      );
+      const { is_member, is_leader } = accessResult.rows[0] || {};
+      isProjectLeaderForTask = !!is_leader;
+
+      if (!is_member && !is_leader) {
+        const taskAccessResult = await query(
+          `SELECT COUNT(*) as count FROM public.tasks t
+           WHERE t.project_id = $1
+             AND (
+               t.assignee_id = $2
+               OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
+               OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
+             )`,
+          [projectId, profileId]
+        );
+        if (!(taskAccessResult.rows[0]?.count > 0)) {
+          return res.status(403).json({ error: 'No tienes acceso a este proyecto' });
+        }
+      }
+    }
+
     // Check permission: only admin and project_leader of THIS project can change assignee
     if (assignee_id !== undefined) {
       // Admins and project_leaders can always change assignee
-      if (userRole !== 'admin' && userRole !== 'project_leader') {
-        // Get task's project_id
-        const taskResult = await query(
-          'SELECT project_id FROM public.tasks WHERE id = $1',
-          [id]
-        );
-
-        if (taskResult.rows.length === 0) {
-          return res.status(404).json({ error: 'Task not found' });
-        }
-
-        const projectId = taskResult.rows[0].project_id;
-
-        // Check if user is project leader for this specific project
-        const leaderResult = await query(
-          'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
-          [projectId, profileId]
-        );
-
-        if (!leaderResult.rows[0]?.is_leader) {
-          return res.status(403).json({
-            error: 'Solo administradores y líderes de proyecto pueden cambiar el responsable de tareas'
-          });
-        }
+      if (userRole !== 'admin' && userRole !== 'project_leader' && !isProjectLeaderForTask) {
+        return res.status(403).json({
+          error: 'Solo administradores y líderes de proyecto pueden cambiar el responsable de tareas'
+        });
       }
     }
 

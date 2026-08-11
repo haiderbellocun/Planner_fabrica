@@ -4,6 +4,7 @@ import { Users, Pencil, CalendarDays } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
 import { useEquipos } from '@/hooks/useEquipos';
 import { useProfiles } from '@/hooks/useProfiles';
 import { EditEquipoDialog } from '@/components/equipos/EditEquipoDialog';
@@ -12,6 +13,7 @@ import type { Equipo } from '@/types/database';
 
 export default function Equipos() {
   const navigate = useNavigate();
+  const { isProjectLeader } = useAuth();
   const { data: equipos = [], isLoading } = useEquipos();
   const { data: profiles = [] } = useProfiles();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,15 +78,17 @@ export default function Equipos() {
                       >
                         <CalendarDays className="h-4 w-4" />
                       </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleEdit(equipo)}
-                        title="Editar equipo"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      {isProjectLeader && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEdit(equipo)}
+                          title="Editar equipo"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 

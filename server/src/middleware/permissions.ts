@@ -113,6 +113,50 @@ export const projectLeaderMiddleware = async (
 };
 
 /**
+ * Factory for resources that are nested under a project but whose route only
+ * carries the RESOURCE's own id (programa/asignatura/tema/material), not the
+ * project's -- projectLeaderMiddleware can't be reused directly there since it
+ * reads req.params.projectId/:id assuming that IS the project id. Give it a
+ * lookup function that resolves the resource id to its owning project_id, and
+ * it applies the exact same rule as projectLeaderMiddleware (admin bypass,
+ * else real per-project leadership via is_project_leader).
+ */
+export function projectLeaderOfResourceMiddleware(
+  resolveProjectId: (req: AuthRequest) => Promise<string | null>
+) {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      if (req.user.role === 'admin') {
+        return next();
+      }
+
+      const projectId = await resolveProjectId(req);
+      if (!projectId) {
+        return res.status(404).json({ error: 'Resource not found' });
+      }
+
+      const result = await query(
+        'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
+        [projectId, req.user.profileId]
+      );
+
+      if (!result.rows[0]?.is_leader) {
+        return res.status(403).json({ error: 'Project leader access required' });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Resource project leader check error:', error);
+      return res.status(500).json({ error: 'Permission check failed' });
+    }
+  };
+}
+
+/**
  * Middleware to check if user can create projects
  * Only admins and project_leaders can create projects
  */
