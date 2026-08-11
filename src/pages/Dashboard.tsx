@@ -66,7 +66,13 @@ export default function DashboardPage() {
   const activeProjectsCount = projects.filter((p) => p.status !== 'completed').length;
 
   return (
-    <div className="page-container">
+    <div className="page-container relative">
+      {/* Ocean decorations */}
+      <img src="./deco_medusa.png" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
+      <img src="./deco_manta.png" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
+      <img src="./deco_cangrejo.png" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="./deco_estrella.png" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+
       <HeroBanner
         eyebrow={greeting()}
         story={
@@ -88,17 +94,29 @@ export default function DashboardPage() {
 
       <div className="space-y-8 mt-8">
       <MyFocusToday />
-      {/* Stats — instrument-panel tiles, no illustration */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatTile label="Proyectos" value={totalProjects} sub={`${activeProjectsCount} activos`} />
-        <StatTile label="Tareas totales" value={totalTasks} sub={`${pendingTasksCount} activas`} />
+        <StatTile
+          label="Proyectos"
+          value={totalProjects}
+          sub={`${activeProjectsCount} activos`}
+          decorationImage="./deco_foca.png"
+          accentImage="./deco_alga2.png"
+        />
+        <StatTile
+          label="Tareas totales"
+          value={totalTasks}
+          sub={`${pendingTasksCount} activas`}
+          decorationImage="./deco_cangrejo.png"
+        />
         <StatTile
           label="Notificaciones"
           value={unreadNotifications.length}
           sub="Sin leer"
           pill={unreadNotifications.length > 0 ? { tone: 'info', label: 'Nuevo' } : undefined}
+          decorationImage="./deco_medusa.png"
         />
-        <StatTile label="Productividad" value="—" sub="Próximamente" />
+        <StatTile label="Productividad" value="—" sub="Próximamente" decorationImage="./deco_manta.png" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7 md:gap-8">

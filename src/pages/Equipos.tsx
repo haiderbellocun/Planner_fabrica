@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Users, Pencil } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Pencil, CalendarDays } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEquipos } from '@/hooks/useEquipos';
@@ -8,6 +9,7 @@ import { StatTile } from '@/components/shared/StoryUI';
 import type { Equipo } from '@/types/database';
 
 export default function Equipos() {
+  const navigate = useNavigate();
   const { data: equipos = [], isLoading } = useEquipos();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null);
@@ -51,15 +53,26 @@ export default function Equipos() {
                 <div style={{ borderLeft: `4px solid ${equipo.color}` }} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium truncate">{equipo.name}</h3>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleEdit(equipo)}
-                      title="Editar equipo"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center shrink-0">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => navigate(`/equipos/${equipo.id}/plan`)}
+                        title="Ver plan semanal"
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleEdit(equipo)}
+                        title="Editar equipo"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {equipo.members.length > 0 ? (

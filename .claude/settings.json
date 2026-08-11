@@ -70,7 +70,10 @@
       "Bash(grep -A2 \"ProjectCalculator.tsx\\\\|ProximosProgramas.tsx\\\\|no-array-index-key\" /tmp/lint_before.txt | head -60)",
       "Bash(rm -f /tmp/lint_before.txt)",
       "Bash(git status *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(node run-equipo-plan-migration.js)",
+      "Bash(node diag_plan_query.js)",
+      "Bash(node diag_camilo.js)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

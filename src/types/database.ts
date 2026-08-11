@@ -114,6 +114,49 @@ export interface Equipo {
   }[];
 }
 
+export interface EquipoPlanTask {
+  id: string;
+  title: string;
+  task_number: number | null;
+  due_date: string | null;
+  priority: string;
+  status: { id: string; name: string; color: string; is_completed: boolean };
+  project: { id: string; name: string; key: string };
+}
+
+export interface EquipoPlanItem {
+  id: string;
+  added_by: string | null;
+  added_by_name: string | null;
+  created_at: string;
+  task: EquipoPlanTask;
+}
+
+export interface EquipoPlanSection {
+  profile_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  is_current_member: boolean;
+  items: EquipoPlanItem[];
+}
+
+export interface EquipoPlan {
+  equipo_id: string;
+  week_start: string;
+  sections: EquipoPlanSection[];
+}
+
+export interface TaskSearchResult {
+  id: string;
+  title: string;
+  task_number: number | null;
+  due_date: string | null;
+  priority: string;
+  project: { id: string; name: string; key: string };
+  status: { id: string; name: string; color: string; is_completed: boolean };
+  assignee: { id: string; full_name: string | null; avatar_url: string | null } | null;
+}
+
 export interface Sprint {
   id: string;
   project_id: string;

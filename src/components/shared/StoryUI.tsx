@@ -48,23 +48,33 @@ interface StatTileProps {
   pill?: { tone: PillTone; label: string };
   sparkline?: { data: number[]; color?: string };
   className?: string;
+  /** Decorative illustration, top-right corner. Optional — most tiles have none. */
+  decorationImage?: string;
+  /** Second, smaller decorative illustration, bottom-left corner. */
+  accentImage?: string;
 }
 
-export function StatTile({ label, value, sub, pill, sparkline, className }: StatTileProps) {
+export function StatTile({ label, value, sub, pill, sparkline, className, decorationImage, accentImage }: StatTileProps) {
   return (
     <div className={cn('stat-tile', className)}>
-      <div className="flex items-start justify-between gap-2 mb-2.5">
+      {decorationImage && (
+        <img src={decorationImage} alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none select-none" />
+      )}
+      {accentImage && (
+        <img src={accentImage} alt="" className="absolute left-0 bottom-0 h-24 w-auto object-contain opacity-40 pointer-events-none select-none" />
+      )}
+      <div className="relative flex items-start justify-between gap-2 mb-2.5">
         <span className="stat-tile-label">{label}</span>
         {pill && <StatusPill tone={pill.tone}>{pill.label}</StatusPill>}
       </div>
-      <div className="stat-tile-value">{value}</div>
-      {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      <div className="relative stat-tile-value">{value}</div>
+      {sub && <p className="relative text-xs text-muted-foreground mt-1">{sub}</p>}
       {sparkline && (
         <Sparkline
           data={sparkline.data}
           color={sparkline.color ?? 'hsl(var(--primary))'}
           height={32}
-          className="mt-2.5"
+          className="relative mt-2.5"
         />
       )}
     </div>

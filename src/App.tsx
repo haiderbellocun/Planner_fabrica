@@ -22,6 +22,7 @@ import Flows from "./pages/Flows";
 import ProximosProgramas from "./pages/ProximosProgramas";
 import Entregas from "./pages/Entregas";
 import Equipos from "./pages/Equipos";
+import EquipoPlan from "./pages/EquipoPlan";
 import Calendar from "./pages/Calendar";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/proximos-programas" element={<AppLayout><ProximosProgramas /></AppLayout>} />
             <Route path="/entregas" element={<AppLayout><Entregas /></AppLayout>} />
             <Route path="/equipos" element={<AppLayout><Equipos /></AppLayout>} />
+            <Route path="/equipos/:equipoId/plan" element={<AppLayout><EquipoPlan /></AppLayout>} />
             <Route path="/calendar" element={<AppLayout><Calendar /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="*" element={<NotFound />} />

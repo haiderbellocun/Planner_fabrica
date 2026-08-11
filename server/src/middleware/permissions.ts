@@ -167,3 +167,24 @@ export const reportsAccessMiddleware = (
   }
   next();
 };
+
+/**
+ * Middleware to restrict weekly-plan editing and the cross-project task
+ * search it depends on to admin and project_leader only. The search endpoint
+ * sees tasks across every project regardless of membership, so it can't be
+ * opened to regular users without creating a new visibility leak.
+ */
+export const planEditorMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const role = req.user.role;
+  if (role !== 'admin' && role !== 'project_leader') {
+    return res.status(403).json({ error: 'Solo administradores y líderes de proyecto pueden editar el plan semanal' });
+  }
+  next();
+};

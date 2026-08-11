@@ -331,7 +331,7 @@
   /* Stat tile — label, monospace figure, optional sparkline + status pill.
      Replaces the old KpiCard's decorative-illustration recipe. */
   .stat-tile {
-    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 transition-shadow duration-200;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 transition-shadow duration-200;
   }
   .stat-tile:hover {
     @apply shadow-[0_1px_2px_rgba(10,20,20,0.05),0_12px_28px_rgba(10,20,20,0.08)];

@@ -88,6 +88,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-white/10 bg-sidebar">
+      <div
+        className="flex h-full flex-col"
+        style={{
+          backgroundImage: 'linear-gradient(180deg, rgba(4,58,56,0.2), rgba(4,58,56,0.2)), url(./deco_coral.png)',
+          backgroundSize: 'cover, cover',
+          backgroundPosition: 'center, center',
+          backgroundRepeat: 'no-repeat, no-repeat',
+        }}
+      >
         <SidebarHeader className="border-b border-white/20 px-3 py-4">
           <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -102,7 +111,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent className="px-2 py-3 bg-transparent">
         <SidebarGroup>
           <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -218,6 +227,7 @@ export function AppSidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
+      </div>
     </Sidebar>
   );
 }

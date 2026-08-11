@@ -16,14 +16,19 @@ import {
   createTaskComment,
   deleteTaskComment,
 } from '../controllers/commentsController.js';
+import { searchTasksForPicker } from '../controllers/taskSearchController.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { projectMemberMiddleware, projectLeaderMiddleware } from '../middleware/permissions.js';
+import { projectMemberMiddleware, projectLeaderMiddleware, planEditorMiddleware } from '../middleware/permissions.js';
 import { validateTaskCreate, validateTaskUpdate } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authMiddleware);
+
+// Cross-project task search for the weekly-plan picker (must be before /:id
+// to avoid Express matching "search" as the :id param)
+router.get('/search', planEditorMiddleware, searchTasksForPicker);
 
 // Get task history and activity (must be before /:id to avoid route conflict)
 router.get('/:id/history', getTaskHistory);
