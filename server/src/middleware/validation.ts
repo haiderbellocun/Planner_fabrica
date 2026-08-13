@@ -44,6 +44,22 @@ export const taskUpdateSchema = z.object({
   sprint_id: z.string().uuid().optional().nullable(),
 });
 
+// Exactly one of status_id/assignee_id/sprint_id per call -- mixing fields
+// would blur which permission rule applies (see bulkUpdateTasks).
+export const bulkTaskUpdateSchema = z
+  .object({
+    project_id: z.string().uuid(),
+    task_ids: z.array(z.string().uuid()).min(1).max(500),
+    status_id: z.string().uuid().optional(),
+    assignee_id: z.string().uuid().optional().nullable(),
+    sprint_id: z.string().uuid().optional().nullable(),
+  })
+  .refine(
+    (data) => [data.status_id !== undefined, data.assignee_id !== undefined, data.sprint_id !== undefined]
+      .filter(Boolean).length === 1,
+    { message: 'Debes especificar exactamente uno de: status_id, assignee_id, sprint_id' }
+  );
+
 // Middleware factory for validation
 export const validate = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -70,3 +86,4 @@ export const validateProjectCreate = validate(projectCreateSchema);
 export const validateProjectUpdate = validate(projectUpdateSchema);
 export const validateTaskCreate = validate(taskCreateSchema);
 export const validateTaskUpdate = validate(taskUpdateSchema);
+export const validateBulkTaskUpdate = validate(bulkTaskUpdateSchema);

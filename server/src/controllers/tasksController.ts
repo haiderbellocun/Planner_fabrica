@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 import { sendTaskAssignedEmail, buildTaskAssignedHtml } from '../services/emailService.js';
+import { checkStatusTransition } from '../utils/taskStatusTransitions.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
@@ -152,7 +153,11 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
         prog.id as programa_id, prog.name as programa_name, prog.code as programa_code, prog.tipo_programa as programa_tipo,
         ep.id as ep_epic_id, ep.title as epic_title, ep.color as epic_color, ep.status as epic_status,
         tm.id as tm_team_id, tm.name as team_name, tm.color as team_color,
-        sp.id as sp_sprint_id, sp.name as sprint_name, sp.status as sprint_status
+        sp.id as sp_sprint_id, sp.name as sprint_name, sp.status as sprint_status,
+        (SELECT COUNT(*)::int FROM public.tasks st WHERE st.subtask_of_id = t.id) AS subtask_count,
+        (SELECT COUNT(*)::int FROM public.tasks st
+           JOIN public.task_statuses sts ON sts.id = st.status_id
+           WHERE st.subtask_of_id = t.id AND sts.is_completed = true) AS subtask_completed_count
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
@@ -204,6 +209,9 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       material_requerido_id: row.material_requerido_id,
       asignatura_id: row.asignatura_id,
       parent_task_id: row.parent_task_id,
+      subtask_of_id: row.subtask_of_id,
+      subtask_count: row.subtask_count ?? 0,
+      subtask_completed_count: row.subtask_completed_count ?? 0,
       status: {
         id: row.status_id,
         name: row.status_name,
@@ -368,6 +376,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
       material_requerido_id: row.material_requerido_id,
       asignatura_id: row.asignatura_id,
       parent_task_id: row.parent_task_id,
+      subtask_of_id: row.subtask_of_id,
       epic: row.epic_id_ref
         ? {
             id: row.epic_id_ref,
@@ -562,6 +571,45 @@ export const getTask = async (req: AuthRequest, res: Response) => {
       });
 
       task.temas_materiales = temasWithMateriales;
+    }
+
+    // Subtasks (user-created, via subtask_of_id -- independent of parent_task_id)
+    const subtasksResult = await query(
+      `SELECT st.id, st.title, st.task_number, st.priority, st.due_date,
+              st.status_id, sts.name AS status_name, sts.color AS status_color, sts.is_completed,
+              st.assignee_id, sap.full_name AS assignee_name, sap.avatar_url AS assignee_avatar_url
+       FROM public.tasks st
+       JOIN public.task_statuses sts ON sts.id = st.status_id
+       LEFT JOIN public.profiles sap ON sap.id = st.assignee_id
+       WHERE st.subtask_of_id = $1
+       ORDER BY st.created_at ASC`,
+      [row.id]
+    );
+    task.subtasks = subtasksResult.rows.map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      task_number: s.task_number,
+      priority: s.priority,
+      due_date: s.due_date,
+      status_id: s.status_id,
+      status_name: s.status_name,
+      status_color: s.status_color,
+      is_completed: s.is_completed,
+      assignee_id: s.assignee_id,
+      assignee_name: s.assignee_name,
+      assignee_avatar_url: s.assignee_avatar_url,
+    }));
+
+    // If this task is itself a subtask, surface a lightweight parent reference
+    // for a "Subtarea de #123" breadcrumb.
+    if (row.subtask_of_id) {
+      const parentResult = await query(
+        'SELECT id, title, task_number FROM public.tasks WHERE id = $1',
+        [row.subtask_of_id]
+      );
+      task.parent = parentResult.rows[0] || null;
+    } else {
+      task.parent = null;
     }
 
     res.json(task);
@@ -916,31 +964,9 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
         [currentTask.project_id, profileId]
       )).rows[0]?.is_leader;
 
-    // CRITICAL: If task is "Finalizado", ONLY admin can change it
-    if (currentStatusName === 'Finalizado' && userRole !== 'admin') {
-      return res.status(403).json({
-        error: 'No tienes permiso para mover tareas finalizadas',
-        detail: 'Solo los administradores pueden cambiar el estado de tareas finalizadas'
-      });
-    }
-
-    // If user is not admin/leader, validate allowed transitions
-    if (!isAdminOrLeader) {
-      // Define allowed transitions for normal users
-      const allowedTransitions: Record<string, string[]> = {
-        'Sin iniciar': ['En proceso'],
-        'En proceso': ['En revisión'],
-        'Ajustes': ['En revisión'],
-      };
-
-      const allowedNext = allowedTransitions[currentStatusName] || [];
-
-      if (!allowedNext.includes(newStatusName)) {
-        return res.status(403).json({
-          error: 'No tienes permiso para cambiar a este estado',
-          detail: `Solo puedes cambiar de "${currentStatusName}" a: ${allowedNext.join(', ') || 'ningún estado'}`
-        });
-      }
+    const transitionCheck = checkStatusTransition(currentStatusName, newStatusName, !!isAdminOrLeader, userRole);
+    if (!transitionCheck.allowed) {
+      return res.status(403).json({ error: transitionCheck.error, detail: transitionCheck.detail });
     }
 
     // Safeguard: Copy tasks (parent_task_id IS NOT NULL) cannot be finalized without an assignee
@@ -974,6 +1000,183 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
     res.json(task);
   } catch (error) {
     console.error('Update task status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * PATCH /api/tasks/bulk
+ * Apply one field (status_id, assignee_id, or sprint_id -- exactly one, enforced
+ * by bulkTaskUpdateSchema) to many tasks of a single project at once. All-or-
+ * nothing: if any task in the batch can't make a requested status transition,
+ * the whole batch is rejected rather than partially applied.
+ */
+export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const { project_id: projectId, task_ids: taskIds, status_id, assignee_id, sprint_id } = req.body;
+    const userRole = req.user?.role;
+    const profileId = req.user?.profileId;
+
+    // Same project-access rule as updateTask: admin / global leader / leader of
+    // THIS project / real member / has assigned work here.
+    let isProjectLeaderForTask = userRole === 'admin' || userRole === 'project_leader';
+    if (!isProjectLeaderForTask) {
+      const accessResult = await query(
+        `SELECT
+           public.is_project_member($1::UUID, $2::UUID) as is_member,
+           public.is_project_leader($1::UUID, $2::UUID) as is_leader`,
+        [projectId, profileId]
+      );
+      const { is_member, is_leader } = accessResult.rows[0] || {};
+      isProjectLeaderForTask = !!is_leader;
+
+      if (!is_member && !is_leader) {
+        const taskAccessResult = await query(
+          `SELECT COUNT(*) as count FROM public.tasks t
+           WHERE t.project_id = $1
+             AND (
+               t.assignee_id = $2
+               OR t.id IN (SELECT task_id FROM public.task_material_assignees WHERE assignee_id = $2)
+               OR t.id IN (SELECT task_id FROM public.task_tema_assignees WHERE assignee_id = $2)
+             )`,
+          [projectId, profileId]
+        );
+        if (!(taskAccessResult.rows[0]?.count > 0)) {
+          return res.status(403).json({ error: 'No tienes acceso a este proyecto' });
+        }
+      }
+    }
+
+    if (assignee_id !== undefined && userRole !== 'admin' && userRole !== 'project_leader' && !isProjectLeaderForTask) {
+      return res.status(403).json({
+        error: 'Solo administradores y líderes de proyecto pueden cambiar el responsable de tareas'
+      });
+    }
+
+    const tasksResult = await query(
+      `SELECT t.id, t.title, t.assignee_id, t.sprint_id, t.parent_task_id, t.status_id, ts.name AS status_name
+       FROM public.tasks t
+       JOIN public.task_statuses ts ON ts.id = t.status_id
+       WHERE t.id = ANY($1::uuid[]) AND t.project_id = $2`,
+      [taskIds, projectId]
+    );
+    if (tasksResult.rows.length !== taskIds.length) {
+      return res.status(400).json({ error: 'Algunas tareas no pertenecen a este proyecto' });
+    }
+    const tasks = tasksResult.rows;
+
+    let field: 'status_id' | 'assignee_id' | 'sprint_id';
+    let value: string | null;
+    let newStatusName: string | undefined;
+
+    if (status_id !== undefined) {
+      field = 'status_id';
+      value = status_id;
+      const newStatusResult = await query('SELECT name FROM public.task_statuses WHERE id = $1', [status_id]);
+      if (newStatusResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Invalid status_id' });
+      }
+      newStatusName = newStatusResult.rows[0].name;
+
+      for (const t of tasks) {
+        const transitionCheck = checkStatusTransition(t.status_name, newStatusName!, isProjectLeaderForTask, userRole);
+        if (!transitionCheck.allowed) {
+          return res.status(403).json({
+            error: transitionCheck.error,
+            detail: `"${t.title}": ${transitionCheck.detail}`,
+          });
+        }
+        if (t.parent_task_id && newStatusName === 'Finalizado' && !t.assignee_id) {
+          return res.status(400).json({
+            error: 'No se puede finalizar una tarea sin asignar',
+            detail: `"${t.title}" debe ser asignada a un responsable antes de poder finalizarla.`,
+          });
+        }
+      }
+    } else if (assignee_id !== undefined) {
+      field = 'assignee_id';
+      value = assignee_id;
+    } else {
+      field = 'sprint_id';
+      value = sprint_id;
+    }
+
+    const result = await query(
+      `UPDATE public.tasks
+       SET ${field} = $1, updated_at = NOW()
+       WHERE id = ANY($2::uuid[]) AND project_id = $3
+       RETURNING id, title, assignee_id, status_id, sprint_id, project_id`,
+      [value, taskIds, projectId]
+    );
+
+    if (field === 'assignee_id' && value && value !== profileId) {
+      const changedTasks = tasks.filter((t) => t.assignee_id !== value);
+      if (changedTasks.length > 0) {
+        await Promise.all(
+          changedTasks.map((t) =>
+            query(
+              `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
+               VALUES ($1, $2, $3, 'task_assigned', 'Tarea asignada', $4)`,
+              [value, projectId, t.id, `Se te ha asignado la tarea: ${t.title}`]
+            )
+          )
+        );
+
+        try {
+          const assigneeResult = await query(
+            `SELECT p.full_name, u.email
+             FROM public.profiles p
+             JOIN public.users u ON u.id = p.user_id
+             WHERE p.id = $1`,
+            [value]
+          );
+          const projectResult = await query('SELECT name FROM public.projects WHERE id = $1', [projectId]);
+          const assignee = assigneeResult.rows[0];
+          const project = projectResult.rows[0];
+
+          if (assignee?.email) {
+            const frontendUrl = (env.FRONTEND_URL ?? '').replace(/\/$/, '');
+            const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
+
+            await Promise.allSettled(
+              changedTasks.map((t) =>
+                sendTaskAssignedEmail({
+                  to: assignee.email,
+                  subject: `Tarea asignada en ${project?.name ?? 'un proyecto'}`,
+                  html: buildTaskAssignedHtml({
+                    assigneeName: assignee.full_name ?? '',
+                    projectName: project?.name ?? 'un proyecto',
+                    taskTitle: t.title,
+                    dueDate: null,
+                    taskLink,
+                    isReassignment: true,
+                  }),
+                })
+              )
+            );
+          }
+        } catch (emailError) {
+          console.error('Error sending bulk assignment emails:', emailError);
+        }
+      }
+    } else if (field === 'status_id') {
+      const notifyTasks = tasks.filter((t) => t.assignee_id && t.assignee_id !== profileId);
+      if (notifyTasks.length > 0) {
+        await Promise.all(
+          notifyTasks.map((t) =>
+            query(
+              `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
+               VALUES ($1, $2, $3, 'task_status_changed', 'Estado de tarea actualizado', $4)`,
+              [t.assignee_id, projectId, t.id, `La tarea "${t.title}" cambió a: ${newStatusName}`]
+            )
+          )
+        );
+      }
+    }
+
+    res.json({ updated: result.rows.length, tasks: result.rows });
+  } catch (error) {
+    console.error('Bulk update tasks error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -10,12 +10,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { TaskWithDetails } from '@/hooks/useTasks';
+import { TaskBulkActionsBar } from './TaskBulkActionsBar';
 
 const priorityConfig = {
   low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', rank: 0 },
@@ -42,16 +44,52 @@ function compareValues(a: string | number | null | undefined, b: string | number
 interface TaskListViewProps {
   tasks: TaskWithDetails[];
   projectKey: string;
+  projectId: string;
   onTaskClick: (task: TaskWithDetails) => void;
   isDesarrollo?: boolean;
+  isAdminOrLeader?: boolean;
   isLoading?: boolean;
   hasActiveFilters?: boolean;
+  filtersKey?: string;
 }
 
-export function TaskListView({ tasks, projectKey, onTaskClick, isDesarrollo, isLoading, hasActiveFilters }: TaskListViewProps) {
+export function TaskListView({
+  tasks,
+  projectKey,
+  projectId,
+  onTaskClick,
+  isDesarrollo,
+  isAdminOrLeader,
+  isLoading,
+  hasActiveFilters,
+  filtersKey,
+}: TaskListViewProps) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'task_number', dir: 'desc' });
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Selection persists across pages/sorting but resets when the active
+  // filters change -- a different filter set reads as a different working
+  // set, not a continuation of the same one.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [filtersKey]);
+
+  // Prune ids that fell out of `tasks` (refetch, deletion) without wiping the
+  // rest of the selection.
+  useEffect(() => {
+    setSelected((prev) => {
+      const validIds = new Set(tasks.map((t) => t.id));
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+        else changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [tasks]);
 
   const sorted = useMemo(() => {
     const list = [...tasks];
@@ -91,6 +129,29 @@ export function TaskListView({ tasks, projectKey, onTaskClick, isDesarrollo, isL
   const currentPage = Math.min(page, totalPages);
   const paged = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const pageIds = paged.map((t) => t.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const somePageSelected = pageIds.some((id) => selected.has(id));
+  const selectedTasks = useMemo(() => tasks.filter((t) => selected.has(t.id)), [tasks, selected]);
+
+  const toggleSelectAllPage = (checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) pageIds.forEach((id) => next.add(id));
+      else pageIds.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+
+  const toggleSelectRow = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
   const toggleSort = (key: SortKey) => {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   };
@@ -114,14 +175,29 @@ export function TaskListView({ tasks, projectKey, onTaskClick, isDesarrollo, isL
     );
   }
 
-  const columnCount = 6 + (isDesarrollo ? 3 : 0);
+  const columnCount = 7 + (isDesarrollo ? 3 : 0);
 
   return (
     <div className="space-y-3">
+      <TaskBulkActionsBar
+        projectId={projectId}
+        selectedTasks={selectedTasks}
+        isDesarrollo={isDesarrollo}
+        isAdminOrLeader={!!isAdminOrLeader}
+        onClearSelection={() => setSelected(new Set())}
+      />
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
+                  onCheckedChange={(checked) => toggleSelectAllPage(!!checked)}
+                  title={totalPages > 1 ? `Selecciona las ${pageIds.length} de esta página (hay ${totalPages} páginas en total)` : undefined}
+                />
+              </TableHead>
               <TableHead className="w-[100px]"><SortButton sortKey="task_number" label="Clave" /></TableHead>
               <TableHead><SortButton sortKey="title" label="Título" /></TableHead>
               <TableHead className="w-[130px]"><SortButton sortKey="status" label="Estado" /></TableHead>
@@ -143,6 +219,12 @@ export function TaskListView({ tasks, projectKey, onTaskClick, isDesarrollo, isL
             ) : (
               paged.map((task) => (
                 <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onTaskClick(task)}>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selected.has(task.id)}
+                      onCheckedChange={(checked) => toggleSelectRow(task.id, !!checked)}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-sm text-muted-foreground">
                     {projectKey}-{task.task_number}
                   </TableCell>

@@ -6,6 +6,7 @@ import {
   updateTask,
   updateTaskStatus,
   updateTaskRank,
+  bulkUpdateTasks,
   deleteTask,
   getTaskHistory,
   getTaskActivity,
@@ -17,9 +18,10 @@ import {
   deleteTaskComment,
 } from '../controllers/commentsController.js';
 import { searchTasksForPicker } from '../controllers/taskSearchController.js';
+import { createSubtask } from '../controllers/subtasksController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { projectMemberMiddleware, projectLeaderMiddleware, planEditorMiddleware } from '../middleware/permissions.js';
-import { validateTaskCreate, validateTaskUpdate } from '../middleware/validation.js';
+import { validateTaskCreate, validateTaskUpdate, validateBulkTaskUpdate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -30,6 +32,10 @@ router.use(authMiddleware);
 // to avoid Express matching "search" as the :id param)
 router.get('/search', planEditorMiddleware, searchTasksForPicker);
 
+// Bulk status/assignee/sprint update, single project at a time (must be
+// before PATCH /:id to avoid Express matching "bulk" as the :id param)
+router.patch('/bulk', validateBulkTaskUpdate, bulkUpdateTasks);
+
 // Get task history and activity (must be before /:id to avoid route conflict)
 router.get('/:id/history', getTaskHistory);
 router.get('/:id/activity', getTaskActivity);
@@ -38,6 +44,9 @@ router.get('/:id/activity', getTaskActivity);
 router.get('/:id/comments', getTaskComments);
 router.post('/:id/comments', createTaskComment);
 router.delete('/:id/comments/:commentId', deleteTaskComment);
+
+// Create a subtask of :id
+router.post('/:id/subtasks', createSubtask);
 
 // Get single task
 router.get('/:id', getTask);

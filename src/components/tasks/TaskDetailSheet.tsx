@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -25,8 +27,9 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send } from 'lucide-react';
-import { useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTasks';
+import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send, ListChecks, Plus } from 'lucide-react';
+import { useUpdateTask, useUpdateTaskStatus, useDeleteTask, useCreateSubtask } from '@/hooks/useTasks';
+import type { TaskSubtask } from '@/types/database';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useTeams } from '@/hooks/useTeams';
@@ -36,12 +39,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
 import { useState } from 'react';
+import { getAllowedNextStatuses } from '@/lib/taskStatusTransitions';
 
 interface TaskDetailSheetProps {
   task: TaskWithDetails | null;
   projectKey: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigateToTask?: (taskId: string) => void;
 }
 
 const priorityConfig = {
@@ -66,7 +71,7 @@ function buildAssigneeOptions(
   return options;
 }
 
-export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDetailSheetProps) {
+export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNavigateToTask }: TaskDetailSheetProps) {
   // Fetch full task details with temas_materiales
   const { data: fullTask } = useTask(task?.id);
   const { data: history = [] } = useTaskHistory(task?.id);
@@ -85,9 +90,11 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
   const updateMaterialAssignees = useUpdateMaterialAssignees();
   const createComment = useCreateTaskComment(task?.id || '');
   const deleteComment = useDeleteTaskComment(task?.id || '');
+  const createSubtask = useCreateSubtask();
   const [newComment, setNewComment] = useState('');
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState('');
   const { data: tiempoTarea } = useTiempoTarea(task?.id);
 
   // Use full task data if available, otherwise fall back to prop
@@ -210,29 +217,36 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
       (member) => member.user_id === user?.profileId && member.role === 'leader'
     );
 
-  const getAllowedStatuses = () => {
-    if (isAdminOrLeader) {
-      // Admin and leaders can change to any status
-      return statuses;
-    }
-
-    // Normal users can only make specific transitions
-    const currentStatusName = taskData.status?.name;
-    const allowedTransitions: Record<string, string[]> = {
-      'Sin iniciar': ['En proceso'],
-      'En proceso': ['En revisión'],
-      'Ajustes': ['En revisión'],
-    };
-
-    const allowedNext = allowedTransitions[currentStatusName || ''] || [];
-
-    // Always include current status + allowed next statuses
-    return statuses.filter(
-      (status) => status.id === taskData.status_id || allowedNext.includes(status.name)
-    );
-  };
+  const getAllowedStatuses = () => getAllowedNextStatuses(statuses, taskData.status?.name, !!isAdminOrLeader);
 
   const allowedStatuses = getAllowedStatuses();
+
+  // Same transition rule as getAllowedStatuses(), applied to a subtask instead
+  // of taskData -- a subtask has its own current status, so the map has to be
+  // re-evaluated per row.
+  const getAllowedStatusesForSubtask = (currentStatusName: string | null) =>
+    getAllowedNextStatuses(statuses, currentStatusName, !!isAdminOrLeader);
+
+  const toggleSubtaskDone = (subtask: TaskSubtask) => {
+    const targetStatus = subtask.is_completed
+      ? statuses.find((s) => s.is_default)
+      : statuses.find((s) => s.is_completed);
+    if (!targetStatus) return;
+    updateTaskStatus.mutate({ taskId: subtask.id, statusId: targetStatus.id, projectId: taskData.project_id });
+  };
+
+  const handleSubtaskStatusChange = (subtaskId: string, statusId: string) => {
+    updateTaskStatus.mutate({ taskId: subtaskId, statusId, projectId: taskData.project_id });
+  };
+
+  const handleAddSubtask = () => {
+    const title = subtaskTitle.trim();
+    if (!title || createSubtask.isPending) return;
+    createSubtask.mutate(
+      { parentTaskId: taskData.id, projectId: taskData.project_id, title },
+      { onSuccess: () => setSubtaskTitle('') }
+    );
+  };
 
   const handleAddComment = () => {
     if (newComment.trim()) {
@@ -281,6 +295,15 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
             <div className="absolute inset-0 bg-white/80 pointer-events-none" />
             {/* Task header */}
             <div className="relative z-10 px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
+              {taskData.parent && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline mb-1.5 flex items-center gap-1"
+                  onClick={() => onNavigateToTask?.(taskData.parent!.id)}
+                >
+                  Subtarea de #{projectKey}-{taskData.parent.task_number} · {taskData.parent.title}
+                </button>
+              )}
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
                   {projectKey}-{taskData.task_number}
@@ -517,6 +540,104 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange }: TaskDe
               </span>
             </div>
           </div>
+
+          {/* Subtareas -- a subtask can't have subtasks of its own (single level only) */}
+          {!taskData.subtask_of_id && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                  <ListChecks className="h-3.5 w-3.5" />
+                  Subtareas
+                  {(taskData.subtasks?.length || 0) > 0 && (
+                    <span className="font-mono normal-case tracking-normal text-muted-foreground/80">
+                      {taskData.subtasks?.filter((s) => s.is_completed).length}/{taskData.subtasks?.length}
+                    </span>
+                  )}
+                </h4>
+
+                {(taskData.subtasks?.length || 0) > 0 && (
+                  <div className="space-y-1.5">
+                    {taskData.subtasks?.map((subtask) => (
+                      <div
+                        key={subtask.id}
+                        className="flex items-center gap-2 py-2 px-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer"
+                        onClick={() => onNavigateToTask?.(subtask.id)}
+                      >
+                        {isAdminOrLeader ? (
+                          <Checkbox
+                            checked={subtask.is_completed}
+                            onCheckedChange={() => toggleSubtaskDone(subtask)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <div
+                            className="h-3 w-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: subtask.status_color }}
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            'text-xs font-mono text-muted-foreground flex-shrink-0',
+                          )}
+                        >
+                          {projectKey}-{subtask.task_number}
+                        </span>
+                        <span className={cn('text-sm flex-1 truncate', subtask.is_completed && 'line-through text-muted-foreground')}>
+                          {subtask.title}
+                        </span>
+                        {subtask.assignee_id && (
+                          <Avatar className="h-5 w-5 flex-shrink-0">
+                            <AvatarImage src={subtask.assignee_avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px]">{getInitials(subtask.assignee_name)}</AvatarFallback>
+                          </Avatar>
+                        )}
+                        {!isAdminOrLeader && (
+                          <Select
+                            value={subtask.status_id}
+                            onValueChange={(value) => handleSubtaskStatusChange(subtask.id, value)}
+                          >
+                            <SelectTrigger
+                              className="h-7 w-32 text-xs flex-shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent onClick={(e) => e.stopPropagation()}>
+                              {getAllowedStatusesForSubtask(subtask.status_name).map((status) => (
+                                <SelectItem key={status.id} value={status.id}>
+                                  {status.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={subtaskTitle}
+                    onChange={(e) => setSubtaskTitle(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                    placeholder="Agregar subtarea..."
+                    className="h-8 text-sm"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8 flex-shrink-0"
+                    disabled={!subtaskTitle.trim() || createSubtask.isPending}
+                    onClick={handleAddSubtask}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Academic Information */}
           {(taskData.programa || taskData.asignatura || taskData.temas_materiales) && (

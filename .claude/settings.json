@@ -106,7 +106,13 @@
       "Bash(grep -n \"canManage\\\\|isAdmin\\\\|isProjectLeader\\\\|role ===\" /c/app_planner/src/components/epics/EpicsPanel.tsx 2>/dev/null | head -20)",
       "Read(//c/app_planner/src/components/epics/**)",
       "Bash(cd c:/app_planner/server && npx tsc --noEmit 2>&1 | head -60 && echo \"---FRONTEND---\" && cd .. && npx tsc --noEmit 2>&1 | head -60)",
-      "Bash(cd c:/app_planner/server && npx tsc --noEmit 2>&1 | head -40 && echo \"---FRONTEND---\" && cd .. && npx tsc --noEmit 2>&1 | head -40)"
+      "Bash(cd c:/app_planner/server && npx tsc --noEmit 2>&1 | head -40 && echo \"---FRONTEND---\" && cd .. && npx tsc --noEmit 2>&1 | head -40)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(node check-tasks-schema.cjs)",
+      "Read(//c/Users/haider_bello/.claude/projects/c--app-planner/memory/**)",
+      "Bash(node run-subtask-of-id-migration.js)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

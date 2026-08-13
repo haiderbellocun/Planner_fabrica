@@ -175,6 +175,21 @@ export interface Sprint {
   completed_count?: number;
 }
 
+export interface TaskSubtask {
+  id: string;
+  title: string;
+  task_number: number | null;
+  priority: TaskPriority;
+  due_date: string | null;
+  status_id: string;
+  status_name: string;
+  status_color: string;
+  is_completed: boolean;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  assignee_avatar_url: string | null;
+}
+
 export interface Task {
   id: string;
   project_id: string;
@@ -196,6 +211,11 @@ export interface Task {
   material_requerido_id: string | null;
   asignatura_id: string | null;
   parent_task_id: string | null;
+  subtask_of_id: string | null;
+  subtask_count?: number;
+  subtask_completed_count?: number;
+  subtasks?: TaskSubtask[];
+  parent?: { id: string; title: string; task_number: number | null } | null;
   created_at: string;
   updated_at: string;
   // Populated by joins

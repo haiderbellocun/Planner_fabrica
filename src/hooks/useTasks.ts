@@ -119,6 +119,47 @@ export function useCreateTask() {
   });
 }
 
+export function useCreateSubtask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      parentTaskId,
+      projectId,
+      title,
+      description,
+      priority,
+      assignee_id,
+      due_date,
+    }: {
+      parentTaskId: string;
+      projectId: string;
+      title: string;
+      description?: string;
+      priority?: 'low' | 'medium' | 'high' | 'urgent';
+      assignee_id?: string;
+      due_date?: string;
+    }) => {
+      const task = await api.post<Task>(`/api/tasks/${parentTaskId}/subtasks`, {
+        title,
+        description,
+        priority,
+        assignee_id,
+        due_date,
+      });
+      return { task, parentTaskId, projectId };
+    },
+    onSuccess: ({ parentTaskId, projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['task', parentTaskId] });
+      toast.success('Subtarea creada');
+    },
+    onError: (error: any) => {
+      toast.error('Error al crear subtarea: ' + error.message);
+    },
+  });
+}
+
 export function useUpdateTask() {
   const queryClient = useQueryClient();
 
@@ -155,6 +196,32 @@ export function useUpdateTaskStatus() {
     },
     onError: (error: any) => {
       toast.error('Error al cambiar estado: ' + error.message);
+    },
+  });
+}
+
+export interface BulkUpdateTasksVars {
+  project_id: string;
+  task_ids: string[];
+  status_id?: string;
+  assignee_id?: string | null;
+  sprint_id?: string | null;
+}
+
+export function useBulkUpdateTasks() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (vars: BulkUpdateTasksVars) => {
+      const result = await api.patch<{ updated: number; tasks: Task[] }>('/api/tasks/bulk', vars);
+      return { ...result, project_id: vars.project_id };
+    },
+    onSuccess: ({ updated, project_id }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', project_id] });
+      toast.success(`${updated} tarea${updated === 1 ? '' : 's'} actualizada${updated === 1 ? '' : 's'}`);
+    },
+    onError: (error: any) => {
+      toast.error('Error al actualizar tareas: ' + error.message);
     },
   });
 }

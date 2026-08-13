@@ -18,7 +18,7 @@ import { BacklogPanel } from '@/components/sprints/BacklogPanel';
 import { useSprints } from '@/hooks/useSprints';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
 import { TaskListView } from '@/components/tasks/TaskListView';
-import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters } from '@/lib/taskFilters';
+import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, taskFiltersToQuery } from '@/lib/taskFilters';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,6 +84,43 @@ export default function ProjectDetailPage() {
   const handleTaskClick = (task: TaskWithDetails) => {
     setSelectedTask(task);
     setDetailOpen(true);
+  };
+
+  // Navigating from a subtask row (or its parent breadcrumb) inside the sheet
+  // only gives us an id. The current `tasks` list may already have it (same
+  // project); if not -- e.g. it's filtered out of the board/list view right
+  // now -- fall back to a placeholder that TaskDetailSheet's own useTask(id)
+  // fetch will replace within a moment.
+  const handleNavigateToTask = (taskId: string) => {
+    const found = tasks.find((t) => t.id === taskId);
+    setSelectedTask(
+      found || {
+        id: taskId,
+        project_id: projectId || '',
+        epic_id: null,
+        team_id: null,
+        sprint_id: null,
+        title: '',
+        description: null,
+        priority: 'medium',
+        status_id: '',
+        assignee_id: null,
+        reporter_id: null,
+        start_date: null,
+        due_date: null,
+        tags: [],
+        task_number: null,
+        material_requerido_id: null,
+        asignatura_id: null,
+        parent_task_id: null,
+        subtask_of_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: { id: '', name: '', description: null, color: '#94a3b8', display_order: 0, is_default: false, is_completed: false, created_at: '' },
+        assignee: null,
+        reporter: null,
+      }
+    );
   };
 
   const handleEditPrograma = (programa: Programa) => {
@@ -397,10 +434,13 @@ export default function ProjectDetailPage() {
             <TaskListView
               tasks={tasks}
               projectKey={project.key}
+              projectId={projectId!}
               onTaskClick={handleTaskClick}
               isDesarrollo={isDesarrolloProject}
+              isAdminOrLeader={!!isLeader}
               isLoading={tasksLoading}
               hasActiveFilters={hasActiveFilters(taskFilters)}
+              filtersKey={taskFiltersToQuery(taskFilters)}
             />
           )}
         </TabsContent>
@@ -502,6 +542,7 @@ export default function ProjectDetailPage() {
         projectKey={project.key}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        onNavigateToTask={handleNavigateToTask}
       />
 
       <CreateEditProgramaDialog

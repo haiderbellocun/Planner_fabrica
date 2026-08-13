@@ -1,7 +1,7 @@
 import { TaskWithDetails } from '@/hooks/useTasks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Tag } from 'lucide-react';
+import { Calendar, Tag, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -89,6 +89,12 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {!!task.subtask_count && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ListChecks className="h-3 w-3" />
+              <span>{task.subtask_completed_count ?? 0}/{task.subtask_count}</span>
+            </div>
+          )}
           {task.due_date && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
