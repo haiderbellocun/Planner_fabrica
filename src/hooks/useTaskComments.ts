@@ -32,8 +32,8 @@ export function useCreateTaskComment(taskId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (comment: string) => {
-      return await api.post(`/api/tasks/${taskId}/comments`, { comment });
+    mutationFn: async ({ comment, mentioned_ids }: { comment: string; mentioned_ids?: string[] }) => {
+      return await api.post(`/api/tasks/${taskId}/comments`, { comment, mentioned_ids });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-comments', taskId] });

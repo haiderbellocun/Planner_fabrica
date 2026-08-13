@@ -32,6 +32,7 @@ import proximosProgramasRoutes from './routes/proximosProgramas.js';
 import checklistRoutes from './routes/checklist.js';
 import entregasRoutes from './routes/entregas.js';
 import calendarRoutes from './routes/calendar.js';
+import projectActivityRoutes from './routes/projectActivity.js';
 import pool from './config/database.js';
 import { env } from './config/env.js';
 
@@ -109,6 +110,7 @@ app.use('/api/projects/:projectId/tasks', projectTasksRouter);
 app.use('/api/projects/:projectId/epics', epicsRoutes);
 app.use('/api/projects/:projectId/teams', teamsRoutes);
 app.use('/api/projects/:projectId/sprints', sprintsRoutes);
+app.use('/api/projects/:projectId/activity', projectActivityRoutes);
 
 // Then mount other routes
 app.use('/api/projects', projectsRoutes);

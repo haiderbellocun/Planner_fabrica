@@ -19,6 +19,7 @@ import {
 } from '../controllers/commentsController.js';
 import { searchTasksForPicker } from '../controllers/taskSearchController.js';
 import { createSubtask } from '../controllers/subtasksController.js';
+import { listWatchers, followTask, unfollowTask } from '../controllers/watchersController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { projectMemberMiddleware, projectLeaderMiddleware, planEditorMiddleware } from '../middleware/permissions.js';
 import { validateTaskCreate, validateTaskUpdate, validateBulkTaskUpdate } from '../middleware/validation.js';
@@ -47,6 +48,11 @@ router.delete('/:id/comments/:commentId', deleteTaskComment);
 
 // Create a subtask of :id
 router.post('/:id/subtasks', createSubtask);
+
+// Watch / unwatch a task (must be before /:id)
+router.get('/:id/watchers', listWatchers);
+router.post('/:id/watchers', followTask);
+router.delete('/:id/watchers', unfollowTask);
 
 // Get single task
 router.get('/:id', getTask);

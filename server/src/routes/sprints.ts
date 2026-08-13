@@ -6,6 +6,7 @@ import {
   startSprint,
   completeSprint,
   deleteSprint,
+  getSprintBurndown,
 } from '../controllers/sprintsController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { projectMemberMiddleware, projectLeaderMiddleware } from '../middleware/permissions.js';
@@ -14,6 +15,7 @@ const router = express.Router({ mergeParams: true });
 router.use(authMiddleware);
 
 router.get('/', projectMemberMiddleware, listSprints);
+router.get('/:sprintId/burndown', projectMemberMiddleware, getSprintBurndown);
 router.post('/', projectLeaderMiddleware, createSprint);
 router.patch('/:sprintId', projectLeaderMiddleware, updateSprint);
 router.delete('/:sprintId', projectLeaderMiddleware, deleteSprint);

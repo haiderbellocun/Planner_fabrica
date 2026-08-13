@@ -20,6 +20,7 @@ import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
 import { TaskListView } from '@/components/tasks/TaskListView';
 import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, taskFiltersToQuery } from '@/lib/taskFilters';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
+import { ProjectActivityFeed } from '@/components/projects/ProjectActivityFeed';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +55,7 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist' | 'activity'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -356,7 +357,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist' | 'activity')} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
@@ -372,6 +373,7 @@ export default function ProjectDetailPage() {
           {isDesarrolloProject && (
             <TabsTrigger value="backlog">Backlog ({sprints.length})</TabsTrigger>
           )}
+          <TabsTrigger value="activity">Actividad</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tasks" className="space-y-4">
@@ -491,6 +493,17 @@ export default function ProjectDetailPage() {
 
         <TabsContent value="checklist">
           <ChecklistTab projectId={projectId!} />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <ProjectActivityFeed
+            projectId={projectId!}
+            projectKey={project.key}
+            onTaskClick={(taskId) => {
+              handleNavigateToTask(taskId);
+              setDetailOpen(true);
+            }}
+          />
         </TabsContent>
 
         {isDesarrolloProject && (

@@ -112,7 +112,10 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(node check-tasks-schema.cjs)",
       "Read(//c/Users/haider_bello/.claude/projects/c--app-planner/memory/**)",
-      "Bash(node run-subtask-of-id-migration.js)"
+      "Bash(node run-subtask-of-id-migration.js)",
+      "Bash(grep -n \"Badge className={cn\\('text-xs', priorityInfo.className\\)}\\\\|user?.role === 'admin' && \\(\" src/components/tasks/TaskDetailSheet.tsx)",
+      "Bash(node run-task-watchers-migration.js)",
+      "Bash(echo \"backend exit=$?\")"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

@@ -27,8 +27,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send, ListChecks, Plus } from 'lucide-react';
-import { useUpdateTask, useUpdateTaskStatus, useDeleteTask, useCreateSubtask } from '@/hooks/useTasks';
+import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send, ListChecks, Plus, Bell, BellOff } from 'lucide-react';
+import { useUpdateTask, useUpdateTaskStatus, useDeleteTask, useCreateSubtask, useWatchTask } from '@/hooks/useTasks';
 import type { TaskSubtask } from '@/types/database';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
@@ -91,7 +91,10 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const createComment = useCreateTaskComment(task?.id || '');
   const deleteComment = useDeleteTaskComment(task?.id || '');
   const createSubtask = useCreateSubtask();
+  const watchTask = useWatchTask();
   const [newComment, setNewComment] = useState('');
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
@@ -239,6 +242,10 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
     updateTaskStatus.mutate({ taskId: subtaskId, statusId, projectId: taskData.project_id });
   };
 
+  const handleToggleWatch = () => {
+    watchTask.mutate({ taskId: taskData.id, watching: !taskData.is_watching });
+  };
+
   const handleAddSubtask = () => {
     const title = subtaskTitle.trim();
     if (!title || createSubtask.isPending) return;
@@ -250,12 +257,68 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
   const handleAddComment = () => {
     if (newComment.trim()) {
-      createComment.mutate(newComment, {
-        onSuccess: () => {
-          setNewComment('');
-        },
-      });
+      createComment.mutate(
+        { comment: newComment, mentioned_ids: mentionedIds },
+        {
+          onSuccess: () => {
+            setNewComment('');
+            setMentionedIds([]);
+            setMentionQuery(null);
+          },
+        }
+      );
     }
+  };
+
+  // Mention autocomplete: whatever comes right after the last "@" up to the
+  // cursor (no spaces in between) drives the suggestion list below the box.
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+    const cursor = e.target.selectionStart ?? value.length;
+    const uptoCursor = value.slice(0, cursor);
+    const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    setMentionQuery(match ? match[1] : null);
+  };
+
+  const handleSelectMention = (profile: { id: string; full_name: string | null }) => {
+    // Simplification: only replaces a trailing "@query" at the very end of the
+    // text (the common case -- typing "@" while composing, then picking
+    // immediately). If the cursor moved elsewhere first, this is a no-op.
+    const mentionRegex = /(?:^|\s)@([^\s@]*)$/;
+    if (!mentionRegex.test(newComment)) return;
+    const replaced = newComment.replace(mentionRegex, (m) => (m.startsWith(' ') ? ' ' : '') + `@${profile.full_name} `);
+    setNewComment(replaced);
+    setMentionedIds((prev) => (prev.includes(profile.id) ? prev : [...prev, profile.id]));
+    setMentionQuery(null);
+  };
+
+  const mentionMatches =
+    mentionQuery !== null
+      ? profiles.filter((p) => p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5)
+      : [];
+
+  // Highlight "@FullName" occurrences already known from `profiles` when
+  // rendering a posted comment (best-effort text match, no stored markup).
+  const renderCommentWithMentions = (text: string) => {
+    const names = profiles.map((p) => p.full_name).filter((n): n is string => !!n);
+    if (names.length === 0) return text;
+    const pattern = [...names]
+      .sort((a, b) => b.length - a.length)
+      .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|');
+    const regex = new RegExp(`@(${pattern})\\b`, 'g');
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+      parts.push(<span key={key++} className="text-primary font-medium">{match[0]}</span>);
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+    return parts;
   };
 
   const handleDeleteComment = (commentId: string) => {
@@ -309,10 +372,23 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                   {projectKey}-{taskData.task_number}
                 </span>
                 <Badge className={cn('text-xs', priorityInfo.className)}>{priorityInfo.label}</Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-7 gap-1.5 px-2 text-muted-foreground"
+                  disabled={watchTask.isPending}
+                  onClick={handleToggleWatch}
+                  title={taskData.is_watching ? 'Dejar de seguir' : 'Seguir esta tarea'}
+                >
+                  {taskData.is_watching ? <Bell className="h-3.5 w-3.5 fill-current" /> : <BellOff className="h-3.5 w-3.5" />}
+                  {(taskData.watchers?.length || 0) > 0 && (
+                    <span className="text-xs">{taskData.watchers?.length}</span>
+                  )}
+                </Button>
                 {user?.role === 'admin' && (
                   <Button
                     variant="ghost" size="icon"
-                    className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
                     disabled={deleteTask.isPending}
                     onClick={() => {
                       if (!confirm(`¿Eliminar la tarea "${taskData.title}"?`)) return;
@@ -920,7 +996,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                         <p className="text-[11px] text-muted-foreground">
                           {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
                         </p>
-                        <p className="text-xs mt-1 whitespace-pre-wrap break-words text-foreground/80">{comment.comment}</p>
+                        <p className="text-xs mt-1 whitespace-pre-wrap break-words text-foreground/80">{renderCommentWithMentions(comment.comment)}</p>
                       </div>
                     </div>
                   ))}
@@ -931,14 +1007,32 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
             {/* Comment input — pinned at bottom */}
             <div className="border-t border-border bg-white px-4 py-3 flex-shrink-0">
               <Textarea
-                placeholder="Escribe un comentario..."
+                placeholder="Escribe un comentario... (@ para mencionar)"
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={handleCommentChange}
                 className="min-h-[72px] resize-none text-sm bg-slate-50 border-slate-200"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddComment(); }
                 }}
               />
+              {mentionMatches.length > 0 && (
+                <div className="mt-1 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  {mentionMatches.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-slate-50 text-left"
+                      onClick={() => handleSelectMention(p)}
+                    >
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={p.avatar_url || undefined} />
+                        <AvatarFallback className="text-[9px]">{getInitials(p.full_name)}</AvatarFallback>
+                      </Avatar>
+                      {p.full_name || 'Usuario'}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-end mt-2">
                 <Button size="sm" className="rounded-xl" onClick={handleAddComment} disabled={!newComment.trim() || createComment.isPending}>
                   <Send className="h-3 w-3 mr-1.5" />

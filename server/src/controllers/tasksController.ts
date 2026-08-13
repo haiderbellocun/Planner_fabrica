@@ -4,6 +4,7 @@ import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 import { sendTaskAssignedEmail, buildTaskAssignedHtml } from '../services/emailService.js';
 import { checkStatusTransition } from '../utils/taskStatusTransitions.js';
+import { ensureWatcher, notifyWatchers } from '../utils/taskWatchers.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
@@ -612,6 +613,17 @@ export const getTask = async (req: AuthRequest, res: Response) => {
       task.parent = null;
     }
 
+    const watchersResult = await query(
+      `SELECT p.id, p.full_name, p.avatar_url
+       FROM public.task_watchers tw
+       JOIN public.profiles p ON p.id = tw.user_id
+       WHERE tw.task_id = $1
+       ORDER BY tw.created_at ASC`,
+      [row.id]
+    );
+    task.watchers = watchersResult.rows;
+    task.is_watching = watchersResult.rows.some((w: any) => w.id === req.user?.profileId);
+
     res.json(task);
   } catch (error) {
     console.error('Get task error:', error);
@@ -694,6 +706,10 @@ export const createTask = async (req: AuthRequest, res: Response) => {
     );
 
     const task = result.rows[0];
+
+    // Reporter and (if set) assignee auto-watch their own task.
+    await ensureWatcher(task.id, reporterId);
+    await ensureWatcher(task.id, assignee_id);
 
     // Create notification + email if assigned to someone else
     if (assignee_id && assignee_id !== reporterId) {
@@ -866,6 +882,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
 
     const task = result.rows[0];
 
+    if (assignee_id) {
+      await ensureWatcher(task.id, assignee_id);
+    }
+
     // Create notification + email if assignee changed
     if (assignee_id && assignee_id !== req.user?.profileId) {
       await query(
@@ -997,6 +1017,16 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
       );
     }
 
+    // Notify the rest of the watchers (assignee already covered above).
+    await notifyWatchers(
+      task.id,
+      task.project_id,
+      'task_status_changed',
+      'Estado de tarea actualizado',
+      `La tarea "${task.title}" cambió a: ${newStatusName}`,
+      [profileId, task.assignee_id]
+    );
+
     res.json(task);
   } catch (error) {
     console.error('Update task status error:', error);
@@ -1101,6 +1131,10 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
       value = sprint_id;
     }
 
+    if (field === 'assignee_id' && value) {
+      await Promise.all(taskIds.map((taskId: string) => ensureWatcher(taskId, value)));
+    }
+
     const result = await query(
       `UPDATE public.tasks
        SET ${field} = $1, updated_at = NOW()
@@ -1172,6 +1206,19 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
           )
         );
       }
+
+      await Promise.all(
+        tasks.map((t) =>
+          notifyWatchers(
+            t.id,
+            projectId,
+            'task_status_changed',
+            'Estado de tarea actualizado',
+            `La tarea "${t.title}" cambió a: ${newStatusName}`,
+            [profileId, t.assignee_id]
+          )
+        )
+      );
     }
 
     res.json({ updated: result.rows.length, tasks: result.rows });

@@ -152,6 +152,108 @@ export const completeSprint = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * GET /api/projects/:projectId/sprints/:sprintId/burndown
+ * Retroactive reconstruction: uses TODAY's sprint_id membership crossed with
+ * task_status_history to derive remaining-work-per-day. A task moved into/out
+ * of the sprint mid-flight will look like it was always/never there -- an
+ * accepted approximation since sprint_id changes leave no history.
+ */
+export const getSprintBurndown = async (req: AuthRequest, res: Response) => {
+  try {
+    const { projectId, sprintId } = req.params;
+
+    const sprintResult = await query(
+      `SELECT
+        s.id, s.name, s.status,
+        to_char(s.start_date, 'YYYY-MM-DD') AS start_date,
+        to_char(s.end_date, 'YYYY-MM-DD')   AS end_date,
+        to_char(COALESCE(s.end_date, (NOW() AT TIME ZONE 'America/Bogota')::date), 'YYYY-MM-DD') AS effective_end,
+        to_char(LEAST(
+          COALESCE(s.end_date, (NOW() AT TIME ZONE 'America/Bogota')::date),
+          s.start_date + INTERVAL '365 days'
+        )::date, 'YYYY-MM-DD') AS effective_end_capped
+       FROM public.sprints s
+       WHERE s.id = $1 AND s.project_id = $2`,
+      [sprintId, projectId]
+    );
+
+    if (sprintResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sprint not found' });
+    }
+
+    const sprint = sprintResult.rows[0];
+
+    if (!sprint.start_date) {
+      return res.json({
+        sprint: { id: sprint.id, name: sprint.name, status: sprint.status, start_date: null, end_date: null },
+        days: [],
+        meta: { truncated: false, day_count: 0, reason: 'not_started' },
+      });
+    }
+
+    const truncated = sprint.effective_end !== sprint.effective_end_capped;
+
+    const burndownResult = await query(
+      `WITH day_series AS (
+         SELECT generate_series($2::date, $3::date, INTERVAL '1 day')::date AS day
+       ),
+       sprint_tasks AS (
+         SELECT t.id, t.created_at FROM public.tasks t WHERE t.sprint_id = $1
+       ),
+       creation_events AS (
+         SELECT
+           GREATEST(LEAST((t.created_at AT TIME ZONE 'America/Bogota')::date, $3::date), $2::date) AS day,
+           COUNT(*)::int AS delta
+         FROM sprint_tasks t
+         GROUP BY 1
+       ),
+       completion_events AS (
+         SELECT
+           GREATEST(LEAST((tsh.started_at AT TIME ZONE 'America/Bogota')::date, $3::date), $2::date) AS day,
+           SUM(CASE
+             WHEN ts_to.is_completed AND NOT COALESCE(ts_from.is_completed, false) THEN 1
+             WHEN NOT ts_to.is_completed AND COALESCE(ts_from.is_completed, false) THEN -1
+             ELSE 0
+           END)::int AS delta
+         FROM public.task_status_history tsh
+         JOIN sprint_tasks st ON st.id = tsh.task_id
+         JOIN public.task_statuses ts_to ON ts_to.id = tsh.to_status_id
+         LEFT JOIN public.task_statuses ts_from ON ts_from.id = tsh.from_status_id
+         GROUP BY 1
+       )
+       SELECT
+         to_char(ds.day, 'YYYY-MM-DD') AS date,
+         COALESCE(SUM(ce.delta)  OVER (ORDER BY ds.day), 0)::int AS total,
+         COALESCE(SUM(cpe.delta) OVER (ORDER BY ds.day), 0)::int AS done
+       FROM day_series ds
+       LEFT JOIN creation_events   ce  ON ce.day  = ds.day
+       LEFT JOIN completion_events cpe ON cpe.day = ds.day
+       ORDER BY ds.day`,
+      [sprintId, sprint.start_date, sprint.effective_end_capped]
+    );
+
+    const rows = burndownResult.rows;
+    const total0 = rows[0]?.total ?? 0;
+    const n = rows.length;
+    const days = rows.map((r: any, i: number) => ({
+      date: r.date,
+      total: r.total,
+      remaining: r.total - r.done,
+      ideal: n <= 1 ? 0 : Math.round(total0 * (1 - i / (n - 1)) * 1000) / 1000,
+    }));
+
+    res.json({
+      sprint: { id: sprint.id, name: sprint.name, status: sprint.status, start_date: sprint.start_date, end_date: sprint.end_date },
+      days,
+      meta: { truncated, day_count: n },
+    });
+  } catch (error) {
+    console.error('Get sprint burndown error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const deleteSprint = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId, sprintId } = req.params;

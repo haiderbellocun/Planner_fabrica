@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,10 +11,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Plus, Loader2 } from 'lucide-react';
 import { CreateSprintDialog } from './CreateSprintDialog';
 import { SprintSection } from './SprintSection';
+import { SprintBurndownChart } from './SprintBurndownChart';
+import { SprintVelocityChart } from './SprintVelocityChart';
 import {
   Sprint,
   useSprints,
@@ -49,6 +52,8 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
   const [completingSprint, setCompletingSprint] = useState<Sprint | null>(null);
   const [moveTo, setMoveTo] = useState<string>('backlog');
+  const [view, setView] = useState<'board' | 'burndown' | 'velocity'>('board');
+  const [burndownSprintId, setBurndownSprintId] = useState<string | null>(null);
 
   const activeSprint = sprints.find((s) => s.status === 'active');
   const plannedSprints = sprints
@@ -57,6 +62,18 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
   const completedSprints = sprints
     .filter((s) => s.status === 'completed')
     .sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
+
+  // Sprints load async -- default into the active sprint's burndown the first
+  // time one shows up, without fighting the isLoading gate below.
+  useEffect(() => {
+    if (activeSprint && burndownSprintId === null) {
+      setView('burndown');
+      setBurndownSprintId(activeSprint.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSprint?.id]);
+
+  const burndownSprint = sprints.find((s) => s.id === burndownSprintId) ?? null;
 
   const sortByBacklogRank = (list: TaskWithDetails[]) =>
     [...list].sort((a, b) => {
@@ -154,15 +171,53 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
 
   return (
     <div className="space-y-4">
-      {canManage && (
-        <div className="flex justify-end">
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo sprint
-          </Button>
+      <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="board">Tablero</TabsTrigger>
+            <TabsTrigger value="burndown">Burndown</TabsTrigger>
+            <TabsTrigger value="velocity">Velocidad</TabsTrigger>
+          </TabsList>
+          {canManage && view === 'board' && (
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo sprint
+            </Button>
+          )}
+        </div>
+      </Tabs>
+
+      {view === 'burndown' && (
+        <div className="space-y-3">
+          <Select value={burndownSprintId ?? ''} onValueChange={setBurndownSprintId}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="Elegir sprint..." />
+            </SelectTrigger>
+            <SelectContent>
+              {activeSprint && <SelectItem value={activeSprint.id}>{activeSprint.name} (activo)</SelectItem>}
+              {plannedSprints.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name} (planificado)</SelectItem>
+              ))}
+              {completedSprints.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name} (completado)</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {burndownSprint ? (
+            <SprintBurndownChart projectId={projectId} sprint={burndownSprint} />
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Elegí un sprint para ver su burndown.
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
+      {view === 'velocity' && <SprintVelocityChart sprints={sprints} />}
+
+      {view === 'board' && (
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="space-y-3">
           {activeSprint && (
@@ -235,6 +290,7 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
           )}
         </div>
       </DragDropContext>
+      )}
 
       <CreateSprintDialog
         projectId={projectId}

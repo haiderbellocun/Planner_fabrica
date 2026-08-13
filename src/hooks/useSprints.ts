@@ -23,6 +23,28 @@ export function useSprints(projectId: string | undefined) {
   });
 }
 
+export interface SprintBurndownDay {
+  date: string;
+  total: number;
+  remaining: number;
+  ideal: number;
+}
+
+export interface SprintBurndownResponse {
+  sprint: Pick<Sprint, 'id' | 'name' | 'status' | 'start_date' | 'end_date'>;
+  days: SprintBurndownDay[];
+  meta: { truncated: boolean; day_count: number; reason?: 'not_started' };
+}
+
+export function useSprintBurndown(projectId: string | undefined, sprintId: string | undefined) {
+  return useQuery({
+    queryKey: ['sprint-burndown', projectId, sprintId],
+    queryFn: async (): Promise<SprintBurndownResponse> =>
+      api.get<SprintBurndownResponse>(`/api/projects/${projectId}/sprints/${sprintId}/burndown`),
+    enabled: !!projectId && !!sprintId,
+  });
+}
+
 export function useCreateSprint(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({

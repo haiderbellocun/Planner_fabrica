@@ -216,6 +216,8 @@ export interface Task {
   subtask_completed_count?: number;
   subtasks?: TaskSubtask[];
   parent?: { id: string; title: string; task_number: number | null } | null;
+  watchers?: { id: string; full_name: string | null; avatar_url: string | null }[];
+  is_watching?: boolean;
   created_at: string;
   updated_at: string;
   // Populated by joins

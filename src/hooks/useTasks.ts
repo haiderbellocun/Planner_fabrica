@@ -160,6 +160,27 @@ export function useCreateSubtask() {
   });
 }
 
+export function useWatchTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ taskId, watching }: { taskId: string; watching: boolean }) => {
+      if (watching) {
+        await api.post(`/api/tasks/${taskId}/watchers`, {});
+      } else {
+        await api.delete(`/api/tasks/${taskId}/watchers`);
+      }
+      return { taskId, watching };
+    },
+    onSuccess: ({ taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+    },
+    onError: (error: any) => {
+      toast.error('Error al actualizar seguimiento: ' + error.message);
+    },
+  });
+}
+
 export function useUpdateTask() {
   const queryClient = useQueryClient();
 

@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 import { sendTaskAssignedEmail, buildTaskAssignedHtml } from '../services/emailService.js';
+import { ensureWatcher } from '../utils/taskWatchers.js';
 
 /**
  * POST /api/tasks/:id/subtasks
@@ -109,6 +110,9 @@ export const createSubtask = async (req: AuthRequest, res: Response) => {
     );
 
     const task = result.rows[0];
+
+    await ensureWatcher(task.id, profileId);
+    await ensureWatcher(task.id, assignee_id);
 
     if (assignee_id && assignee_id !== profileId) {
       await query(
