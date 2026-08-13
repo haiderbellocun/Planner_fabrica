@@ -2,6 +2,8 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { ensureWatcher, notifyWatchers } from '../utils/taskWatchers.js';
+import { env } from '../config/env.js';
+import { sendTaskAssignedEmail, buildMentionEmailHtml } from '../services/emailService.js';
 
 /**
  * GET /api/tasks/:id/comments
@@ -121,6 +123,45 @@ export const createTaskComment = async (req: AuthRequest, res: Response) => {
                 );
               })
             );
+
+            try {
+              const [mentionedProfiles, projectResult] = await Promise.all([
+                query(
+                  `SELECT p.id, p.full_name, u.email
+                   FROM public.profiles p
+                   JOIN public.users u ON u.id = p.user_id
+                   WHERE p.id = ANY($1::uuid[])`,
+                  [mentionedValidIds]
+                ),
+                query('SELECT name FROM public.projects WHERE id = $1', [task.project_id]),
+              ]);
+
+              const projectName = projectResult.rows[0]?.name ?? 'un proyecto';
+              const frontendUrl = (env.FRONTEND_URL ?? '').replace(/\/$/, '');
+              const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
+              const excerpt = comment.trim().length > 160 ? `${comment.trim().slice(0, 160)}…` : comment.trim();
+
+              await Promise.allSettled(
+                mentionedProfiles.rows
+                  .filter((p: any) => p.email)
+                  .map((p: any) =>
+                    sendTaskAssignedEmail({
+                      to: p.email,
+                      subject: `${user?.full_name || 'Alguien'} te mencionó en ${projectName}`,
+                      html: buildMentionEmailHtml({
+                        mentionedName: p.full_name ?? '',
+                        commenterName: user?.full_name || 'Alguien',
+                        projectName,
+                        taskTitle: task.title,
+                        commentExcerpt: excerpt,
+                        taskLink,
+                      }),
+                    })
+                  )
+              );
+            } catch (mentionEmailError) {
+              console.error('Error sending mention emails:', mentionEmailError);
+            }
           }
 
           await notifyWatchers(
