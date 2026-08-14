@@ -115,6 +115,7 @@ export default function ProjectDetailPage() {
         asignatura_id: null,
         parent_task_id: null,
         subtask_of_id: null,
+        horas_estimadas: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: { id: '', name: '', description: null, color: '#94a3b8', display_order: 0, is_default: false, is_completed: false, created_at: '' },

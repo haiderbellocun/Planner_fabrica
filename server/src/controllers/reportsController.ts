@@ -1782,7 +1782,15 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
           ), 0) as horas_semana_actual,
           COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed), 0) as horas_backlog_total,
           COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed AND due_date IS NULL), 0) as horas_sin_fecha,
-          COUNT(DISTINCT task_id) FILTER (WHERE NOT is_completed AND horas_estimadas IS NULL) as unidades_sin_estimacion
+          COUNT(DISTINCT task_id) FILTER (WHERE NOT is_completed AND horas_estimadas IS NULL) as unidades_sin_estimacion,
+          -- Active tasks already due (overdue or due this week) with NO hour
+          -- estimate -- these contribute 0 to carga_semana_actual even though
+          -- they're real, active commitments, which is what makes a "0%
+          -- utilización" headline misleading when it's really "sin datos".
+          COUNT(DISTINCT task_id) FILTER (
+            WHERE NOT is_completed AND horas_estimadas IS NULL
+              AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+          ) as unidades_semana_actual_sin_estimacion
         FROM scoped_work
         GROUP BY profile_id
       ),
@@ -1818,6 +1826,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         COALESCE(cw.horas_backlog_total, 0) as horas_backlog_total,
         COALESCE(cw.horas_sin_fecha, 0) as horas_sin_fecha,
         COALESCE(cw.unidades_sin_estimacion, 0) as unidades_sin_estimacion,
+        COALESCE(cw.unidades_semana_actual_sin_estimacion, 0) as unidades_semana_actual_sin_estimacion,
         COALESCE(
           (SELECT json_agg(json_build_object('week_start', f.week_start, 'horas', f.horas) ORDER BY f.week_offset)
            FROM forward f WHERE f.profile_id = p.id),
@@ -1877,6 +1886,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
           risk_level: currentBand.level,
           risk_label: currentBand.label,
           risk_color: currentBand.color,
+          unidades_semana_actual_sin_estimacion: parseInt(r.unidades_semana_actual_sin_estimacion),
         },
         weeks: weeksData,
         backlog: {
@@ -1891,6 +1901,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
 
     const overallCarga = members.reduce((sum, m) => sum + m.current.carga_semana_actual, 0);
     const overallCapacidad = members.reduce((sum, m) => sum + m.weekly_hours_capacity, 0);
+    const overallUnidadesSinEstimacion = members.reduce((sum, m) => sum + m.current.unidades_semana_actual_sin_estimacion, 0);
     const riskCounts = { available: 0, ok: 0, warning: 0, over: 0 };
     for (const m of members) riskCounts[m.current.risk_level]++;
 
@@ -1908,6 +1919,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         utilizacion_pct: overallCapacidad > 0 ? Math.round((overallCarga / overallCapacidad) * 100) : 0,
         holgura_horas: Math.round((overallCapacidad - overallCarga) * 100) / 100,
         risk_counts: riskCounts,
+        unidades_semana_actual_sin_estimacion: overallUnidadesSinEstimacion,
       },
     });
   } catch (error) {

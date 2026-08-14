@@ -213,6 +213,7 @@ export const listTasks = async (req: AuthRequest, res: Response) => {
       subtask_of_id: row.subtask_of_id,
       subtask_count: row.subtask_count ?? 0,
       subtask_completed_count: row.subtask_completed_count ?? 0,
+      horas_estimadas: row.horas_estimadas != null ? Number(row.horas_estimadas) : null,
       status: {
         id: row.status_id,
         name: row.status_name,
@@ -378,6 +379,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
       asignatura_id: row.asignatura_id,
       parent_task_id: row.parent_task_id,
       subtask_of_id: row.subtask_of_id,
+      horas_estimadas: row.horas_estimadas != null ? Number(row.horas_estimadas) : null,
       epic: row.epic_id_ref
         ? {
             id: row.epic_id_ref,
@@ -638,7 +640,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
 export const createTask = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id, sprint_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id, sprint_id, horas_estimadas } = req.body;
     const reporterId = req.user?.profileId;
     const userRole = req.user?.role;
 
@@ -679,10 +681,10 @@ export const createTask = async (req: AuthRequest, res: Response) => {
       `INSERT INTO public.tasks (
          project_id, title, description, priority, status_id, assignee_id, reporter_id,
          due_date, tags, material_requerido_id, asignatura_id, epic_id, team_id, sprint_id,
-         board_rank, backlog_rank
+         horas_estimadas, board_rank, backlog_rank
        )
        VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
          COALESCE((SELECT MIN(board_rank) FROM public.tasks WHERE project_id = $1 AND status_id = $5), 1000) - 1000,
          COALESCE((SELECT MIN(backlog_rank) FROM public.tasks WHERE project_id = $1), 1000) - 1000
        )
@@ -702,6 +704,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
         epic_id || null,
         team_id || null,
         sprint_id || null,
+        horas_estimadas ?? null,
       ]
     );
 
@@ -767,7 +770,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id, sprint_id } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id, sprint_id, horas_estimadas } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -861,6 +864,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     if (sprint_id !== undefined) {
       updates.push(`sprint_id = $${paramCount++}`);
       values.push(sprint_id);
+    }
+    if (horas_estimadas !== undefined) {
+      updates.push(`horas_estimadas = $${paramCount++}`);
+      values.push(horas_estimadas);
     }
 
     if (updates.length === 0) {

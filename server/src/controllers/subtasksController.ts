@@ -14,7 +14,7 @@ import { ensureWatcher } from '../utils/taskWatchers.js';
 export const createSubtask = async (req: AuthRequest, res: Response) => {
   try {
     const { id: parentId } = req.params;
-    const { title, description, priority, assignee_id, due_date } = req.body;
+    const { title, description, priority, assignee_id, due_date, horas_estimadas } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -87,10 +87,10 @@ export const createSubtask = async (req: AuthRequest, res: Response) => {
     const result = await query(
       `INSERT INTO public.tasks (
          project_id, title, description, priority, status_id, assignee_id, reporter_id,
-         due_date, tags, subtask_of_id, board_rank, backlog_rank
+         due_date, tags, subtask_of_id, horas_estimadas, board_rank, backlog_rank
        )
        VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
          COALESCE((SELECT MIN(board_rank) FROM public.tasks WHERE project_id = $1 AND status_id = $5), 1000) - 1000,
          COALESCE((SELECT MIN(backlog_rank) FROM public.tasks WHERE project_id = $1), 1000) - 1000
        )
@@ -106,6 +106,7 @@ export const createSubtask = async (req: AuthRequest, res: Response) => {
         effectiveDueDate,
         [],
         parentId,
+        horas_estimadas ?? null,
       ]
     );
 

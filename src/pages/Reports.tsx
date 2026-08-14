@@ -1132,7 +1132,12 @@ function TabEquipo() {
                     <b className="text-white">{formatHours(overall.capacidad_total)}</b> disponibles.{' '}
                     {overall.risk_counts.over > 0
                       ? <><b className="text-white">{overall.risk_counts.over} {overall.risk_counts.over === 1 ? 'persona está sobrecargada' : 'personas están sobrecargadas'}</b>.</>
-                      : 'Nadie está sobrecargado en este momento.'}
+                      : 'Nadie está sobrecargado en este momento.'}{' '}
+                    {overall.unidades_semana_actual_sin_estimacion > 0 && (
+                      <>
+                        Ojo: <b className="text-white">{overall.unidades_semana_actual_sin_estimacion} {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tarea activa' : 'tareas activas'} de esta semana no {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tiene' : 'tienen'} horas estimadas</b>, así que no cuentan en este % — la utilización real puede ser más alta.
+                      </>
+                    )}
                   </>
                 }
                 stats={[
@@ -1160,6 +1165,11 @@ function TabEquipo() {
                 {overall.risk_counts.over > 0 && (
                   <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.over}`}>
                     Sobrecargado · {overall.risk_counts.over}
+                  </Badge>
+                )}
+                {overall.unidades_semana_actual_sin_estimacion > 0 && (
+                  <Badge variant="outline" className="px-2 py-0.5 text-[11px] bg-amber-50 text-amber-700 border-amber-200">
+                    Sin horas estimadas · {overall.unidades_semana_actual_sin_estimacion}
                   </Badge>
                 )}
               </div>

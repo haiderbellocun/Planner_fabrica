@@ -43,8 +43,10 @@ export const RISK_BANDS = {
  *
  * Only ~114 of 3480 tasks (all with asignatura_id) currently have any
  * task_material_assignees rows — "desarrollo" project tasks have no material
- * breakdown and therefore no hours dimension at all. Those tasks still need to
- * show up (as `sin_estimacion`), attributed to `tasks.assignee_id`, just without hours.
+ * breakdown and therefore no hours dimension there. Those tasks fall back to
+ * `tasks.horas_estimadas` (a plain hand-entered estimate on the task itself,
+ * independent of the material/preset-catalog system) when it's set, and show
+ * up as `sin_estimacion` only when neither source has an hours value.
  */
 export const ASSIGNED_WORK_CTE = `
   assigned_work AS (
@@ -54,7 +56,7 @@ export const ASSIGNED_WORK_CTE = `
       t.id                  AS task_id,
       tma.material_id,
       tma.horas_estimadas,
-      false                 AS sin_estimacion,
+      tma.horas_estimadas IS NULL AS sin_estimacion,
       t.project_id, t.due_date, t.status_id, ts.name AS status_name, ts.is_completed, t.created_at
     FROM public.task_material_assignees tma
     JOIN public.tasks t ON t.id = tma.task_id
@@ -62,14 +64,15 @@ export const ASSIGNED_WORK_CTE = `
 
     UNION ALL
 
-    -- Tasks with no material breakdown at all: fall back to the task's own assignee,
-    -- with no hours (never invent an estimate that doesn't exist).
+    -- Tasks with no material breakdown at all: fall back to the task's own
+    -- assignee and its own hand-entered horas_estimadas (never invent a
+    -- number that wasn't actually entered somewhere).
     SELECT
       t.assignee_id         AS profile_id,
       t.id                  AS task_id,
       NULL::uuid            AS material_id,
-      NULL::numeric         AS horas_estimadas,
-      true                  AS sin_estimacion,
+      t.horas_estimadas,
+      t.horas_estimadas IS NULL AS sin_estimacion,
       t.project_id, t.due_date, t.status_id, ts.name AS status_name, ts.is_completed, t.created_at
     FROM public.tasks t
     JOIN public.task_statuses ts ON ts.id = t.status_id

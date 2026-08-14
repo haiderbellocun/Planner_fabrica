@@ -30,6 +30,7 @@ export const taskCreateSchema = z.object({
   epic_id: z.string().uuid().optional().nullable(),
   team_id: z.string().uuid().optional().nullable(),
   sprint_id: z.string().uuid().optional().nullable(),
+  horas_estimadas: z.number().positive().max(999).optional().nullable(),
 });
 
 export const taskUpdateSchema = z.object({
@@ -42,6 +43,7 @@ export const taskUpdateSchema = z.object({
   epic_id: z.string().uuid().optional().nullable(),
   team_id: z.string().uuid().optional().nullable(),
   sprint_id: z.string().uuid().optional().nullable(),
+  horas_estimadas: z.number().positive().max(999).optional().nullable(),
 });
 
 // Exactly one of status_id/assignee_id/sprint_id per call -- mixing fields

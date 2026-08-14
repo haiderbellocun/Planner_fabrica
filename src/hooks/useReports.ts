@@ -560,6 +560,7 @@ export interface CapacityForecastMember {
     risk_level: 'available' | 'ok' | 'warning' | 'over';
     risk_label: string;
     risk_color: 'sky' | 'emerald' | 'amber' | 'red';
+    unidades_semana_actual_sin_estimacion: number;
   };
   weeks: CapacityForecastWeek[];
   backlog: {
@@ -580,6 +581,7 @@ export interface CapacityForecastResponse {
     utilizacion_pct: number;
     holgura_horas: number;
     risk_counts: { available: number; ok: number; warning: number; over: number };
+    unidades_semana_actual_sin_estimacion: number;
   };
 }
 

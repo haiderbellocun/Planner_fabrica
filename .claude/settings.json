@@ -115,7 +115,14 @@
       "Bash(node run-subtask-of-id-migration.js)",
       "Bash(grep -n \"Badge className={cn\\('text-xs', priorityInfo.className\\)}\\\\|user?.role === 'admin' && \\(\" src/components/tasks/TaskDetailSheet.tsx)",
       "Bash(node run-task-watchers-migration.js)",
-      "Bash(echo \"backend exit=$?\")"
+      "Bash(echo \"backend exit=$?\")",
+      "Bash(node diag_capacity.mjs)",
+      "Bash(node run-task-horas-estimadas-migration.js)",
+      "Bash(node -e ' *)",
+      "Bash(timeout 20 node diag_smtp.mjs)",
+      "Bash(node diag_mentions.mjs)",
+      "Bash(node diag_mention_email.mjs)",
+      "Bash(timeout 25 node diag_send_mention.mjs)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

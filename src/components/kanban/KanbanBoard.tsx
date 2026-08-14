@@ -188,7 +188,9 @@ function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: Kanb
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`space-y-2 min-h-[200px] rounded-lg p-1 transition-colors flex-1 ${
+            // Fixed max-height ~ 8 average cards; beyond that the column scrolls
+            // on its own instead of stretching the whole board page downward.
+            className={`space-y-2 min-h-[200px] max-h-[950px] overflow-y-auto rounded-lg p-1 transition-colors flex-1 ${
               snapshot.isDraggingOver ? 'bg-accent/50' : ''
             }`}
           >

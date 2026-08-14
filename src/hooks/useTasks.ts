@@ -104,6 +104,7 @@ export function useCreateTask() {
       asignatura_id?: string;
       epic_id?: string;
       team_id?: string;
+      horas_estimadas?: number;
     }) => {
       const task = await api.post<Task>(`/api/projects/${data.project_id}/tasks`, data);
       return task;
@@ -131,6 +132,7 @@ export function useCreateSubtask() {
       priority,
       assignee_id,
       due_date,
+      horas_estimadas,
     }: {
       parentTaskId: string;
       projectId: string;
@@ -139,6 +141,7 @@ export function useCreateSubtask() {
       priority?: 'low' | 'medium' | 'high' | 'urgent';
       assignee_id?: string;
       due_date?: string;
+      horas_estimadas?: number;
     }) => {
       const task = await api.post<Task>(`/api/tasks/${parentTaskId}/subtasks`, {
         title,
@@ -146,6 +149,7 @@ export function useCreateSubtask() {
         priority,
         assignee_id,
         due_date,
+        horas_estimadas,
       });
       return { task, parentTaskId, projectId };
     },

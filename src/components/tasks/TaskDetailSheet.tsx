@@ -96,6 +96,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const [mentionedIds, setMentionedIds] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [editingDueDate, setEditingDueDate] = useState(false);
+  const [editingHoras, setEditingHoras] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
   const { data: tiempoTarea } = useTiempoTarea(task?.id);
@@ -592,6 +593,33 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               <span>
                 Creada: {formatDistanceToNow(new Date(taskData.created_at), { addSuffix: true, locale: es })}
               </span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              {isAdminOrLeader && editingHoras ? (
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground w-20"
+                  defaultValue={taskData.horas_estimadas ?? ''}
+                  autoFocus
+                  onBlur={(e) => {
+                    setEditingHoras(false);
+                    const value = e.target.value ? parseFloat(e.target.value) : null;
+                    updateTask.mutate({ id: taskData.id, project_id: taskData.project_id, horas_estimadas: value });
+                  }}
+                  onKeyDown={(e) => e.key === 'Escape' && setEditingHoras(false)}
+                />
+              ) : (
+                <span
+                  className={isAdminOrLeader ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
+                  onClick={() => isAdminOrLeader && setEditingHoras(true)}
+                  title={isAdminOrLeader ? 'Clic para editar horas estimadas' : undefined}
+                >
+                  Horas estimadas: {taskData.horas_estimadas != null ? `${Number(taskData.horas_estimadas)}h` : 'Sin estimar'}
+                </span>
+              )}
             </div>
           </div>
 

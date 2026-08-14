@@ -41,6 +41,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [dueDate, setDueDate] = useState('');
+  const [horasEstimadas, setHorasEstimadas] = useState('');
   const [programaId, setProgramaId] = useState<string>('');
   const [asignaturaId, setAsignaturaId] = useState<string>('');
   const [epicId, setEpicId] = useState<string>('');
@@ -72,6 +73,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
       asignatura_id: asignaturaId || undefined,
       epic_id: isDesarrolloProject && epicId ? epicId : undefined,
       team_id: isDesarrolloProject && teamId ? teamId : undefined,
+      horas_estimadas: horasEstimadas ? parseFloat(horasEstimadas) : undefined,
     });
 
     // Reset form
@@ -80,6 +82,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
     setPriority('medium');
     setAssigneeId('');
     setDueDate('');
+    setHorasEstimadas('');
     setProgramaId('');
     setAsignaturaId('');
     setEpicId('');
@@ -141,6 +144,19 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
                     <SelectItem value="urgent">Urgente</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="horasEstimadas">Horas estimadas (opcional)</Label>
+                <Input
+                  id="horasEstimadas"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Ej. 4"
+                  value={horasEstimadas}
+                  onChange={(e) => setHorasEstimadas(e.target.value)}
+                />
               </div>
 
               {canAssignTasks && (
