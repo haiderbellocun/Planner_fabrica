@@ -24,7 +24,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
         t.id, t.title, t.due_date,
         ts.name AS status_name, ts.color AS status_color, ts.is_completed,
         assignee.id AS assignee_id, assignee.full_name AS assignee_name,
-        assignee.avatar_url,
+        assignee.avatar_url, assignee.cargo AS assignee_cargo,
         proj.name AS project_name, proj.key AS project_key
       FROM public.tasks t
       JOIN public.task_statuses ts ON ts.id = t.status_id
@@ -53,6 +53,7 @@ export const getCalendarEvents = async (req: AuthRequest, res: Response) => {
         assignee_id: r.assignee_id ?? null,
         assignee_name: r.assignee_name ?? null,
         avatar_url: r.avatar_url ?? null,
+        assignee_cargo: r.assignee_cargo ?? null,
         project_name: r.project_name,
         project_key: r.project_key,
       })),

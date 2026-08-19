@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useTask } from '@/hooks/useTasks';
+import { useProfiles } from '@/hooks/useProfiles';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ interface CalendarTask {
   assignee_id: string | null;
   assignee_name: string | null;
   avatar_url: string | null;
+  assignee_cargo: string | null;
   project_name: string;
   project_key: string;
 }
@@ -89,11 +91,13 @@ export default function CalendarPage() {
   const [showProjects, setShowProjects] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
   const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set());
+  const [selectedCargos, setSelectedCargos] = useState<Set<string>>(new Set());
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedProjectKey, setSelectedProjectKey] = useState('');
 
   const { data: eventsData, isLoading } = useCalendarEvents();
   const { data: selectedTask } = useTask(selectedTaskId ?? undefined);
+  const { data: allProfiles = [] } = useProfiles();
 
   const projects = eventsData?.projects ?? [];
   const tasks = eventsData?.tasks ?? [];
@@ -113,11 +117,29 @@ export default function CalendarPage() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks]);
 
+  // Cargos of every currently-active person (not just those with a task due
+  // in the calendar's data), so the filter is browsable even when nobody with
+  // that cargo happens to have a task showing right now.
+  const cargos = useMemo(() => {
+    const set = new Set<string>();
+    allProfiles.forEach(p => { if (p.cargo) set.add(p.cargo); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allProfiles]);
+
   const toggleAssignee = (id: string) => {
     setSelectedAssignees(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleCargo = (cargo: string) => {
+    setSelectedCargos(prev => {
+      const next = new Set(prev);
+      if (next.has(cargo)) next.delete(cargo);
+      else next.add(cargo);
       return next;
     });
   };
@@ -130,9 +152,12 @@ export default function CalendarPage() {
 
   const filteredTasks = useMemo(() => {
     if (!showTasks) return [];
-    if (selectedAssignees.size === 0) return tasks;
-    return tasks.filter(t => t.assignee_id && selectedAssignees.has(t.assignee_id));
-  }, [tasks, showTasks, selectedAssignees]);
+    return tasks.filter(t => {
+      if (selectedAssignees.size > 0 && !(t.assignee_id && selectedAssignees.has(t.assignee_id))) return false;
+      if (selectedCargos.size > 0 && !(t.assignee_cargo && selectedCargos.has(t.assignee_cargo))) return false;
+      return true;
+    });
+  }, [tasks, showTasks, selectedAssignees, selectedCargos]);
 
   // Events for a given date string "YYYY-MM-DD"
   const getEventsForDate = (dateStr: string) => {
@@ -207,6 +232,46 @@ export default function CalendarPage() {
               Tareas
             </button>
           </div>
+
+          {/* Cargo filter */}
+          {showTasks && cargos.length > 0 && (
+            <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Cargo</p>
+                {selectedCargos.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCargos(new Set())}
+                    className="text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {cargos.map(cargo => {
+                  const active = selectedCargos.size === 0 || selectedCargos.has(cargo);
+                  return (
+                    <button
+                      key={cargo}
+                      type="button"
+                      onClick={() => toggleCargo(cargo)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors',
+                        selectedCargos.has(cargo)
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : active
+                            ? 'hover:bg-muted'
+                            : 'opacity-40 hover:opacity-70 hover:bg-muted'
+                      )}
+                    >
+                      <span className="truncate text-left">{cargo}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Collaborator filter */}
           {showTasks && assignees.length > 0 && (
