@@ -8,6 +8,7 @@ import {
   addMember,
   completeProject,
 } from '../controllers/projectsController.js';
+import { pinProject, unpinProject } from '../controllers/projectPinsController.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import {
   projectMemberMiddleware,
@@ -41,5 +42,9 @@ router.delete('/:id', adminMiddleware, deleteProject);
 
 // Add member to project (project leader only)
 router.post('/:id/members', projectLeaderMiddleware, addMember);
+
+// Pin/unpin a project for the current user only (personal, not project management)
+router.post('/:id/pin', projectMemberMiddleware, pinProject);
+router.delete('/:id/pin', projectMemberMiddleware, unpinProject);
 
 export default router;

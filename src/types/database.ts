@@ -41,7 +41,7 @@ export interface Project {
   name: string;
   description: string | null;
   key: string;
-  status: string;
+  status: 'active' | 'paused' | 'completed' | 'archived';
   start_date: string | null;
   end_date: string | null;
   owner_id: string | null;

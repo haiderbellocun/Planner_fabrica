@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjects, usePinProject, useUnpinProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FolderKanban, Loader2, X, CalendarClock, CheckCircle2 } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, X, CalendarClock, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
 import { cn } from '@/lib/utils';
+import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
 
 const TIPO_LABELS: Record<string, string> = {
   profesional:  'Profesional',
@@ -38,6 +39,8 @@ function formatEndDate(dateStr: string | null | undefined): string | null {
 export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
   const { user } = useAuth();
+  const pinProject = usePinProject();
+  const unpinProject = useUnpinProject();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterTipo, setFilterTipo]     = useState<string>('all');
@@ -45,14 +48,22 @@ export default function ProjectsPage() {
 
   const canCreateProject = user?.role === 'admin' || user?.role === 'project_leader';
 
+  // Fijados primero (por usuario, no afecta a nadie más), luego el orden que ya
+  // había según rol.
+  const byPinnedThen = (cmp: (a: typeof projects[number], b: typeof projects[number]) => number) =>
+    (a: typeof projects[number], b: typeof projects[number]) => {
+      if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+      return cmp(a, b);
+    };
+
   // Base list según rol
   const baseProjects = useMemo(() =>
     user?.role === 'admin'
-      ? [...projects].sort((a, b) => {
+      ? [...projects].sort(byPinnedThen((a, b) => {
           const aC = a.status === 'completed', bC = b.status === 'completed';
           return aC === bC ? 0 : aC ? 1 : -1;
-        })
-      : projects.filter((p) => p.status !== 'completed'),
+        }))
+      : [...projects.filter((p) => p.status !== 'completed')].sort(byPinnedThen(() => 0)),
   [projects, user?.role]);
 
   // Tipos y meses disponibles
@@ -71,10 +82,7 @@ export default function ProjectsPage() {
   // Aplicar filtros
   const visibleProjects = useMemo(() =>
     baseProjects.filter((p) => {
-      if (filterStatus !== 'all') {
-        if (filterStatus === 'active'    && p.status === 'completed') return false;
-        if (filterStatus === 'completed' && p.status !== 'completed') return false;
-      }
+      if (filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (filterTipo !== 'all' && p.tipo_programa !== filterTipo) return false;
       if (filterMonth !== -1 && p.end_date && new Date(p.end_date).getMonth() !== filterMonth) return false;
       return true;
@@ -115,7 +123,7 @@ export default function ProjectsPage() {
       {/* ── Filter bar ── */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {/* Estado */}
-        {['all','active','completed'].map((s) => (
+        {['all','active','paused','completed'].map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -126,7 +134,7 @@ export default function ProjectsPage() {
                 : 'bg-white text-muted-foreground border-border hover:border-primary/40'
             )}
           >
-            {s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : 'Finalizados'}
+            {s === 'all' ? 'Todos' : s === 'active' ? 'Activos' : s === 'paused' ? 'Pausados' : 'Finalizados'}
           </button>
         ))}
 
@@ -210,17 +218,37 @@ export default function ProjectsPage() {
 
                     {/* Row 1: badges */}
                     <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        className={cn(
+                          'p-0.5 rounded hover:bg-muted transition-colors',
+                          project.is_pinned ? 'text-amber-500' : 'text-muted-foreground/50'
+                        )}
+                        title={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          (project.is_pinned ? unpinProject : pinProject).mutate(project.id);
+                        }}
+                      >
+                        <Pin className={cn('h-4 w-4', project.is_pinned && 'fill-current')} />
+                      </button>
                       <Badge variant="secondary" className="font-mono text-xs">{project.key}</Badge>
                       {project.tipo_programa && (
                         <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border', TIPO_COLORS[project.tipo_programa] ?? 'bg-gray-100 text-gray-600 border-gray-200')}>
                           {TIPO_LABELS[project.tipo_programa] ?? project.tipo_programa}
                         </span>
                       )}
-                      {isCompleted && (
-                        <span className="ml-auto flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Finalizado
-                        </span>
-                      )}
+                      {(() => {
+                        const statusBadge = PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES];
+                        if (!statusBadge) return null;
+                        const StatusIcon = statusBadge.icon;
+                        return (
+                          <span className={cn('ml-auto flex items-center gap-1 text-[11px] font-medium', statusBadge.textClassName)}>
+                            <StatusIcon className="h-3.5 w-3.5" /> {statusBadge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Row 2: name + icon */}

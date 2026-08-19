@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProject, useCompleteProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
+import { useProject, useCompleteProject, useDeleteProject, useUpdateProject, usePinProject, useUnpinProject } from '@/hooks/useProjects';
 import { useTasks, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { useEpics } from '@/hooks/useEpics';
+import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
 import { Epic } from '@/hooks/useEpics';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
@@ -35,7 +36,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Input } from '@/components/ui/input';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2 } from 'lucide-react';
+import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2, Pin } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -65,6 +66,8 @@ export default function ProjectDetailPage() {
   const completeProject = useCompleteProject();
   const deleteProject = useDeleteProject();
   const updateProject = useUpdateProject();
+  const pinProject = usePinProject();
+  const unpinProject = useUnpinProject();
 
   const [editingLink, setEditingLink] = useState(false);
   const [editLinks, setEditLinks] = useState<{ label: string; url: string }[]>([{ label: '', url: '' }]);
@@ -192,11 +195,10 @@ export default function ProjectDetailPage() {
           <div className="flex items-center gap-2 mb-1">
             <h1 className="page-title">{project.name}</h1>
             <Badge variant="secondary">{project.key}</Badge>
-            {project.status === 'completed' && (
-              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                Finalizado
-              </Badge>
-            )}
+            {PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES] && (() => {
+              const { label, className } = PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES];
+              return <Badge className={className}>{label}</Badge>;
+            })()}
           </div>
           <p className="page-description">{project.description || 'Sin descripción'}</p>
 
@@ -300,6 +302,17 @@ export default function ProjectDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {projectId && (
+            <Button
+              variant="outline"
+              size="icon"
+              className={project.is_pinned ? 'text-amber-500 border-amber-200' : undefined}
+              title={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
+              onClick={() => (project.is_pinned ? unpinProject : pinProject).mutate(projectId)}
+            >
+              <Pin className={cn('h-4 w-4', project.is_pinned && 'fill-current')} />
+            </Button>
+          )}
           <Button variant="outline" size="icon">
             <Users className="h-4 w-4" />
           </Button>
@@ -323,10 +336,31 @@ export default function ProjectDetailPage() {
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
-          {project.status !== 'completed' && (
+          {project.status !== 'completed' && project.status !== 'paused' && (
             <Button onClick={() => setCreateTaskOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva Tarea
+            </Button>
+          )}
+          {canCompleteProject && project.status !== 'completed' && projectId && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                const pausing = project.status !== 'paused';
+                if (
+                  !confirm(
+                    pausing
+                      ? '¿Pausar este proyecto? No se podrán crear tareas nuevas hasta reanudarlo.'
+                      : '¿Reanudar este proyecto?'
+                  )
+                ) {
+                  return;
+                }
+                updateProject.mutate({ id: projectId, status: pausing ? 'paused' : 'active' });
+              }}
+              disabled={updateProject.isPending}
+            >
+              {project.status === 'paused' ? 'Reanudar proyecto' : 'Pausar proyecto'}
             </Button>
           )}
           {canCompleteProject && project.status !== 'completed' && projectId && (

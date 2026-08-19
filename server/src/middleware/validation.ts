@@ -13,7 +13,7 @@ export const projectCreateSchema = z.object({
 export const projectUpdateSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   description: z.string().optional(),
-  status: z.enum(['active', 'completed', 'archived']).optional(),
+  status: z.enum(['active', 'paused', 'completed', 'archived']).optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
 });

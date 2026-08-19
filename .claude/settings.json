@@ -122,7 +122,9 @@
       "Bash(timeout 20 node diag_smtp.mjs)",
       "Bash(node diag_mentions.mjs)",
       "Bash(node diag_mention_email.mjs)",
-      "Bash(timeout 25 node diag_send_mention.mjs)"
+      "Bash(timeout 25 node diag_send_mention.mjs)",
+      "Bash(echo \"backend=$?\")",
+      "Bash(node run-project-pins-migration.js)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",

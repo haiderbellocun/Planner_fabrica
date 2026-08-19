@@ -9,6 +9,7 @@ export interface ProjectWithDetails extends Project {
   tasks_count: number;
   members_count: number;
   completed_tasks: number;
+  is_pinned: boolean;
 }
 
 export function useProjects() {
@@ -119,6 +120,42 @@ export function useCompleteProject() {
     },
     onError: (error: any) => {
       toast.error('No se pudo finalizar el proyecto: ' + error.message);
+    },
+  });
+}
+
+export function usePinProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      await api.post(`/api/projects/${projectId}/pin`, {});
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error: any) => {
+      toast.error('Error al fijar el proyecto: ' + error.message);
+    },
+  });
+}
+
+export function useUnpinProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      await api.delete(`/api/projects/${projectId}/pin`);
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error: any) => {
+      toast.error('Error al desfijar el proyecto: ' + error.message);
     },
   });
 }

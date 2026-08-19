@@ -1769,6 +1769,16 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         SELECT * FROM assigned_work
         WHERE ($1::uuid IS NULL OR project_id = $1::uuid) AND profile_id IS NOT NULL
       ),
+      -- Global stand-in for tasks with no hour estimate: the average of every
+      -- task IN THIS SAME SCOPE that already has one. Used only to compute an
+      -- approximate utilization % below -- never written back onto a task,
+      -- and always shown alongside the real (unassumed) numbers, never in
+      -- place of them.
+      avg_estimate AS (
+        SELECT COALESCE(AVG(horas_estimadas), 0) AS avg_horas
+        FROM scoped_work
+        WHERE horas_estimadas IS NOT NULL
+      ),
       current_week AS (
         SELECT
           profile_id,
@@ -1790,7 +1800,13 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
           COUNT(DISTINCT task_id) FILTER (
             WHERE NOT is_completed AND horas_estimadas IS NULL
               AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
-          ) as unidades_semana_actual_sin_estimacion
+          ) as unidades_semana_actual_sin_estimacion,
+          -- Same "current commitment" window as horas_vencidas + horas_semana_actual
+          -- combined, but substituting avg_estimate.avg_horas for any task missing
+          -- an hour value, so tasks with no estimate still count for SOMETHING.
+          COALESCE(SUM(COALESCE(horas_estimadas, (SELECT avg_horas FROM avg_estimate))) FILTER (
+            WHERE NOT is_completed AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+          ), 0) as carga_semana_actual_aprox
         FROM scoped_work
         GROUP BY profile_id
       ),
@@ -1827,6 +1843,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         COALESCE(cw.horas_sin_fecha, 0) as horas_sin_fecha,
         COALESCE(cw.unidades_sin_estimacion, 0) as unidades_sin_estimacion,
         COALESCE(cw.unidades_semana_actual_sin_estimacion, 0) as unidades_semana_actual_sin_estimacion,
+        COALESCE(cw.carga_semana_actual_aprox, 0) as carga_semana_actual_aprox,
         COALESCE(
           (SELECT json_agg(json_build_object('week_start', f.week_start, 'horas', f.horas) ORDER BY f.week_offset)
            FROM forward f WHERE f.profile_id = p.id),
@@ -1837,6 +1854,18 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
       LEFT JOIN current_week cw ON cw.profile_id = p.id
       ORDER BY (COALESCE(cw.horas_vencidas, 0) + COALESCE(cw.horas_semana_actual, 0)) DESC
     `, [projectId, weeks, cargo]);
+
+    const avgEstimateResult = await query(`
+      WITH ${ASSIGNED_WORK_CTE},
+      scoped_work AS (
+        SELECT * FROM assigned_work
+        WHERE ($1::uuid IS NULL OR project_id = $1::uuid) AND profile_id IS NOT NULL
+      )
+      SELECT COALESCE(AVG(horas_estimadas), 0) AS avg_horas
+      FROM scoped_work
+      WHERE horas_estimadas IS NOT NULL
+    `, [projectId]);
+    const avgHorasAsumidas = Math.round(parseFloat(avgEstimateResult.rows[0]?.avg_horas ?? 0) * 100) / 100;
 
     const members = result.rows.map(r => {
       const weeklyCapacity = parseFloat(r.weekly_hours_capacity);
@@ -1855,6 +1884,9 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
 
       const currentUtilizationPct = weeklyCapacity > 0 ? Math.round((cargaSemanaActual / weeklyCapacity) * 100) : 0;
       const currentBand = riskBand(currentUtilizationPct);
+
+      const cargaSemanaActualAprox = parseFloat(r.carga_semana_actual_aprox);
+      const aproxUtilizationPct = weeklyCapacity > 0 ? Math.round((cargaSemanaActualAprox / weeklyCapacity) * 100) : 0;
 
       const weeksData = (r.weeks as Array<{ week_start: string; horas: string | number }>).map((w) => {
         const horas = typeof w.horas === 'string' ? parseFloat(w.horas) : w.horas;
@@ -1887,6 +1919,9 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
           risk_label: currentBand.label,
           risk_color: currentBand.color,
           unidades_semana_actual_sin_estimacion: parseInt(r.unidades_semana_actual_sin_estimacion),
+          carga_semana_actual_aprox: Math.round(cargaSemanaActualAprox * 100) / 100,
+          utilizacion_aprox_pct: aproxUtilizationPct,
+          holgura_aprox_horas: Math.round((weeklyCapacity - cargaSemanaActualAprox) * 100) / 100,
         },
         weeks: weeksData,
         backlog: {
@@ -1900,6 +1935,7 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
     });
 
     const overallCarga = members.reduce((sum, m) => sum + m.current.carga_semana_actual, 0);
+    const overallCargaAprox = members.reduce((sum, m) => sum + m.current.carga_semana_actual_aprox, 0);
     const overallCapacidad = members.reduce((sum, m) => sum + m.weekly_hours_capacity, 0);
     const overallUnidadesSinEstimacion = members.reduce((sum, m) => sum + m.current.unidades_semana_actual_sin_estimacion, 0);
     const riskCounts = { available: 0, ok: 0, warning: 0, over: 0 };
@@ -1920,6 +1956,10 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         holgura_horas: Math.round((overallCapacidad - overallCarga) * 100) / 100,
         risk_counts: riskCounts,
         unidades_semana_actual_sin_estimacion: overallUnidadesSinEstimacion,
+        carga_semana_actual_aprox: Math.round(overallCargaAprox * 100) / 100,
+        utilizacion_aprox_pct: overallCapacidad > 0 ? Math.round((overallCargaAprox / overallCapacidad) * 100) : 0,
+        holgura_aprox_horas: Math.round((overallCapacidad - overallCargaAprox) * 100) / 100,
+        avg_horas_asumidas: avgHorasAsumidas,
       },
     });
   } catch (error) {

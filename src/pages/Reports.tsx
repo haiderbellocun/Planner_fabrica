@@ -1065,10 +1065,19 @@ function TabEquipo() {
   const capacityMembers = capacity?.members ?? [];
   const overall = capacity?.overall;
 
+  // When most/all active work this week has no hour estimate, the "exact"
+  // number is near-meaningless (it's measuring almost nothing) — lead with
+  // the approximated figure instead, and only fall back to the exact one
+  // when there's no estimation gap at all.
+  const hasEstimationGap = !!overall && overall.unidades_semana_actual_sin_estimacion > 0;
+  const headlineUtilizacionPct = overall ? (hasEstimationGap ? overall.utilizacion_aprox_pct : overall.utilizacion_pct) : 0;
+  const headlineCarga = overall ? (hasEstimationGap ? overall.carga_semana_actual_aprox : overall.carga_semana_actual) : 0;
+  const headlineHolgura = overall ? (hasEstimationGap ? overall.holgura_aprox_horas : overall.holgura_horas) : 0;
+
   const overallHolguraDisplay = overall
-    ? overall.holgura_horas >= 0
-      ? `Holgura ${formatHours(overall.holgura_horas)}`
-      : `Exceso ${formatHours(Math.abs(overall.holgura_horas))}`
+    ? headlineHolgura >= 0
+      ? `Holgura ${formatHours(headlineHolgura)}`
+      : `Exceso ${formatHours(Math.abs(headlineHolgura))}`
     : '0h';
 
   // Weekly throughput (hours), stacked by top-5 people + "Otros" — replaces the old
@@ -1127,21 +1136,24 @@ function TabEquipo() {
                 eyebrow="Equipo · compromiso semana actual"
                 story={
                   <>
-                    El equipo está al <b className="text-white">{overall.utilizacion_pct}% de utilización</b> esta semana —{' '}
-                    <b className="text-white">{formatHours(overall.carga_semana_actual)}</b> comprometidas de{' '}
+                    El equipo está {hasEstimationGap ? 'aproximadamente ' : ''}al <b className="text-white">{headlineUtilizacionPct}% de utilización</b> esta semana —{' '}
+                    <b className="text-white">{hasEstimationGap ? `~${formatHours(headlineCarga)}` : formatHours(headlineCarga)}</b> comprometidas de{' '}
                     <b className="text-white">{formatHours(overall.capacidad_total)}</b> disponibles.{' '}
                     {overall.risk_counts.over > 0
                       ? <><b className="text-white">{overall.risk_counts.over} {overall.risk_counts.over === 1 ? 'persona está sobrecargada' : 'personas están sobrecargadas'}</b>.</>
                       : 'Nadie está sobrecargado en este momento.'}{' '}
-                    {overall.unidades_semana_actual_sin_estimacion > 0 && (
+                    {hasEstimationGap && (
                       <>
-                        Ojo: <b className="text-white">{overall.unidades_semana_actual_sin_estimacion} {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tarea activa' : 'tareas activas'} de esta semana no {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tiene' : 'tienen'} horas estimadas</b>, así que no cuentan en este % — la utilización real puede ser más alta.
+                        Ojo: <b className="text-white">{overall.unidades_semana_actual_sin_estimacion} {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tarea activa' : 'tareas activas'} de esta semana no {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tiene' : 'tienen'} horas estimadas</b> — este {headlineUtilizacionPct}% es una aproximación, asumiendo <b className="text-white">{overall.avg_horas_asumidas}h</b> por cada una de esas tareas (el promedio de las que sí tienen horas puestas). Entre más gente registre sus horas reales, más preciso será este número.
                       </>
                     )}
                   </>
                 }
                 stats={[
-                  { value: `${overall.utilizacion_pct}%`, label: 'Utilización semana actual' },
+                  {
+                    value: hasEstimationGap ? `~${headlineUtilizacionPct}%` : `${headlineUtilizacionPct}%`,
+                    label: hasEstimationGap ? 'Utilización aproximada' : 'Utilización semana actual',
+                  },
                   { value: overallHolguraDisplay, label: 'Holgura / exceso' },
                   { value: overall.risk_counts.available, label: 'Con espacio disponible' },
                 ]}
@@ -1330,7 +1342,14 @@ function TabEquipo() {
                       <div className="flex justify-between text-[10px]">
                         <span className="text-muted-foreground">Compromiso semana actual</span>
                         <span className={`font-semibold ${isOverloaded ? 'text-red-500' : ''}`}>
-                          {member.current.utilizacion_pct}%
+                          {member.current.unidades_semana_actual_sin_estimacion > 0 ? (
+                            <>
+                              ~{member.current.utilizacion_aprox_pct}%
+                              <span className="text-muted-foreground font-normal"> ({member.current.utilizacion_pct}% con horas puestas)</span>
+                            </>
+                          ) : (
+                            `${member.current.utilizacion_pct}%`
+                          )}
                         </span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

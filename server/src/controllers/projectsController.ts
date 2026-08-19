@@ -25,13 +25,15 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
           p.*,
           COUNT(DISTINCT pm.id) as members_count,
           COUNT(DISTINCT t.id) as tasks_count,
-          COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks
+          COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
+          EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $1) AS is_pinned
          FROM public.projects p
          LEFT JOIN public.project_members pm ON pm.project_id = p.id
          LEFT JOIN public.tasks t ON t.project_id = p.id
          LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
          GROUP BY p.id
-         ORDER BY p.created_at DESC`
+         ORDER BY p.created_at DESC`,
+        [profileId]
       );
     } else {
       // Regular users see projects where they have assigned tasks
@@ -41,7 +43,8 @@ export const listProjects = async (req: AuthRequest, res: Response) => {
           p.*,
           (SELECT COUNT(DISTINCT pm2.id) FROM public.project_members pm2 WHERE pm2.project_id = p.id) as members_count,
           (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 WHERE t2.project_id = p.id) as tasks_count,
-          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 JOIN public.task_statuses ts2 ON ts2.id = t2.status_id WHERE t2.project_id = p.id AND ts2.is_completed = true) as completed_tasks
+          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 JOIN public.task_statuses ts2 ON ts2.id = t2.status_id WHERE t2.project_id = p.id AND ts2.is_completed = true) as completed_tasks,
+          EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $1) AS is_pinned
          FROM public.projects p
          JOIN public.tasks t ON t.project_id = p.id
          WHERE (
@@ -127,13 +130,14 @@ export const getProject = async (req: AuthRequest, res: Response) => {
       `SELECT
         p.*,
         COUNT(DISTINCT pm.id) as members_count,
-        COUNT(DISTINCT t.id) as tasks_count
+        COUNT(DISTINCT t.id) as tasks_count,
+        EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $2) AS is_pinned
        FROM public.projects p
        LEFT JOIN public.project_members pm ON pm.project_id = p.id
        LEFT JOIN public.tasks t ON t.project_id = p.id
        WHERE p.id = $1
        GROUP BY p.id`,
-      [id]
+      [id, req.user?.profileId]
     );
 
     if (env.NODE_ENV !== 'production') {
