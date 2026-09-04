@@ -30,6 +30,7 @@ import {
   CalendarDays,
   PackageCheck,
   Users,
+  Megaphone,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ const leaderNavItems = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
   { title: 'Próximos Proyectos', url: '/proximos-programas', icon: CalendarClock },
   { title: 'Registro de Entregas', url: '/entregas', icon: PackageCheck },
+  { title: 'Solicitudes de Marketing', url: '/solicitudes-marketing', icon: Megaphone },
   { title: 'Equipos', url: '/equipos', icon: Users },
 ];
 

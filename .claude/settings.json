@@ -126,7 +126,8 @@
       "Bash(echo \"backend=$?\")",
       "Bash(node run-project-pins-migration.js)",
       "Bash(node diag_check_profiles.mjs)",
-      "Bash(node diag_check_paula.mjs)"
+      "Bash(node diag_check_paula.mjs)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",
