@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject, useCompleteProject, useDeleteProject, useUpdateProject, usePinProject, useUnpinProject } from '@/hooks/useProjects';
-import { useTasks, useTask, TaskWithDetails } from '@/hooks/useTasks';
+import { useTasks, useTask, useTaskStatuses, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { useEpics } from '@/hooks/useEpics';
 import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
@@ -21,7 +21,11 @@ import { useSprints } from '@/hooks/useSprints';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
 import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 import { TaskListView } from '@/components/tasks/TaskListView';
-import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, taskFiltersToQuery } from '@/lib/taskFilters';
+import {
+  TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, taskFiltersToQuery, taskFiltersFromQuery,
+  type SavedTaskView,
+} from '@/lib/taskFilters';
+import { getStoredJSON, setStoredJSON } from '@/lib/viewPreferences';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
 import { ProjectActivityFeed } from '@/components/projects/ProjectActivityFeed';
 import { Button } from '@/components/ui/button';
@@ -38,7 +42,10 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Input } from '@/components/ui/input';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2, Pin } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2, Pin, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -48,8 +55,17 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const userId = user?.profileId;
   const { data: project, isLoading: projectLoading } = useProject(projectId);
-  const [taskFilters, setTaskFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
+  const { data: taskStatuses = [] } = useTaskStatuses();
+
+  // Filtros: la URL manda si trae alguno (enlace compartible); si no, se recupera la última
+  // preferencia guardada en este dispositivo; si tampoco hay, vacío. Ídem vista y pestaña.
+  const [taskFilters, setTaskFilters] = useState<TaskFilters>(() => {
+    const fromUrl = taskFiltersFromQuery(searchParams);
+    if (Object.keys(fromUrl).length > 0) return fromUrl;
+    return getStoredJSON<TaskFilters>(userId, projectId, 'filters') ?? EMPTY_TASK_FILTERS;
+  });
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId, taskFilters);
   const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
   const { data: epics = [] } = useEpics(projectId);
@@ -64,8 +80,28 @@ export default function ProjectDetailPage() {
   // sobreviva a un F5, y responda a Atrás/Adelante del navegador.
   const taskParam = searchParams.get('task');
   const { data: deepLinkTask, isError: deepLinkTaskError } = useTask(taskParam ?? undefined);
-  const [view, setView] = useState<'board' | 'list'>('board');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist' | 'activity'>('tasks');
+  const [view, setView] = useState<'board' | 'list'>(
+    () => getStoredJSON<'board' | 'list'>(userId, projectId, 'view') ?? 'board'
+  );
+  const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist' | 'activity'>(
+    () => getStoredJSON(userId, projectId, 'tab') ?? 'tasks'
+  );
+
+  // Vistas guardadas por usuario y proyecto (preferencia local, no sincronizada entre equipos).
+  // La primera vez que se abren tareas en un proyecto se ofrecen 3 vistas por defecto.
+  const [savedViews, setSavedViews] = useState<SavedTaskView[]>(() => {
+    const stored = getStoredJSON<SavedTaskView[]>(userId, projectId, 'savedViews');
+    if (stored) return stored;
+    const revisionStatus = taskStatuses.find((s) => /revis/i.test(s.name));
+    const defaults: SavedTaskView[] = [
+      { id: 'mis-pendientes', name: 'Mis pendientes', filters: { assignee_id: userId }, view: 'list' },
+      { id: 'sin-responsable', name: 'Sin responsable', filters: { assignee_id: 'unassigned' }, view: 'list' },
+      ...(revisionStatus
+        ? [{ id: 'en-revision', name: 'En revisión', filters: { status_id: [revisionStatus.id] }, view: 'list' } as SavedTaskView]
+        : []),
+    ];
+    return defaults;
+  });
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -93,6 +129,48 @@ export default function ProjectDetailPage() {
   const isDesarrolloProject = project?.tipo_programa === 'desarrollo';
   const canManageEpics = isLeader;
   const canManageTeams = isLeader;
+
+  // Persistencia local (por usuario y proyecto) de filtros, vista y pestaña activa -- para que
+  // "salir y volver" a un proyecto conserve lo que se estaba viendo. Es una preferencia de este
+  // dispositivo/navegador, no se sincroniza entre equipos.
+  useEffect(() => { setStoredJSON(userId, projectId, 'filters', taskFilters); }, [userId, projectId, taskFilters]);
+  useEffect(() => { setStoredJSON(userId, projectId, 'view', view); }, [userId, projectId, view]);
+  useEffect(() => { setStoredJSON(userId, projectId, 'tab', activeTab); }, [userId, projectId, activeTab]);
+  useEffect(() => { setStoredJSON(userId, projectId, 'savedViews', savedViews); }, [userId, projectId, savedViews]);
+
+  // Refleja los filtros activos en la URL (compartible / sobrevive a un F5) sin tocar `?task=`.
+  const FILTER_PARAM_KEYS = ['search', 'status_id', 'priority', 'assignee_id', 'epic_id', 'team_id', 'sprint_id', 'tag'];
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    FILTER_PARAM_KEYS.forEach((k) => next.delete(k));
+    new URLSearchParams(taskFiltersToQuery(taskFilters)).forEach((value, key) => next.set(key, value));
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskFilters]);
+
+  const applySavedView = (sv: SavedTaskView) => {
+    setTaskFilters(sv.filters);
+    setView(sv.view);
+  };
+
+  const saveCurrentAsView = () => {
+    const name = window.prompt('Nombre de la vista:');
+    if (!name || !name.trim()) return;
+    setSavedViews((prev) => [...prev, { id: crypto.randomUUID(), name: name.trim(), filters: taskFilters, view }]);
+  };
+
+  const renameSavedView = (id: string) => {
+    const current = savedViews.find((v) => v.id === id);
+    if (!current) return;
+    const name = window.prompt('Nuevo nombre de la vista:', current.name);
+    if (!name || !name.trim()) return;
+    setSavedViews((prev) => prev.map((v) => (v.id === id ? { ...v, name: name.trim() } : v)));
+  };
+
+  const deleteSavedView = (id: string) => {
+    if (!confirm('¿Eliminar esta vista guardada?')) return;
+    setSavedViews((prev) => prev.filter((v) => v.id !== id));
+  };
 
   // Abrir una tarea siempre pasa por la URL (`?task=<id>`) — el efecto de más abajo hace el
   // resto (buscarla en la lista ya cargada o dejar un placeholder mientras se resuelve por id).
@@ -482,6 +560,41 @@ export default function ProjectDetailPage() {
             >
               <List className="mr-2 h-4 w-4" />
               Lista
+            </Button>
+          </div>
+
+          {/* Vistas guardadas — preferencia local por usuario y proyecto */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {savedViews.map((sv) => (
+              <div key={sv.id} className="inline-flex items-center rounded-full border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => applySavedView(sv)}
+                  className="px-3 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                >
+                  {sv.name}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="px-1.5 py-1 text-muted-foreground hover:bg-muted border-l border-border"
+                      aria-label={`Opciones de la vista "${sv.name}"`}
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => renameSavedView(sv.id)}>Renombrar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => deleteSavedView(sv.id)} className="text-destructive focus:text-destructive">
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={saveCurrentAsView}>
+              <Plus className="h-3 w-3" /> Guardar vista actual
             </Button>
           </div>
 

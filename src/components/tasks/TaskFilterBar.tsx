@@ -3,7 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Search, X, ChevronDown } from 'lucide-react';
 import { useTaskStatuses, useProjectTags } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useEpics } from '@/hooks/useEpics';
@@ -71,36 +74,59 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
           />
         </div>
 
-        <Select
-          value={statusIds[0] ?? ALL}
-          onValueChange={(v) => set('status_id', v === ALL ? undefined : [v])}
-        >
-          <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Estado" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Todos los estados</SelectItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              Estado {statusIds.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{statusIds.length}</Badge>}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>Filtrar por estado (varios)</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             {statuses.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
+              <DropdownMenuCheckboxItem
+                key={s.id}
+                checked={statusIds.includes(s.id)}
+                onCheckedChange={(checked) => {
+                  const next = checked ? [...statusIds, s.id] : statusIds.filter((id) => id !== s.id);
+                  set('status_id', next.length > 0 ? next : undefined);
+                }}
+              >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
                   {s.name}
                 </span>
-              </SelectItem>
+              </DropdownMenuCheckboxItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Select
-          value={priorities[0] ?? ALL}
-          onValueChange={(v) => set('priority', v === ALL ? undefined : [v as NonNullable<TaskFilters['priority']>[number]])}
-        >
-          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Prioridad" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Toda prioridad</SelectItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              Prioridad {priorities.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{priorities.length}</Badge>}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuLabel>Filtrar por prioridad (varias)</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             {Object.entries(priorityLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>{label}</SelectItem>
+              <DropdownMenuCheckboxItem
+                key={value}
+                checked={priorities.includes(value as NonNullable<TaskFilters['priority']>[number])}
+                onCheckedChange={(checked) => {
+                  const v = value as NonNullable<TaskFilters['priority']>[number];
+                  const next = checked ? [...priorities, v] : priorities.filter((p) => p !== v);
+                  set('priority', next.length > 0 ? next : undefined);
+                }}
+              >
+                {label}
+              </DropdownMenuCheckboxItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Select
           value={filters.assignee_id ?? ALL}
@@ -187,16 +213,54 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
             return (
               <Badge key={id} variant="secondary" className="gap-1">
                 {s.name}
-                <button onClick={() => set('status_id', undefined)}><X className="h-3 w-3" /></button>
+                <button onClick={() => {
+                  const next = statusIds.filter((x) => x !== id);
+                  set('status_id', next.length > 0 ? next : undefined);
+                }}><X className="h-3 w-3" /></button>
               </Badge>
             );
           })}
           {priorities.map((p) => (
             <Badge key={p} variant="secondary" className="gap-1">
               {priorityLabels[p] ?? p}
-              <button onClick={() => set('priority', undefined)}><X className="h-3 w-3" /></button>
+              <button onClick={() => {
+                const next = priorities.filter((x) => x !== p);
+                set('priority', next.length > 0 ? next : undefined);
+              }}><X className="h-3 w-3" /></button>
             </Badge>
           ))}
+          {filters.assignee_id && (
+            <Badge variant="secondary" className="gap-1">
+              {filters.assignee_id === 'unassigned'
+                ? 'Sin asignar'
+                : profiles.find((p) => p.id === filters.assignee_id)?.full_name ?? 'Responsable'}
+              <button onClick={() => set('assignee_id', undefined)}><X className="h-3 w-3" /></button>
+            </Badge>
+          )}
+          {filters.tag && (
+            <Badge variant="secondary" className="gap-1">
+              #{filters.tag}
+              <button onClick={() => set('tag', undefined)}><X className="h-3 w-3" /></button>
+            </Badge>
+          )}
+          {filters.epic_id && (
+            <Badge variant="secondary" className="gap-1">
+              {filters.epic_id === 'none' ? 'Sin épica' : epics.find((e) => e.id === filters.epic_id)?.title ?? 'Épica'}
+              <button onClick={() => set('epic_id', undefined)}><X className="h-3 w-3" /></button>
+            </Badge>
+          )}
+          {filters.team_id && (
+            <Badge variant="secondary" className="gap-1">
+              {filters.team_id === 'none' ? 'Sin equipo' : teams.find((t) => t.id === filters.team_id)?.name ?? 'Equipo'}
+              <button onClick={() => set('team_id', undefined)}><X className="h-3 w-3" /></button>
+            </Badge>
+          )}
+          {filters.sprint_id && (
+            <Badge variant="secondary" className="gap-1">
+              {filters.sprint_id === 'none' ? 'Backlog' : sprints.find((s) => s.id === filters.sprint_id)?.name ?? 'Sprint'}
+              <button onClick={() => set('sprint_id', undefined)}><X className="h-3 w-3" /></button>
+            </Badge>
+          )}
         </div>
       )}
     </div>

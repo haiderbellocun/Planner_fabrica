@@ -1,6 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/hooks/useProjects';
-import { useTaskStatuses } from '@/hooks/useTasks';
 import { MyFocusToday } from '@/components/dashboard/MyFocusToday';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +22,6 @@ export default function DashboardPage() {
   const { profile } = useAuth();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: notifications = [] } = useNotifications();
-  const { data: statuses = [] } = useTaskStatuses();
 
   // Calculate stats
   const totalProjects = projects.length;
@@ -33,7 +31,6 @@ export default function DashboardPage() {
     (acc, p) => acc + Math.max(Number(p.tasks_count ?? 0) - Number(p.completed_tasks ?? 0), 0),
     0
   );
-  const completedStatus = statuses.find((s) => s.is_completed);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -78,16 +75,15 @@ export default function DashboardPage() {
         story={
           <>
             Hola <b className="text-white">{firstName}</b> — tienes{' '}
-            <b className="text-white">{activeProjectsCount} proyectos activos</b> con{' '}
-            <b className="text-white">{pendingTasksCount} tareas activas</b>.
+            <b className="text-white">{activeProjectsCount} proyectos activos</b>.
             {unreadNotifications.length > 0 && (
               <> Tienes <b className="text-white">{unreadNotifications.length} notificaciones</b> sin leer.</>
             )}
+            {' '}Tu detalle de tareas está justo debajo, en "Tu foco hoy".
           </>
         }
         stats={[
           { value: totalProjects, label: 'Proyectos totales' },
-          { value: pendingTasksCount, label: 'Tareas en curso' },
           { value: unreadNotifications.length, label: 'Notificaciones nuevas' },
         ]}
       />
@@ -95,7 +91,7 @@ export default function DashboardPage() {
       <div className="space-y-8 mt-8">
       <MyFocusToday />
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <StatTile
           label="Proyectos"
           value={totalProjects}
@@ -116,7 +112,6 @@ export default function DashboardPage() {
           pill={unreadNotifications.length > 0 ? { tone: 'info', label: 'Nuevo' } : undefined}
           decorationImage="./deco_medusa.png"
         />
-        <StatTile label="Productividad" value="—" sub="Próximamente" decorationImage="./deco_manta.png" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7 md:gap-8">

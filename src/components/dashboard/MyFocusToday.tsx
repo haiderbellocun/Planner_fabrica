@@ -99,6 +99,13 @@ export function MyFocusToday() {
     const dStr = due.slice(0, 10);
     return dStr >= todayStr && dStr <= endOfWeekStr;
   });
+  // No existe una columna semántica tipo "is_review" en task_statuses (solo "is_completed"),
+  // así que "pendiente de revisión" se aproxima por nombre de estado -- limitación conocida,
+  // documentada aquí en vez de aparentar que es un criterio robusto.
+  const enRevision = pendingForCards.filter((t) => {
+    const name = 'status' in t ? t.status?.name : undefined;
+    return typeof name === 'string' && /revis/i.test(name);
+  });
 
   const priorityList: MyTask[] = [
     ...vencidas,
@@ -295,10 +302,21 @@ export function MyFocusToday() {
           <p className="text-sm text-muted-foreground">Sin tareas del equipo por vencer.</p>
         ) : (
           <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatTile label="Vencen hoy (equipo)" value={vencenHoy.length} />
+              <StatTile
+                label="Vencidas (equipo)"
+                value={vencidas.length}
+                pill={hasOverdue ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
+              />
+              <StatTile label="Pendientes de revisión" value={enRevision.length} />
+              <StatTile label="Esta semana (equipo)" value={estaSemana.length} />
+            </div>
+
             {showTeamTab && (
               <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <CardContent className="p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
                     CARGA POR PERSONA
                   </p>
                   {ranking.length === 0 ? (
@@ -329,7 +347,7 @@ export function MyFocusToday() {
                                         <p className="text-[12px] text-muted-foreground truncate">{person.cargo}</p>
                                       )}
                                       {person.projects.length > 0 && (
-                                        <p className="text-[11px] text-muted-foreground/70 truncate">
+                                        <p className="text-xs text-muted-foreground/70 truncate">
                                           {person.projects.length === 1
                                             ? person.projects[0]
                                             : `${person.projects[0]} +${person.projects.length - 1} proyectos`}
@@ -382,11 +400,11 @@ export function MyFocusToday() {
                                             className="w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-primary/10 transition-colors group"
                                           >
                                             <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary-deep">{task.title}</span>
-                                            <span className="text-[11px] text-muted-foreground/70 shrink-0">
+                                            <span className="text-xs text-muted-foreground/70 shrink-0">
                                               {task.project?.key ?? ''}
                                             </span>
                                             {due && (
-                                              <span className={cn('text-[11px] shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground')}>
+                                              <span className={cn('text-xs shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground')}>
                                                 {format(due, 'd MMM', { locale: es })}
                                               </span>
                                             )}
@@ -423,7 +441,7 @@ export function MyFocusToday() {
 
             <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <CardContent className="p-4">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">Foco del equipo</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Foco del equipo</p>
                 <ul className="space-y-2">
                   {teamList.slice(0, 5).map((task: LeadersFocusTask) => {
                     const parsed = parseDue(task.due_date);
@@ -516,7 +534,7 @@ export function MyFocusToday() {
       ) : priorityList.length > 0 ? (
         <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
           <CardContent className="p-4">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-3">Tareas prioritarias</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Tareas prioritarias</p>
             <ul className="space-y-2">
               {priorityList.map((task) => {
                 const parsed = parseDue(task.due_date ?? null);
