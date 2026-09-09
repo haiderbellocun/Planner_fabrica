@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject, useCompleteProject, useDeleteProject, useUpdateProject, usePinProject, useUnpinProject } from '@/hooks/useProjects';
-import { useTasks, TaskWithDetails } from '@/hooks/useTasks';
+import { useTasks, useTask, TaskWithDetails } from '@/hooks/useTasks';
 import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { useEpics } from '@/hooks/useEpics';
 import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
@@ -18,6 +19,7 @@ import { TeamsPanel } from '@/components/teams/TeamsPanel';
 import { BacklogPanel } from '@/components/sprints/BacklogPanel';
 import { useSprints } from '@/hooks/useSprints';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
+import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 import { TaskListView } from '@/components/tasks/TaskListView';
 import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, taskFiltersToQuery } from '@/lib/taskFilters';
 import { ChecklistTab } from '@/components/checklist/ChecklistTab';
@@ -44,6 +46,7 @@ import { cn } from '@/lib/utils';
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const [taskFilters, setTaskFilters] = useState<TaskFilters>(EMPTY_TASK_FILTERS);
@@ -55,6 +58,12 @@ export default function ProjectDetailPage() {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Tarea abierta vía enlace directo `?task=<id>` — misma param en toda la app (búsqueda,
+  // notificaciones, o navegación interna) para que abrir/cerrar el detalle sea compartible,
+  // sobreviva a un F5, y responda a Atrás/Adelante del navegador.
+  const taskParam = searchParams.get('task');
+  const { data: deepLinkTask, isError: deepLinkTaskError } = useTask(taskParam ?? undefined);
   const [view, setView] = useState<'board' | 'list'>('board');
   const [activeTab, setActiveTab] = useState<'tasks' | 'programas' | 'epics' | 'teams' | 'backlog' | 'checklist' | 'activity'>('tasks');
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
@@ -85,48 +94,73 @@ export default function ProjectDetailPage() {
   const canManageEpics = isLeader;
   const canManageTeams = isLeader;
 
-  const handleTaskClick = (task: TaskWithDetails) => {
-    setSelectedTask(task);
-    setDetailOpen(true);
+  // Abrir una tarea siempre pasa por la URL (`?task=<id>`) — el efecto de más abajo hace el
+  // resto (buscarla en la lista ya cargada o dejar un placeholder mientras se resuelve por id).
+  // Empuja una entrada de historial para que Atrás/Adelante abran/cierren el detalle.
+  const openTask = (taskId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('task', taskId);
+    setSearchParams(next);
   };
 
-  // Navigating from a subtask row (or its parent breadcrumb) inside the sheet
-  // only gives us an id. The current `tasks` list may already have it (same
-  // project); if not -- e.g. it's filtered out of the board/list view right
-  // now -- fall back to a placeholder that TaskDetailSheet's own useTask(id)
-  // fetch will replace within a moment.
-  const handleNavigateToTask = (taskId: string) => {
-    const found = tasks.find((t) => t.id === taskId);
-    setSelectedTask(
-      found || {
-        id: taskId,
-        project_id: projectId || '',
-        epic_id: null,
-        team_id: null,
-        sprint_id: null,
-        title: '',
-        description: null,
-        priority: 'medium',
-        status_id: '',
-        assignee_id: null,
-        reporter_id: null,
-        start_date: null,
-        due_date: null,
-        tags: [],
-        task_number: null,
-        material_requerido_id: null,
-        asignatura_id: null,
-        parent_task_id: null,
-        subtask_of_id: null,
-        horas_estimadas: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: { id: '', name: '', description: null, color: '#94a3b8', display_order: 0, is_default: false, is_completed: false, created_at: '' },
-        assignee: null,
-        reporter: null,
-      }
-    );
+  const closeTaskDetail = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('task');
+    setSearchParams(next);
   };
+
+  const handleTaskClick = (task: TaskWithDetails) => openTask(task.id);
+
+  // Navigating from a subtask row (or its parent breadcrumb) inside the sheet only gives us an id.
+  const handleNavigateToTask = (taskId: string) => openTask(taskId);
+
+  const buildPlaceholderTask = (taskId: string): TaskWithDetails => ({
+    id: taskId,
+    project_id: projectId || '',
+    epic_id: null,
+    team_id: null,
+    sprint_id: null,
+    title: '',
+    description: null,
+    priority: 'medium',
+    status_id: '',
+    assignee_id: null,
+    reporter_id: null,
+    start_date: null,
+    due_date: null,
+    tags: [],
+    task_number: null,
+    material_requerido_id: null,
+    asignatura_id: null,
+    parent_task_id: null,
+    subtask_of_id: null,
+    horas_estimadas: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    status: { id: '', name: '', description: null, color: '#94a3b8', display_order: 0, is_default: false, is_completed: false, created_at: '' },
+    assignee: null,
+    reporter: null,
+  });
+
+  // Fuente de verdad: el parámetro `?task=` de la URL. Cubre apertura por clic, enlace directo
+  // (búsqueda/notificaciones) al cargar la página, y Atrás/Adelante del navegador.
+  useEffect(() => {
+    if (!taskParam) {
+      setDetailOpen(false);
+      return;
+    }
+
+    if (deepLinkTaskError) {
+      toast.error('Esta tarea no existe o no tienes acceso a ella.');
+      closeTaskDetail();
+      return;
+    }
+
+    const found = tasks.find((t) => t.id === taskParam);
+    setSelectedTask(deepLinkTask ?? found ?? buildPlaceholderTask(taskParam));
+    setDetailOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskParam, deepLinkTask, deepLinkTaskError]);
 
   const handleEditPrograma = (programa: Programa) => {
     setSelectedPrograma(programa);
@@ -415,8 +449,8 @@ export default function ProjectDetailPage() {
           {/* Snapshot: task-status narrative strip */}
           {tasks.length > 0 && (() => {
             const completed = tasks.filter(t => t.status?.is_completed).length;
-            const today = new Date().toISOString().slice(0, 10);
-            const overdue = tasks.filter(t => !t.status?.is_completed && t.due_date && t.due_date.slice(0, 10) < today).length;
+            const todayStr = getBusinessTodayStr();
+            const overdue = tasks.filter(t => getDueBucket(t.due_date, !!t.status?.is_completed, todayStr) === 'overdue').length;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <StatTile label="Tareas totales" value={tasks.length} />
@@ -589,7 +623,7 @@ export default function ProjectDetailPage() {
         task={selectedTask}
         projectKey={project.key}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={(open) => { if (!open) closeTaskDetail(); }}
         onNavigateToTask={handleNavigateToTask}
       />
 

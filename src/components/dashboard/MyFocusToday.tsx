@@ -8,9 +8,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/shared/StoryUI';
 import { Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import { format, endOfWeek, startOfDay } from 'date-fns';
+import { format, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 
 type MyTask = MyTaskWithProject;
 
@@ -43,10 +44,14 @@ type PersonLoad = {
 export function MyFocusToday() {
   const { isAdmin, isProjectLeader } = useAuth();
 
-  // Computed on each render so they never go stale if the app stays open past midnight
-  const today = useMemo(() => startOfDay(new Date()), []);
-  const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
-  const endOfWeekStr = useMemo(() => format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'), [today]);
+  // "Hoy" según la zona horaria de negocio (America/Bogota), no la del navegador —
+  // recalculado en cada render para no quedar obsoleto si la app sigue abierta pasada la medianoche.
+  const todayStr = getBusinessTodayStr();
+  const todayLocal = useMemo(() => {
+    const [y, m, d] = todayStr.split('-').map((n) => parseInt(n, 10));
+    return new Date(y, m - 1, d);
+  }, [todayStr]);
+  const endOfWeekStr = useMemo(() => format(endOfWeek(todayLocal, { weekStartsOn: 1 }), 'yyyy-MM-dd'), [todayLocal]);
 
   const [focusTab, setFocusTab] = useState<FocusTab>('mine');
   const [showAllRanking, setShowAllRanking] = useState(false);
@@ -80,12 +85,12 @@ export function MyFocusToday() {
   const vencenHoy = pendingForCards.filter((t) => {
     const due = 'due_date' in t ? t.due_date : null;
     if (!due || typeof due !== 'string') return false;
-    return due.slice(0, 10) === todayStr;
+    return getDueBucket(due, false, todayStr) === 'due_today';
   });
   const vencidas = pendingForCards.filter((t) => {
     const due = 'due_date' in t ? t.due_date : null;
     if (!due || typeof due !== 'string') return false;
-    return due.slice(0, 10) < todayStr;
+    return getDueBucket(due, false, todayStr) === 'overdue';
   });
   const enCurso = pendingForCards;
   const estaSemana = pendingForCards.filter((t) => {
@@ -202,10 +207,10 @@ export function MyFocusToday() {
           : task.assignee?.full_name ?? task.assignee?.email ?? 'Sin asignado';
       const existing = personMap.get(key);
       const notCompleted = task.status?.is_completed === false;
-      const parsedDue = parseDue(task.due_date);
       const dStr = typeof task.due_date === 'string' ? task.due_date.slice(0, 10) : null;
-      const overdue = dStr !== null && dStr < todayStr;
-      const dueToday = dStr !== null && dStr === todayStr;
+      const dueBucket = getDueBucket(task.due_date, task.status?.is_completed ?? false, todayStr);
+      const overdue = dueBucket === 'overdue';
+      const dueToday = dueBucket === 'due_today';
       const dueThisWeek = dStr !== null && dStr >= todayStr && dStr <= endOfWeekStr;
 
       const projectLabel =
@@ -368,7 +373,7 @@ export function MyFocusToday() {
                                     })
                                     .map((task) => {
                                       const due = parseDue(task.due_date);
-                                      const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
+                                      const isOverdue = getDueBucket(task.due_date, task.status?.is_completed ?? false, todayStr) === 'overdue';
                                       return (
                                         <li key={task.id}>
                                           <button
@@ -423,7 +428,7 @@ export function MyFocusToday() {
                   {teamList.slice(0, 5).map((task: LeadersFocusTask) => {
                     const parsed = parseDue(task.due_date);
                     const dueFormatted = parsed ? format(parsed, 'd MMM yyyy', { locale: es }) : '—';
-                    const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
+                    const isOverdue = getDueBucket(task.due_date, task.status?.is_completed ?? false, todayStr) === 'overdue';
                     return (
                       <li key={task.id}>
                         <button
@@ -516,7 +521,7 @@ export function MyFocusToday() {
               {priorityList.map((task) => {
                 const parsed = parseDue(task.due_date ?? null);
                 const dueFormatted = parsed ? format(parsed, 'd MMM yyyy', { locale: es }) : '—';
-                const isOverdue = typeof task.due_date === 'string' && task.due_date.slice(0, 10) < todayStr;
+                const isOverdue = getDueBucket(task.due_date, task.status?.is_completed ?? false, todayStr) === 'overdue';
                 return (
                   <li key={task.id}>
                     <button

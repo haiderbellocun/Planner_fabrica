@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
+import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 import { EpicBadge } from '@/components/epics/EpicBadge';
 import { TeamBadge } from '@/components/teams/TeamBadge';
 
@@ -28,6 +29,7 @@ const priorityConfig = {
 
 export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProps) {
   const priorityInfo = priorityConfig[task.priority];
+  const dueBucket = getDueBucket(task.due_date, !!task.status?.is_completed, getBusinessTodayStr());
 
   const getInitials = (name: string | null) => {
     if (!name) return '?';
@@ -96,10 +98,13 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
             </div>
           )}
           {task.due_date && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className={cn(
+              'flex items-center gap-1 text-xs',
+              dueBucket === 'overdue' ? 'text-red-600 font-medium' : dueBucket === 'due_today' ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+            )}>
               <Calendar className="h-3 w-3" />
               <span>
-                {(() => {
+                {dueBucket === 'due_today' ? 'Vence hoy' : (() => {
                   const d = parseDateOnly(task.due_date);
                   return d ? format(d, 'd MMM', { locale: es }) : null;
                 })()}

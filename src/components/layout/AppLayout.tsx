@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useRef } from 'react';
+import { ReactNode, useState, useEffect, useRef, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -37,6 +37,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,6 +65,48 @@ export function AppLayout({ children }: AppLayoutProps) {
   const hasResults =
     (searchResults?.projects?.length ?? 0) > 0 ||
     (searchResults?.tasks?.length ?? 0) > 0;
+
+  type FlatResult =
+    | { kind: 'project'; id: string; label: string }
+    | { kind: 'task'; id: string; projectId: string; label: string };
+
+  const flatResults: FlatResult[] = [
+    ...(searchResults?.projects ?? []).map((p): FlatResult => ({ kind: 'project', id: p.id, label: p.name })),
+    ...(searchResults?.tasks ?? []).map((t): FlatResult => ({ kind: 'task', id: t.id, projectId: t.project_id, label: t.title })),
+  ];
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [searchResults]);
+
+  const selectResult = (result: FlatResult) => {
+    setShowResults(false);
+    setSearchQuery('');
+    setActiveIndex(-1);
+    if (result.kind === 'project') {
+      navigate(`/projects/${result.id}`);
+    } else {
+      navigate(`/projects/${result.projectId}?task=${result.id}`);
+    }
+  };
+
+  const handleSearchKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setShowResults(false);
+      return;
+    }
+    if (!showResults || flatResults.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, flatResults.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      selectResult(flatResults[activeIndex]);
+    }
+  };
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -97,6 +140,12 @@ export function AppLayout({ children }: AppLayoutProps) {
                 )}
                 <Input
                   type="search"
+                  role="combobox"
+                  aria-label="Buscar proyectos y tareas"
+                  aria-expanded={showResults && debouncedQuery.length >= 2}
+                  aria-controls="global-search-listbox"
+                  aria-autocomplete="list"
+                  aria-activedescendant={activeIndex >= 0 ? `global-search-option-${activeIndex}` : undefined}
                   placeholder="Buscar proyectos, tareas..."
                   className="pl-9 h-9 rounded-lg bg-muted/50 border-border shadow-sm text-sm"
                   value={searchQuery}
@@ -105,10 +154,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                     setShowResults(true);
                   }}
                   onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
-                  onKeyDown={(e) => e.key === 'Escape' && setShowResults(false)}
+                  onKeyDown={handleSearchKeyDown}
                 />
                 {showResults && debouncedQuery.length >= 2 && (
-                  <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                  <div
+                    id="global-search-listbox"
+                    role="listbox"
+                    aria-label="Resultados de búsqueda"
+                    className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+                  >
                     {!hasResults && !isFetching && (
                       <p className="px-4 py-3 text-sm text-muted-foreground">Sin resultados para "{debouncedQuery}"</p>
                     )}
@@ -117,15 +171,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                         <p className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted/40">
                           Proyectos
                         </p>
-                        {searchResults!.projects.map((p) => (
+                        {searchResults!.projects.map((p, i) => (
                           <button
                             key={p.id}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-muted/60 flex items-center gap-2"
-                            onMouseDown={() => {
-                              setShowResults(false);
-                              setSearchQuery('');
-                              navigate(`/projects/${p.id}`);
-                            }}
+                            id={`global-search-option-${i}`}
+                            role="option"
+                            aria-selected={activeIndex === i}
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 focus:outline-none ${activeIndex === i ? 'bg-muted/70' : 'hover:bg-muted/60'}`}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onMouseDown={() => selectResult({ kind: 'project', id: p.id, label: p.name })}
                           >
                             <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <span className="truncate">{p.name}</span>
@@ -141,20 +195,23 @@ export function AppLayout({ children }: AppLayoutProps) {
                         <p className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted/40">
                           Tareas
                         </p>
-                        {searchResults!.tasks.map((t) => (
-                          <button
-                            key={t.id}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-muted/60 flex flex-col gap-0.5"
-                            onMouseDown={() => {
-                              setShowResults(false);
-                              setSearchQuery('');
-                              navigate(`/projects/${t.project_id}`);
-                            }}
-                          >
-                            <span className="truncate">{t.title}</span>
-                            <span className="text-[11px] text-muted-foreground">{t.project_name} · {t.status_name}</span>
-                          </button>
-                        ))}
+                        {searchResults!.tasks.map((t, ti) => {
+                          const i = (searchResults?.projects?.length ?? 0) + ti;
+                          return (
+                            <button
+                              key={t.id}
+                              id={`global-search-option-${i}`}
+                              role="option"
+                              aria-selected={activeIndex === i}
+                              className={`w-full text-left px-4 py-2 text-sm flex flex-col gap-0.5 focus:outline-none ${activeIndex === i ? 'bg-muted/70' : 'hover:bg-muted/60'}`}
+                              onMouseEnter={() => setActiveIndex(i)}
+                              onMouseDown={() => selectResult({ kind: 'task', id: t.id, projectId: t.project_id, label: t.title })}
+                            >
+                              <span className="truncate">{t.title}</span>
+                              <span className="text-[11px] text-muted-foreground">{t.project_name} · {t.status_name}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

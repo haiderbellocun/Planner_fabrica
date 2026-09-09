@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useTask } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
+import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -429,6 +430,7 @@ function MonthView({
   onTaskClick: (id: string, key: string) => void;
 }) {
   const today = startOfDay(new Date());
+  const todayStr = getBusinessTodayStr();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -485,7 +487,7 @@ function MonthView({
                 ))}
                 {tsk.slice(0, MAX_SHOW - proj.length).map(t => {
                   const color = getPersonColor(t.assignee_id);
-                  const isPast = t.due_date < format(today, 'yyyy-MM-dd') && !t.is_completed;
+                  const isPast = getDueBucket(t.due_date, t.is_completed, todayStr) === 'overdue';
                   return (
                     <button
                       key={t.id}
@@ -532,6 +534,7 @@ function WeekView({
   onTaskClick: (id: string, key: string) => void;
 }) {
   const today = startOfDay(new Date());
+  const todayStr = getBusinessTodayStr();
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -575,7 +578,7 @@ function WeekView({
                 ))}
                 {tsk.map(t => {
                   const color = getPersonColor(t.assignee_id);
-                  const isPast = t.due_date < format(today, 'yyyy-MM-dd') && !t.is_completed;
+                  const isPast = getDueBucket(t.due_date, t.is_completed, todayStr) === 'overdue';
                   return (
                     <button
                       key={t.id}
@@ -632,6 +635,7 @@ function AgendaView({
   onTaskClick: (id: string, key: string) => void;
 }) {
   const today = startOfDay(new Date());
+  const todayStr = getBusinessTodayStr();
   const rangeStart = startOfMonth(currentDate);
   const rangeEnd = endOfMonth(addMonths(currentDate, 2));
 
@@ -710,7 +714,7 @@ function AgendaView({
               ))}
               {tsk.map(t => {
                 const color = getPersonColor(t.assignee_id);
-                const isPastTask = t.due_date < format(today, 'yyyy-MM-dd') && !t.is_completed;
+                const isPastTask = getDueBucket(t.due_date, t.is_completed, todayStr) === 'overdue';
                 return (
                   <button
                     key={t.id}

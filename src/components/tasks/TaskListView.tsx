@@ -18,6 +18,8 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { TaskWithDetails } from '@/hooks/useTasks';
 import { TaskBulkActionsBar } from './TaskBulkActionsBar';
+import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
+import { parseDateOnly } from '@/lib/dates';
 
 const priorityConfig = {
   low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', rank: 0 },
@@ -64,6 +66,7 @@ export function TaskListView({
   hasActiveFilters,
   filtersKey,
 }: TaskListViewProps) {
+  const todayStr = getBusinessTodayStr();
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'task_number', dir: 'desc' });
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
@@ -261,8 +264,18 @@ export function TaskListView({
                       <span className="text-muted-foreground text-sm">Sin asignar</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {task.due_date ? format(new Date(task.due_date), 'd MMM yyyy', { locale: es }) : '-'}
+                  <TableCell className="text-sm">
+                    {task.due_date ? (() => {
+                      const bucket = getDueBucket(task.due_date, !!task.status?.is_completed, todayStr);
+                      const d = parseDateOnly(task.due_date);
+                      return (
+                        <span className={cn(
+                          bucket === 'overdue' ? 'text-red-600 font-medium' : bucket === 'due_today' ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+                        )}>
+                          {bucket === 'due_today' ? 'Vence hoy' : d ? format(d, 'd MMM yyyy', { locale: es }) : '-'}
+                        </span>
+                      );
+                    })() : <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   {isDesarrollo && (
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[130px]">

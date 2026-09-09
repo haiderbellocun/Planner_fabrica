@@ -27,7 +27,9 @@ export default function NotificationsPage() {
 
   const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     if (!notification.read) markAsRead.mutate(notification.id);
-    if (notification.project_id) {
+    if (notification.project_id && notification.task_id) {
+      navigate(`/projects/${notification.project_id}?task=${notification.task_id}`);
+    } else if (notification.project_id) {
       navigate(`/projects/${notification.project_id}`);
     }
   };
@@ -124,7 +126,7 @@ export default function NotificationsPage() {
                         </span>
                         {isClickable && (
                           <span className="text-xs text-primary">
-                            · Clic para ir al proyecto
+                            · {notification.task_id ? 'Clic para ir a la tarea' : 'Clic para ir al proyecto'}
                           </span>
                         )}
                       </div>

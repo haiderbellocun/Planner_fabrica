@@ -8,10 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ListTodo, Clock, AlertTriangle, CheckCircle, CalendarDays } from 'lucide-react';
-import { format, isAfter, isBefore, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
+import { getBusinessTodayStr, getDueBucket, isWithinDays } from '@/lib/dueDate';
 
 const priorityConfig = {
   low:    { label: 'Baja',    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',       cardBg: 'bg-slate-50/70 border-slate-200' },
@@ -35,16 +36,11 @@ export default function MyTasksPage() {
 
   const pendingTasks   = tasks.filter((t) => !t.status.is_completed);
   const completedTasks = tasks.filter((t) => t.status.is_completed);
-  const today = new Date();
-  const overdueTasks = pendingTasks.filter((t) => {
-    const d = parseDateOnly(t.due_date);
-    return d !== null && isBefore(d, today);
-  });
-  const upcomingTasks = pendingTasks.filter((t) => {
-    const d = parseDateOnly(t.due_date);
-    if (!d) return false;
-    return isAfter(d, today) && isBefore(d, addDays(today, 7));
-  });
+  const todayStr = getBusinessTodayStr();
+  const overdueTasks = pendingTasks.filter(
+    (t) => getDueBucket(t.due_date, t.status.is_completed, todayStr) === 'overdue'
+  );
+  const upcomingTasks = pendingTasks.filter((t) => isWithinDays(t.due_date, 7, todayStr));
 
   const handleTaskClick = (task: MyTaskWithProject) => {
     setSelectedTask(task);
@@ -73,14 +69,16 @@ export default function MyTasksPage() {
   const TaskCard = ({ task }: { task: MyTaskWithProject }) => {
     const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
     const parsedDue = parseDateOnly(task.due_date);
-    const isOverdue = parsedDue && isBefore(parsedDue, new Date()) && !task.status.is_completed;
+    const dueBucket = getDueBucket(task.due_date, task.status.is_completed, todayStr);
+    const isOverdue = dueBucket === 'overdue';
+    const isDueToday = dueBucket === 'due_today';
 
     return (
       <div
         onClick={() => handleTaskClick(task)}
         className={cn(
           'p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:brightness-95',
-          isOverdue ? 'border-red-300 bg-red-50/80' : priority.cardBg,
+          isOverdue ? 'border-red-300 bg-red-50/80' : isDueToday ? 'border-amber-300 bg-amber-50/80' : priority.cardBg,
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -112,9 +110,12 @@ export default function MyTasksPage() {
               {task.status.name}
             </Badge>
             {task.due_date && (
-              <span className={cn('text-xs', isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground')}>
+              <span className={cn(
+                'text-xs',
+                isOverdue ? 'text-red-600 font-medium' : isDueToday ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+              )}>
                 {isOverdue && <AlertTriangle className="inline h-3 w-3 mr-1" />}
-                {parsedDue ? format(parsedDue, 'dd MMM yyyy', { locale: es }) : null}
+                {isDueToday ? 'Vence hoy' : parsedDue ? format(parsedDue, 'dd MMM yyyy', { locale: es }) : null}
               </span>
             )}
           </div>
