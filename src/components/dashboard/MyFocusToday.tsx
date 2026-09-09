@@ -7,11 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/shared/StoryUI';
-import { Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, AlertCircle, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
+import { useMyCapacity } from '@/hooks/useCapacity';
+import { useReportTeamCapacity } from '@/hooks/useReports';
 
 type MyTask = MyTaskWithProject;
 
@@ -60,6 +63,7 @@ export function MyFocusToday() {
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
 
   const { data: selectedTask } = useTask(selectedTaskId ?? undefined);
+  const { data: myCapacity, isLoading: myCapacityLoading } = useMyCapacity();
 
   const openTask = (id: string, projectKey: string) => {
     setSelectedTaskId(id);
@@ -74,6 +78,10 @@ export function MyFocusToday() {
     isLoading: teamLoading,
     error: teamError,
   } = useLeadersFocus(showTeamTab);
+  // Reutiliza el mismo cálculo de horas ya usado en /reports (evita doble conteo entre
+  // subtareas/materiales/varios asignados) -- ver server/src/controllers/reportsMetrics.ts.
+  const { data: teamCapacity } = useReportTeamCapacity(showTeamTab);
+  const teamCapacityMembers = teamCapacity?.members ?? [];
 
   const teamList: LeadersFocusTask[] = Array.isArray(teamTasks)
     ? teamTasks.filter((t): t is LeadersFocusTask => t != null && typeof t === 'object')
@@ -313,11 +321,51 @@ export function MyFocusToday() {
               <StatTile label="Esta semana (equipo)" value={estaSemana.length} />
             </div>
 
+            {showTeamTab && teamCapacityMembers.length > 0 && (
+              <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <CardContent className="p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
+                    CARGA DEL EQUIPO POR HORAS
+                  </p>
+                  <ul className="space-y-2">
+                    {[...teamCapacityMembers]
+                      .sort((a, b) => b.pending_horas - a.pending_horas)
+                      .slice(0, 8)
+                      .map((m) => (
+                        <li key={m.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-black/[0.02]">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{m.full_name}</p>
+                            {m.cargo && <p className="text-xs text-muted-foreground truncate">{m.cargo}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="figure text-sm text-muted-foreground">
+                              {m.pending_horas}h / {m.weekly_hours_capacity}h
+                            </span>
+                            <Badge className={cn(
+                              'text-[10px] font-medium border-0',
+                              m.risk_color === 'red' ? 'bg-red-100 text-red-700'
+                                : m.risk_color === 'amber' ? 'bg-amber-100 text-amber-700'
+                                : m.risk_color === 'sky' ? 'bg-blue-100 text-blue-700'
+                                : 'bg-emerald-100 text-emerald-700',
+                            )}>
+                              {m.risk_label}
+                            </Badge>
+                          </div>
+                        </li>
+                      ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground/70 mt-2">
+                    Horas pendientes vs. disponibilidad semanal configurada (mismo cálculo que /reports, evita doble conteo entre materiales y varios asignados).
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {showTeamTab && (
               <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <CardContent className="p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
-                    CARGA POR PERSONA
+                    CARGA POR PERSONA (por tareas)
                   </p>
                   {ranking.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Sin tareas del equipo por vencer.</p>
@@ -528,6 +576,56 @@ export function MyFocusToday() {
         <StatTile label="En curso" value={enCurso.length} />
         <StatTile label="Esta semana" value={estaSemana.length} />
       </div>
+
+      <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+        <CardContent className="p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Tu carga por horas</p>
+          {myCapacityLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="h-4 w-4 animate-spin" /> Calculando…
+            </div>
+          ) : !myCapacity ? (
+            <p className="text-sm text-muted-foreground">No se pudo calcular tu carga por horas.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Horas pendientes</p>
+                <p className="figure text-lg font-semibold text-foreground">{myCapacity.pending_hours_estimated}h</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Disponibilidad semanal</p>
+                {myCapacity.weekly_hours_capacity != null ? (
+                  <p className="figure text-lg font-semibold text-foreground">{myCapacity.weekly_hours_capacity}h</p>
+                ) : (
+                  <p className="text-sm font-medium text-amber-700">Sin configurar</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Ocupación</p>
+                {myCapacity.utilization_pct != null ? (
+                  <p className="figure text-lg font-semibold text-foreground">{myCapacity.utilization_pct}%</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No se puede calcular sin disponibilidad configurada</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sin estimación</p>
+                <p className="figure text-lg font-semibold text-foreground">{myCapacity.tasks_without_estimate_count}</p>
+              </div>
+            </div>
+          )}
+          {myCapacity?.weekly_hours_capacity == null && !myCapacityLoading && (isAdmin || isProjectLeader) && (
+            <Link to="/settings" className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <Settings className="h-3 w-3" /> Configurar disponibilidad
+            </Link>
+          )}
+          {myCapacity && (
+            <p className="text-xs text-muted-foreground/70 mt-3">
+              {myCapacity.tasks_count} tarea{myCapacity.tasks_count === 1 ? '' : 's'} pendiente{myCapacity.tasks_count === 1 ? '' : 's'} en total (dato complementario)
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {tasks.length === 0 ? (
         <p className="text-sm text-muted-foreground">No tienes tareas asignadas.</p>

@@ -296,11 +296,12 @@ export function useReportWorkloadByCargo() {
   });
 }
 
-export function useReportTeamCapacity() {
+export function useReportTeamCapacity(enabled: boolean = true) {
   return useQuery({
     queryKey: ['report-team-capacity'],
     queryFn: () => api.get<TeamCapacity>('/api/reports/team-capacity'),
     staleTime: STALE_TIME,
+    enabled,
   });
 }
 

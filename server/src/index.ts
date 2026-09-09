@@ -32,6 +32,7 @@ import proximosProgramasRoutes from './routes/proximosProgramas.js';
 import checklistRoutes from './routes/checklist.js';
 import entregasRoutes from './routes/entregas.js';
 import solicitudesMarketingRoutes from './routes/solicitudesMarketing.js';
+import capacityRoutes from './routes/capacity.js';
 import calendarRoutes from './routes/calendar.js';
 import projectActivityRoutes from './routes/projectActivity.js';
 import pool from './config/database.js';
@@ -139,6 +140,7 @@ app.use('/api/projects/:projectId/checklist', checklistRoutes);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/entregas', entregasRoutes);
 app.use('/api/solicitudes-marketing', solicitudesMarketingRoutes);
+app.use('/api/capacity', capacityRoutes);
 app.use('/api/calendar', calendarRoutes);
 
 // 404 handler

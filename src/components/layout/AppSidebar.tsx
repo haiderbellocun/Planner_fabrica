@@ -43,33 +43,53 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const baseNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
-  { title: 'Proyectos', url: '/projects', icon: FolderKanban },
+type NavItem = { title: string; url: string; icon: typeof LayoutGrid };
+
+// Grupos fijos por tipo de trabajo (visibilidad por permisos se resuelve al renderizar):
+// Mi trabajo (todos) · Producción (Proyectos para todos, el resto solo líder/admin) ·
+// Gestión (solo líder/admin) · Administración (Flujo solo admin, Configuración para todos).
+const miTrabajoItems: NavItem[] = [
+  { title: 'Inicio', url: '/dashboard', icon: LayoutGrid },
   { title: 'Mis Tareas', url: '/my-tasks', icon: ListTodo },
   { title: 'Calendario', url: '/calendar', icon: CalendarDays },
 ];
 
-const reportsNavItem = { title: 'Reportes', url: '/reports', icon: BarChart3 };
+const produccionBaseItems: NavItem[] = [
+  { title: 'Proyectos', url: '/projects', icon: FolderKanban },
+];
 
-const baseNavItemsWithReports = (showReports: boolean) =>
-  showReports ? [...baseNavItems, reportsNavItem] : baseNavItems;
-
-const leaderNavItems = [
-  { title: 'Calculadora', url: '/calculator', icon: Calculator },
+const produccionLeaderItems: NavItem[] = [
   { title: 'Próximos Proyectos', url: '/proximos-programas', icon: CalendarClock },
   { title: 'Registro de Entregas', url: '/entregas', icon: PackageCheck },
   { title: 'Solicitudes de Marketing', url: '/solicitudes-marketing', icon: Megaphone },
-  { title: 'Equipos', url: '/equipos', icon: Users },
 ];
 
-const adminFlowNavItems = [
+const gestionLeaderItems: NavItem[] = [
+  { title: 'Equipos', url: '/equipos', icon: Users },
+  { title: 'Reportes', url: '/reports', icon: BarChart3 },
+  { title: 'Calculadora', url: '/calculator', icon: Calculator },
+];
+
+const adminFlowNavItems: NavItem[] = [
   { title: 'Flujo', url: '/flows', icon: GitBranch },
 ];
 
-const settingsNavItems = [
+const settingsNavItems: NavItem[] = [
   { title: 'Configuración', url: '/settings', icon: Settings },
 ];
+
+// "Proyectos" debe seguir resaltado también dentro del detalle de un proyecto (/projects/:id),
+// no solo en el listado exacto -- el resto de ítems sí usa coincidencia exacta de ruta.
+function isNavItemActive(pathname: string, url: string): boolean {
+  if (url === '/projects') return pathname === '/projects' || pathname.startsWith('/projects/');
+  return pathname === url;
+}
+
+function roleLabel(isAdmin: boolean, isProjectLeader: boolean): string {
+  if (isAdmin) return 'Administrador';
+  if (isProjectLeader) return 'Líder de proyecto';
+  return 'Colaborador';
+}
 
 export function AppSidebar() {
   const location = useLocation();
@@ -77,6 +97,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { profile, signOut, isAdmin, isProjectLeader } = useAuth();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
+  const canManage = isAdmin || isProjectLeader;
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -86,6 +107,39 @@ export function AppSidebar() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const renderGroup = (label: string, items: NavItem[]) => {
+    if (items.length === 0) return null;
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">
+          {label}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-0.5">
+            {items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isNavItemActive(location.pathname, item.url)}
+                  tooltip={item.title}
+                >
+                  <NavLink
+                    to={item.url}
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
+                    activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
+                  >
+                    <item.icon className="h-[18px] w-[18px]" />
+                    <span>{item.title}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
   };
 
   return (
@@ -114,37 +168,19 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3 bg-transparent">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-0.5">
-              {[...baseNavItemsWithReports(isAdmin || isProjectLeader),
-                ...(isAdmin || isProjectLeader ? leaderNavItems : []),
-                ...(isAdmin ? adminFlowNavItems : []),
-              ].map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                    <NavLink
-                      to={item.url}
-                      className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
-                      activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
-                    >
-                      <item.icon className="h-[18px] w-[18px]" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderGroup('Mi trabajo', miTrabajoItems)}
+        {renderGroup('Producción', [...produccionBaseItems, ...(canManage ? produccionLeaderItems : [])])}
+        {canManage && renderGroup('Gestión', gestionLeaderItems)}
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">Sistema</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.pathname === '/notifications'}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/notifications'}
+                  tooltip="Notificaciones"
+                >
                   <NavLink
                     to="/notifications"
                     className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
@@ -162,23 +198,11 @@ export function AppSidebar() {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {settingsNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                    <NavLink
-                      to={item.url}
-                      className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
-                      activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
-                    >
-                      <item.icon className="h-[18px] w-[18px]" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {renderGroup('Administración', [...(isAdmin ? adminFlowNavItems : []), ...settingsNavItems])}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-white/20">
@@ -197,7 +221,7 @@ export function AppSidebar() {
                     {profile?.full_name || 'Usuario'}
                   </span>
                   <span className="text-xs text-white/70 truncate max-w-[140px]">
-                    {isAdmin ? 'Administrador' : 'Usuario'}
+                    {roleLabel(!!isAdmin, !!isProjectLeader)}
                   </span>
                 </div>
               )}
