@@ -9,7 +9,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // bg-primary-deep (no bg-primary): el turquesa brillante con texto blanco da ~1.8:1 de
+        // contraste (falla WCAG); primary-deep contra blanco da ~5.3:1.
+        default: "bg-primary-deep text-primary-foreground hover:bg-primary-deep/90",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

@@ -249,7 +249,7 @@
 
   /* Status badge variations - More refined */
   .status-badge {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider;
   }
 
   .status-pending {

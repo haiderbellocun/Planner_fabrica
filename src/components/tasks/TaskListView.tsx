@@ -20,12 +20,13 @@ import type { TaskWithDetails } from '@/hooks/useTasks';
 import { TaskBulkActionsBar } from './TaskBulkActionsBar';
 import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 import { parseDateOnly } from '@/lib/dates';
+import { BADGE_TONES } from '@/lib/badgeColors';
 
 const priorityConfig = {
-  low: { label: 'Baja', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', rank: 0 },
-  medium: { label: 'Media', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', rank: 1 },
-  high: { label: 'Alta', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', rank: 2 },
-  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', rank: 3 },
+  low: { label: 'Baja', className: BADGE_TONES.neutral, rank: 0 },
+  medium: { label: 'Media', className: BADGE_TONES.warning, rank: 1 },
+  high: { label: 'Alta', className: BADGE_TONES.escalated, rank: 2 },
+  urgent: { label: 'Urgente', className: BADGE_TONES.danger, rank: 3 },
 };
 
 type SortKey = 'task_number' | 'title' | 'status' | 'priority' | 'assignee' | 'due_date' | 'epic' | 'team' | 'sprint';

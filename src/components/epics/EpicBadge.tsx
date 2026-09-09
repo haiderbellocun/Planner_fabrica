@@ -10,7 +10,7 @@ export function EpicBadge({ epic, className }: EpicBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate max-w-[120px]',
+        'inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full truncate max-w-[120px]',
         className
       )}
       style={{ backgroundColor: `${epic.color}20`, color: epic.color, border: `1px solid ${epic.color}40` }}

@@ -338,7 +338,7 @@ export function MyFocusToday() {
                                     </div>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className={cn('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium', risk.className)}>
+                                    <span className={cn('inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium', risk.className)}>
                                       {risk.label}
                                     </span>
                                     <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border', person.overdue > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-black/5 text-muted-foreground border-black/10')}>
@@ -391,7 +391,7 @@ export function MyFocusToday() {
                                               </span>
                                             )}
                                             <span
-                                              className="text-[10px] px-1.5 py-0.5 rounded-md border shrink-0"
+                                              className="text-xs px-1.5 py-0.5 rounded-md border shrink-0"
                                               style={{ backgroundColor: `${task.status.color}20`, color: task.status.color, borderColor: `${task.status.color}40` }}
                                             >
                                               {task.status.name}
@@ -445,7 +445,7 @@ export function MyFocusToday() {
                           <span className={cn('text-xs', isOverdue && 'text-red-600 font-medium')}>{dueFormatted}</span>
                           <Badge
                             variant="secondary"
-                            className="text-[10px] font-medium rounded-md"
+                            className="text-xs font-medium rounded-md"
                             style={{
                               backgroundColor: task.status?.color ? `${task.status.color}20` : undefined,
                               color: task.status?.color,
@@ -536,7 +536,7 @@ export function MyFocusToday() {
                       </span>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] font-medium rounded-md"
+                        className="text-xs font-medium rounded-md"
                         style={{
                           backgroundColor: task.status?.color ? `${task.status.color}20` : undefined,
                           color: task.status?.color,

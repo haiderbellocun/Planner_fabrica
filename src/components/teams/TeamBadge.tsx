@@ -10,7 +10,7 @@ export function TeamBadge({ team, className }: TeamBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate max-w-[120px]',
+        'inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full truncate max-w-[120px]',
         className
       )}
       style={{ backgroundColor: `${team.color}20`, color: team.color, border: `1px solid ${team.color}40` }}

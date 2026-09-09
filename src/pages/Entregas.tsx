@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Search, PackageCheck, Download, CalendarDays, Tab
 import * as XLSX from 'xlsx';
 import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
 import { cn } from '@/lib/utils';
+import { BADGE_TONES } from '@/lib/badgeColors';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useEntregas,
@@ -81,16 +82,16 @@ const ESTADO_LABELS: Record<EstadoEntrega, string> = {
 };
 
 const TIPO_COLORS: Record<TipoEntrega, string> = {
-  primera_entrega: 'bg-blue-100 text-blue-700',
-  correccion:      'bg-amber-100 text-amber-700',
-  final:           'bg-purple-100 text-purple-700',
+  primera_entrega: BADGE_TONES.info,
+  correccion:      BADGE_TONES.warning,
+  final:           BADGE_TONES.special,
 };
 
 const ESTADO_COLORS: Record<EstadoEntrega, string> = {
-  aceptado:          'bg-green-100 text-green-700',
-  con_observaciones: 'bg-amber-100 text-amber-700',
-  rechazado:         'bg-red-100 text-red-700',
-  pendiente:         'bg-slate-100 text-slate-600',
+  aceptado:          BADGE_TONES.success,
+  con_observaciones: BADGE_TONES.warning,
+  rechazado:         BADGE_TONES.danger,
+  pendiente:         BADGE_TONES.neutral,
 };
 
 const EMPTY_FORM: EntregaInput = {
@@ -941,6 +942,7 @@ export default function Entregas() {
                               size="icon"
                               className="h-7 w-7 text-slate-500 hover:text-primary"
                               onClick={() => openEdit(e)}
+                              aria-label={`Editar entrega ${e.nombre_proyecto}`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -949,6 +951,7 @@ export default function Entregas() {
                               size="icon"
                               className="h-7 w-7 text-slate-500 hover:text-destructive"
                               onClick={() => setDeleting(e)}
+                              aria-label={`Eliminar entrega ${e.nombre_proyecto}`}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>

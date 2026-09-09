@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useChecklist';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/contexts/AuthContext';
+import { BADGE_TONES } from '@/lib/badgeColors';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -35,15 +36,15 @@ const ESTADO_OPTIONS: { value: EstadoRevision; label: string }[] = [
 ];
 
 const ESTADO_COLORS: Record<EstadoRevision, string> = {
-  sin_iniciar: 'bg-slate-100 text-slate-600',
-  en_proceso:  'bg-amber-100 text-amber-700',
-  finalizado:  'bg-teal-100  text-teal-700',
+  sin_iniciar: BADGE_TONES.neutral,
+  en_proceso:  BADGE_TONES.warning,
+  finalizado:  BADGE_TONES.success,
 };
 
 const FINAL_COLORS: Record<string, string> = {
-  'Materia Completa': 'bg-green-100 text-green-700 font-semibold',
-  'En proceso':       'bg-amber-100 text-amber-700',
-  'Sin iniciar':      'bg-slate-100 text-slate-500',
+  'Materia Completa': `${BADGE_TONES.success} font-semibold`,
+  'En proceso':       BADGE_TONES.warning,
+  'Sin iniciar':      BADGE_TONES.neutral,
 };
 
 // ─── Sub-components ────────────────────────────────────────────────────────────

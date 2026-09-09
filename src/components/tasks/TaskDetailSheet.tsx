@@ -27,7 +27,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { format, formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send, ListChecks, Plus, Bell, BellOff } from 'lucide-react';
+import { Clock, Calendar, User, Tag, ArrowRight, History, MessageSquare, Trash2, Send, ListChecks, Plus, Bell, BellOff, Loader2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useUpdateTask, useUpdateTaskStatus, useDeleteTask, useCreateSubtask, useWatchTask } from '@/hooks/useTasks';
 import type { TaskSubtask } from '@/types/database';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -38,8 +39,9 @@ import { TagsEditor } from './TagsEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { parseDateOnly } from '@/lib/dates';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getAllowedNextStatuses } from '@/lib/taskStatusTransitions';
+import { BADGE_TONES } from '@/lib/badgeColors';
 
 interface TaskDetailSheetProps {
   task: TaskWithDetails | null;
@@ -50,10 +52,10 @@ interface TaskDetailSheetProps {
 }
 
 const priorityConfig = {
-  low: { label: 'Baja', className: 'bg-gray-100 text-gray-700' },
-  medium: { label: 'Media', className: 'bg-amber-100 text-amber-700' },
-  high: { label: 'Alta', className: 'bg-orange-100 text-orange-700' },
-  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700' },
+  low: { label: 'Baja', className: BADGE_TONES.neutral },
+  medium: { label: 'Media', className: BADGE_TONES.warning },
+  high: { label: 'Alta', className: BADGE_TONES.escalated },
+  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
 };
 
 // `profiles` only lists active users (disabled accounts can't be assigned new
@@ -71,7 +73,30 @@ function buildAssigneeOptions(
   return options;
 }
 
+// Indicador real de guardado para los campos que se guardan al perder foco (título, fecha,
+// horas) -- antes no daban ninguna confirmación de éxito, solo un toast si algo fallaba.
+type SaveState = 'idle' | 'pending' | 'saved' | 'error';
+
+function SaveStatus({ state }: { state: SaveState }) {
+  if (state === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" /> Guardando…
+      </span>
+    );
+  }
+  if (state === 'saved') {
+    return <span className="text-xs text-emerald-600">Guardado</span>;
+  }
+  if (state === 'error') {
+    return <span className="text-xs text-destructive">Error al guardar — tu cambio no se perdió</span>;
+  }
+  return null;
+}
+
 export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNavigateToTask }: TaskDetailSheetProps) {
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<'detalles' | 'materiales' | 'actividad'>('detalles');
   // Fetch full task details with temas_materiales
   const { data: fullTask } = useTask(task?.id);
   const { data: history = [] } = useTaskHistory(task?.id);
@@ -99,7 +124,27 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const [editingHoras, setEditingHoras] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [titleSaveState, setTitleSaveState] = useState<SaveState>('idle');
+  const [dueDateSaveState, setDueDateSaveState] = useState<SaveState>('idle');
+  const [horasSaveState, setHorasSaveState] = useState<SaveState>('idle');
   const { data: tiempoTarea } = useTiempoTarea(task?.id);
+
+  // "Guardado" es una confirmación transitoria, no un estado permanente -- se oculta sola.
+  useEffect(() => {
+    if (titleSaveState !== 'saved') return;
+    const t = setTimeout(() => setTitleSaveState('idle'), 2000);
+    return () => clearTimeout(t);
+  }, [titleSaveState]);
+  useEffect(() => {
+    if (dueDateSaveState !== 'saved') return;
+    const t = setTimeout(() => setDueDateSaveState('idle'), 2000);
+    return () => clearTimeout(t);
+  }, [dueDateSaveState]);
+  useEffect(() => {
+    if (horasSaveState !== 'saved') return;
+    const t = setTimeout(() => setHorasSaveState('idle'), 2000);
+    return () => clearTimeout(t);
+  }, [horasSaveState]);
 
   // Use full task data if available, otherwise fall back to prop
   const taskData = fullTask || task;
@@ -343,22 +388,26 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
     ? Math.floor((Date.now() - new Date(currentStatusEntry.started_at).getTime()) / 1000)
     : 0;
 
+  const mobileTabs: { value: typeof mobileTab; label: string }[] = [
+    { value: 'detalles', label: 'Detalles' },
+    { value: 'materiales', label: 'Materiales' },
+    { value: 'actividad', label: 'Actividad' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-full p-0 overflow-hidden rounded-2xl shadow-2xl" style={{ maxHeight: '88vh' }}>
-        <div className="flex h-full" style={{ maxHeight: '88vh' }}>
-          {/* ── LEFT PANEL ── */}
-          <div
-            className="flex flex-col flex-1 overflow-hidden border-r border-border relative"
-            style={{
-              backgroundImage: 'url(./FONDO_3.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            <div className="absolute inset-0 bg-white/80 pointer-events-none" />
+      <DialogContent
+        className={cn(
+          'p-0 overflow-hidden shadow-2xl',
+          isMobile ? 'w-screen h-[100dvh] max-w-none rounded-none' : 'max-w-3xl w-full rounded-2xl',
+        )}
+        style={!isMobile ? { maxHeight: '88vh' } : undefined}
+      >
+        <div className={cn('flex', isMobile ? 'flex-col h-full' : 'h-full')} style={!isMobile ? { maxHeight: '88vh' } : undefined}>
+          {/* ── LEFT PANEL (Detalles + Materiales en escritorio; contenido de pestañas en celular) ── */}
+          <div className={cn('flex flex-col flex-1 overflow-hidden', !isMobile && 'border-r border-border')}>
             {/* Task header */}
-            <div className="relative z-10 px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
+            <div className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
               {taskData.parent && (
                 <button
                   type="button"
@@ -395,6 +444,8 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                       if (!confirm(`¿Eliminar la tarea "${taskData.title}"?`)) return;
                       deleteTask.mutate({ taskId: taskData.id, projectId: taskData.project_id }, { onSuccess: () => onOpenChange(false) });
                     }}
+                    title="Eliminar tarea"
+                    aria-label="Eliminar tarea"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -402,23 +453,36 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               </div>
               <DialogTitle className="text-base font-bold text-foreground leading-snug">
                 {user?.role === 'admin' && editingTitle ? (
-                  <input
-                    type="text"
-                    className="w-full border border-border rounded px-2 py-1 text-base font-bold bg-background text-foreground"
-                    defaultValue={taskData.title}
-                    autoFocus
-                    onBlur={(e) => {
-                      setEditingTitle(false);
-                      const newTitle = e.target.value.trim();
-                      if (newTitle && newTitle !== taskData.title) {
-                        updateTask.mutate({ id: taskData.id, projectId: taskData.project_id, title: newTitle });
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') setEditingTitle(false);
-                      if (e.key === 'Enter') e.currentTarget.blur();
-                    }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      className="w-full border border-border rounded px-2 py-1 text-base font-bold bg-background text-foreground"
+                      defaultValue={taskData.title}
+                      autoFocus
+                      disabled={titleSaveState === 'pending'}
+                      onBlur={(e) => {
+                        const newTitle = e.target.value.trim();
+                        if (!newTitle || newTitle === taskData.title) {
+                          setEditingTitle(false);
+                          return;
+                        }
+                        setTitleSaveState('pending');
+                        updateTask.mutate(
+                          { id: taskData.id, projectId: taskData.project_id, title: newTitle },
+                          {
+                            onSuccess: () => { setTitleSaveState('saved'); setEditingTitle(false); },
+                            // Se queda en modo edición para no perder lo escrito si falla el guardado.
+                            onError: () => setTitleSaveState('error'),
+                          }
+                        );
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setEditingTitle(false);
+                        if (e.key === 'Enter') e.currentTarget.blur();
+                      }}
+                    />
+                    <SaveStatus state={titleSaveState} />
+                  </div>
                 ) : (
                   <span
                     className={user?.role === 'admin' ? 'cursor-pointer hover:text-primary' : ''}
@@ -436,8 +500,31 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               )}
             </div>
 
+            {/* Selector de pestañas — solo en celular; en escritorio Detalles y Materiales
+                fluyen en una sola columna con scroll continuo. */}
+            {isMobile && (
+              <div role="tablist" aria-label="Secciones de la tarea" className="flex gap-1 px-4 pt-3 pb-1 border-b border-border flex-shrink-0">
+                {mobileTabs.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={mobileTab === t.value}
+                    onClick={() => setMobileTab(t.value)}
+                    className={cn(
+                      'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                      mobileTab === t.value ? 'bg-primary/10 text-primary-deep' : 'text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Scrollable details */}
-            <div className="relative z-10 flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className={cn('space-y-5', isMobile && mobileTab !== 'detalles' && 'hidden')}>
           {/* Status and Assignee */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -559,19 +646,31 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
               {user?.role === 'admin' && editingDueDate ? (
-                <input
-                  type="date"
-                  className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground"
-                  defaultValue={taskData.due_date ? taskData.due_date.slice(0, 10) : ''}
-                  autoFocus
-                  onBlur={(e) => {
-                    setEditingDueDate(false);
-                    if (e.target.value) {
-                      updateTask.mutate({ id: taskData.id, projectId: taskData.project_id, due_date: e.target.value });
-                    }
-                  }}
-                  onKeyDown={(e) => e.key === 'Escape' && setEditingDueDate(false)}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground"
+                    defaultValue={taskData.due_date ? taskData.due_date.slice(0, 10) : ''}
+                    autoFocus
+                    disabled={dueDateSaveState === 'pending'}
+                    onBlur={(e) => {
+                      if (!e.target.value) {
+                        setEditingDueDate(false);
+                        return;
+                      }
+                      setDueDateSaveState('pending');
+                      updateTask.mutate(
+                        { id: taskData.id, projectId: taskData.project_id, due_date: e.target.value },
+                        {
+                          onSuccess: () => { setDueDateSaveState('saved'); setEditingDueDate(false); },
+                          onError: () => setDueDateSaveState('error'),
+                        }
+                      );
+                    }}
+                    onKeyDown={(e) => e.key === 'Escape' && setEditingDueDate(false)}
+                  />
+                  <SaveStatus state={dueDateSaveState} />
+                </div>
               ) : (
                 <span
                   className={user?.role === 'admin' ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
@@ -597,20 +696,30 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-4 w-4" />
               {isAdminOrLeader && editingHoras ? (
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground w-20"
-                  defaultValue={taskData.horas_estimadas ?? ''}
-                  autoFocus
-                  onBlur={(e) => {
-                    setEditingHoras(false);
-                    const value = e.target.value ? parseFloat(e.target.value) : null;
-                    updateTask.mutate({ id: taskData.id, project_id: taskData.project_id, horas_estimadas: value });
-                  }}
-                  onKeyDown={(e) => e.key === 'Escape' && setEditingHoras(false)}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    className="border border-border rounded px-2 py-0.5 text-sm bg-background text-foreground w-20"
+                    defaultValue={taskData.horas_estimadas ?? ''}
+                    autoFocus
+                    disabled={horasSaveState === 'pending'}
+                    onBlur={(e) => {
+                      const value = e.target.value ? parseFloat(e.target.value) : null;
+                      setHorasSaveState('pending');
+                      updateTask.mutate(
+                        { id: taskData.id, project_id: taskData.project_id, horas_estimadas: value },
+                        {
+                          onSuccess: () => { setHorasSaveState('saved'); setEditingHoras(false); },
+                          onError: () => setHorasSaveState('error'),
+                        }
+                      );
+                    }}
+                    onKeyDown={(e) => e.key === 'Escape' && setEditingHoras(false)}
+                  />
+                  <SaveStatus state={horasSaveState} />
+                </div>
               ) : (
                 <span
                   className={isAdminOrLeader ? 'cursor-pointer hover:text-foreground hover:underline' : ''}
@@ -644,7 +753,14 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               </span>
             </div>
           </div>
+          </div>{/* end pestaña Detalles */}
 
+          <div className={cn('space-y-5', isMobile && mobileTab !== 'materiales' && 'hidden')}>
+          {taskData.subtask_of_id && !taskData.programa && !taskData.asignatura && !taskData.temas_materiales && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Esta tarea no tiene subtareas ni información académica.
+            </p>
+          )}
           {/* Subtareas -- a subtask can't have subtasks of its own (single level only) */}
           {!taskData.subtask_of_id && (
             <>
@@ -961,15 +1077,19 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               </div>
             </>
           )}
+          </div>{/* end pestaña Materiales */}
 
             </div>{/* end scrollable details */}
           </div>{/* end LEFT PANEL */}
 
-          {/* ── RIGHT PANEL — activity + comments ── */}
-          <div className="w-72 flex-shrink-0 flex flex-col bg-slate-50/60">
+          {/* ── RIGHT PANEL — activity + comments (pestaña "Actividad" en celular) ── */}
+          <div className={cn(
+            'flex flex-col bg-slate-50/60 min-h-0',
+            isMobile ? cn('flex-1', mobileTab !== 'actividad' && 'hidden') : 'w-72 flex-shrink-0',
+          )}>
             {/* Activity feed */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Actividad</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Actividad</p>
 
               {activity.length === 0 && comments.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-6">Sin actividad</p>
@@ -992,7 +1112,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                         {entry.action === 'assigned' && 'asignó la tarea'}
                       </span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true, locale: es })}
                     </p>
                   </div>
@@ -1002,7 +1122,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               {comments.length > 0 && (
                 <>
                   <Separator className="my-2" />
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Comentarios</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Comentarios</p>
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex items-start gap-2.5">
                       <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
@@ -1021,7 +1141,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                             </Button>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
                         </p>
                         <p className="text-xs mt-1 whitespace-pre-wrap break-words text-foreground/80">{renderCommentWithMentions(comment.comment)}</p>

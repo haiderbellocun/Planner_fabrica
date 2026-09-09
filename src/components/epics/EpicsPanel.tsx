@@ -9,12 +9,13 @@ import { CreateEpicDialog } from './CreateEpicDialog';
 import { Epic, useDeleteEpic, useEpics } from '@/hooks/useEpics';
 import { TaskWithDetails } from '@/hooks/useTasks';
 import { cn } from '@/lib/utils';
+import { BADGE_TONES } from '@/lib/badgeColors';
 
 const priorityConfig = {
-  low: { label: 'Baja', className: 'bg-gray-100 text-gray-700' },
-  medium: { label: 'Media', className: 'bg-amber-100 text-amber-700' },
-  high: { label: 'Alta', className: 'bg-orange-100 text-orange-700' },
-  urgent: { label: 'Urgente', className: 'bg-red-100 text-red-700' },
+  low: { label: 'Baja', className: BADGE_TONES.neutral },
+  medium: { label: 'Media', className: BADGE_TONES.warning },
+  high: { label: 'Alta', className: BADGE_TONES.escalated },
+  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
 };
 
 interface EpicsPanelProps {
@@ -161,6 +162,7 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
                             variant="ghost"
                             onClick={() => handleEdit(epic)}
                             title="Editar épica"
+                            aria-label="Editar épica"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -171,6 +173,7 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
                             className="text-destructive hover:text-destructive"
                             onClick={() => handleDelete(epic)}
                             title="Eliminar épica"
+                            aria-label="Eliminar épica"
                             disabled={deleteEpic.isPending}
                           >
                             <Trash2 className="h-4 w-4" />

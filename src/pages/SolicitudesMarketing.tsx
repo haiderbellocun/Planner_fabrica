@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
+import { BADGE_TONES } from '@/lib/badgeColors';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useSolicitudesMarketing,
@@ -70,9 +71,9 @@ const TIPO_PIEZA_OPTIONS: { value: string; label: string }[] = [
 
 const PRIORIDAD_LABELS: Record<Prioridad, string> = { alta: 'Alta', media: 'Media', baja: 'Baja' };
 const PRIORIDAD_COLORS: Record<Prioridad, string> = {
-  alta:  'bg-red-100 text-red-700',
-  media: 'bg-amber-100 text-amber-700',
-  baja:  'bg-slate-100 text-slate-600',
+  alta:  BADGE_TONES.danger,
+  media: BADGE_TONES.warning,
+  baja:  BADGE_TONES.neutral,
 };
 
 const ESTADO_INSUMOS_LABELS: Record<EstadoInsumos, string> = {
@@ -81,9 +82,9 @@ const ESTADO_INSUMOS_LABELS: Record<EstadoInsumos, string> = {
   incompleto: 'Incompleto',
 };
 const ESTADO_INSUMOS_COLORS: Record<EstadoInsumos, string> = {
-  pendiente:  'bg-slate-100 text-slate-600',
-  recibido:   'bg-green-100 text-green-700',
-  incompleto: 'bg-amber-100 text-amber-700',
+  pendiente:  BADGE_TONES.neutral,
+  recibido:   BADGE_TONES.success,
+  incompleto: BADGE_TONES.warning,
 };
 
 const ESTADO_PRODUCCION_ORDER: EstadoProduccion[] = ['pendiente', 'en_diseno', 'en_revision', 'aprobado', 'publicado'];
@@ -95,11 +96,11 @@ const ESTADO_PRODUCCION_LABELS: Record<EstadoProduccion, string> = {
   publicado:    'Publicado',
 };
 const ESTADO_PRODUCCION_COLORS: Record<EstadoProduccion, string> = {
-  pendiente:    'bg-slate-100 text-slate-600',
-  en_diseno:    'bg-blue-100 text-blue-700',
-  en_revision:  'bg-amber-100 text-amber-700',
-  aprobado:     'bg-purple-100 text-purple-700',
-  publicado:    'bg-green-100 text-green-700',
+  pendiente:    BADGE_TONES.neutral,
+  en_diseno:    BADGE_TONES.info,
+  en_revision:  BADGE_TONES.warning,
+  aprobado:     BADGE_TONES.special,
+  publicado:    BADGE_TONES.success,
 };
 
 const EMPTY_FORM: SolicitudMarketingInput = {
@@ -817,6 +818,7 @@ export default function SolicitudesMarketing() {
                               size="icon"
                               className="h-7 w-7 text-slate-500 hover:text-primary"
                               onClick={() => openEdit(s)}
+                              aria-label={`Editar solicitud ${folioLabel(s.folio)}`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -825,6 +827,7 @@ export default function SolicitudesMarketing() {
                               size="icon"
                               className="h-7 w-7 text-slate-500 hover:text-destructive"
                               onClick={() => setDeleting(s)}
+                              aria-label={`Eliminar solicitud ${folioLabel(s.folio)}`}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
