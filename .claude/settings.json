@@ -127,7 +127,10 @@
       "Bash(node run-project-pins-migration.js)",
       "Bash(node diag_check_profiles.mjs)",
       "Bash(node diag_check_paula.mjs)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx eslint *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git fetch *)"
     ],
     "additionalDirectories": [
       "C:\\app_planner\\server",
