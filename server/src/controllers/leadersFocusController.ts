@@ -47,8 +47,12 @@ const TASKS_SELECT = `
   JOIN public.task_statuses ts ON ts.id = t.status_id
   JOIN public.projects p ON p.id = t.project_id
   LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
+  LEFT JOIN public.users assignee_user ON assignee_user.id = assignee.user_id
   WHERE ts.is_completed = false
     AND t.due_date IS NOT NULL
+    -- Una tarea sin asignar sigue siendo accionable (alguien debe tomarla); una tarea
+    -- asignada a un usuario desactivado ya no debe aparecer en el foco del equipo.
+    AND (assignee.id IS NULL OR assignee_user.is_active = true)
 `;
 
 const TASKS_SELECT_FOR_LEADER_PROJECTS = `
@@ -70,8 +74,10 @@ const TASKS_SELECT_FOR_LEADER_PROJECTS = `
   JOIN public.projects p ON p.id = t.project_id
   JOIN public.project_members pm ON pm.project_id = p.id AND pm.user_id = $1 AND pm.role = 'leader'
   LEFT JOIN public.profiles assignee ON assignee.id = t.assignee_id
+  LEFT JOIN public.users assignee_user ON assignee_user.id = assignee.user_id
   WHERE ts.is_completed = false
     AND t.due_date IS NOT NULL
+    AND (assignee.id IS NULL OR assignee_user.is_active = true)
 `;
 
 /**

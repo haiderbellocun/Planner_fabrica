@@ -11,6 +11,19 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
 const oneOf = (v: unknown): string | undefined => (Array.isArray(v) ? v[0] as string : (v as string | undefined));
 
+/** true si el profile existe y su usuario sigue activo -- una persona desactivada no puede
+ * recibir tareas nuevas, aunque el request venga de una lista de asignados desactualizada
+ * o de una llamada directa a la API. */
+const isActiveProfile = async (profileId: string): Promise<boolean> => {
+  const result = await query(
+    `SELECT 1 FROM public.profiles p
+     JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+     WHERE p.id = $1`,
+    [profileId]
+  );
+  return result.rows.length > 0;
+};
+
 /**
  * GET /api/projects/:projectId/tasks
  * List all tasks for a project with full details
@@ -662,6 +675,10 @@ export const createTask = async (req: AuthRequest, res: Response) => {
           });
         }
       }
+
+      if (!(await isActiveProfile(assignee_id))) {
+        return res.status(400).json({ error: 'No se puede asignar la tarea a un usuario desactivado' });
+      }
     }
 
     // Get default status
@@ -821,6 +838,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
         return res.status(403).json({
           error: 'Solo administradores y líderes de proyecto pueden cambiar el responsable de tareas'
         });
+      }
+
+      if (assignee_id && !(await isActiveProfile(assignee_id))) {
+        return res.status(400).json({ error: 'No se puede asignar la tarea a un usuario desactivado' });
       }
     }
 
@@ -1088,6 +1109,10 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({
         error: 'Solo administradores y líderes de proyecto pueden cambiar el responsable de tareas'
       });
+    }
+
+    if (assignee_id && !(await isActiveProfile(assignee_id))) {
+      return res.status(400).json({ error: 'No se puede asignar la tarea a un usuario desactivado' });
     }
 
     const tasksResult = await query(

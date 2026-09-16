@@ -60,12 +60,20 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
       // Insert new assignments + create user tasks
       const newAssignments: { material_id: string; assignee_id: string; horas_estimadas: number | null }[] = [];
 
+      // Un usuario desactivado no puede recibir asignaciones nuevas -- se resuelven todas
+      // de una vez para no hacer una consulta por cada material.
+      const activeIdsResult = await query(
+        `SELECT p.id FROM public.profiles p
+         JOIN public.users u ON u.id = p.user_id AND u.is_active = true`
+      );
+      const activeProfileIds = new Set(activeIdsResult.rows.map((r) => r.id));
+
       if (assignments && Array.isArray(assignments) && assignments.length > 0) {
         for (const assignment of assignments) {
           const { material_id, assignee_id, horas_estimadas } = assignment;
 
-          // Skip if no assignee selected
-          if (!assignee_id) continue;
+          // Skip if no assignee selected, or if the assignee is deactivated
+          if (!assignee_id || !activeProfileIds.has(assignee_id)) continue;
 
           await query(
             `INSERT INTO public.task_material_assignees (task_id, material_id, assignee_id, horas_estimadas)
