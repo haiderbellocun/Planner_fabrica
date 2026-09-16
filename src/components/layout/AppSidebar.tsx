@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
@@ -25,11 +26,10 @@ import {
   LogOut,
   Bell,
   User,
-  GitBranch,
   CalendarClock,
   CalendarDays,
-  PackageCheck,
   Users,
+  PackageCheck,
   Megaphone,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -60,8 +60,6 @@ const produccionBaseItems: NavItem[] = [
 
 const produccionLeaderItems: NavItem[] = [
   { title: 'Próximos Proyectos', url: '/proximos-programas', icon: CalendarClock },
-  { title: 'Registro de Entregas', url: '/entregas', icon: PackageCheck },
-  { title: 'Solicitudes de Marketing', url: '/solicitudes-marketing', icon: Megaphone },
 ];
 
 const gestionLeaderItems: NavItem[] = [
@@ -70,9 +68,15 @@ const gestionLeaderItems: NavItem[] = [
   { title: 'Calculadora', url: '/calculator', icon: Calculator },
 ];
 
-const adminFlowNavItems: NavItem[] = [
-  { title: 'Flujo', url: '/flows', icon: GitBranch },
+// Rutas activas pero fuera de la navegación principal a pedido — se listan aquí,
+// de forma discreta, solo para que quien las necesite las encuentre sin URL directa.
+const accesosAdicionalesItems: NavItem[] = [
+  { title: 'Registro de Entregas', url: '/entregas', icon: PackageCheck },
+  { title: 'Solicitudes de Marketing', url: '/solicitudes-marketing', icon: Megaphone },
 ];
+
+// Flujo oculto del menú a pedido (ruta /flows sigue activa).
+const adminFlowNavItems: NavItem[] = [];
 
 const settingsNavItems: NavItem[] = [
   { title: 'Configuración', url: '/settings', icon: Settings },
@@ -109,11 +113,12 @@ export function AppSidebar() {
       .slice(0, 2);
   };
 
-  const renderGroup = (label: string, items: NavItem[]) => {
+  const renderGroup = (label: string, items: NavItem[], opts?: { muted?: boolean }) => {
     if (items.length === 0) return null;
+    const muted = opts?.muted;
     return (
       <SidebarGroup>
-        <SidebarGroupLabel className="text-sm font-semibold uppercase tracking-wide text-white/90 px-2 mb-1">
+        <SidebarGroupLabel className={cn('text-sm font-semibold uppercase tracking-wide px-2 mb-1', muted ? 'text-white/55' : 'text-white/90')}>
           {label}
         </SidebarGroupLabel>
         <SidebarGroupContent>
@@ -127,10 +132,15 @@ export function AppSidebar() {
                 >
                   <NavLink
                     to={item.url}
-                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
+                    className={cn(
+                      'flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+                      muted
+                        ? 'text-[13.5px] font-medium text-white/65 hover:bg-white/10 hover:text-white/90 [&>svg]:text-white/65'
+                        : 'text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90',
+                    )}
                     activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
                   >
-                    <item.icon className="h-[18px] w-[18px]" />
+                    <item.icon className={muted ? 'h-4 w-4' : 'h-[18px] w-[18px]'} />
                     <span>{item.title}</span>
                   </NavLink>
                 </SidebarMenuButton>
@@ -171,6 +181,7 @@ export function AppSidebar() {
         {renderGroup('Mi trabajo', miTrabajoItems)}
         {renderGroup('Producción', [...produccionBaseItems, ...(canManage ? produccionLeaderItems : [])])}
         {canManage && renderGroup('Gestión', gestionLeaderItems)}
+        {canManage && renderGroup('Accesos adicionales', accesosAdicionalesItems, { muted: true })}
 
         <SidebarGroup>
           <SidebarGroupContent>

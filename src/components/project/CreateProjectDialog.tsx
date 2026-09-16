@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import {
   Select,
   SelectContent,
@@ -194,7 +195,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${DIALOG_SIZES.xl} max-h-[90vh] overflow-y-auto`}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Crear Proyecto</DialogTitle>

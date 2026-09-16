@@ -29,6 +29,8 @@ import { useProjects } from '@/hooks/useProjects';
 import { useAsignaturas } from '@/hooks/useAsignaturas';
 import { useMaterialTypes, useMaterialesAsignatura } from '@/hooks/useMateriales';
 import { EntregasDashboard } from '@/components/entregas/EntregasDashboard';
+import { LoadingState, EmptyState } from '@/components/shared/StoryUI';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Sheet,
   SheetContent,
@@ -788,27 +790,71 @@ export default function Entregas() {
             className="pl-9"
           />
         </div>
-        <select
-          value={filterEstado}
-          onChange={(e) => setFilterEstado(e.target.value as EstadoEntrega | 'todos')}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="todos">Todos los estados</option>
-          {(Object.entries(ESTADO_LABELS) as [EstadoEntrega, string][]).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
-          ))}
-        </select>
-        <select
-          value={filterTipo}
-          onChange={(e) => setFilterTipo(e.target.value as TipoEntrega | 'todos')}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="todos">Todos los tipos</option>
-          {(Object.entries(TIPO_LABELS) as [TipoEntrega, string][]).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
-          ))}
-        </select>
+        <Select value={filterEstado} onValueChange={(v) => setFilterEstado(v as EstadoEntrega | 'todos')}>
+          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los estados</SelectItem>
+            {(Object.entries(ESTADO_LABELS) as [EstadoEntrega, string][]).map(([v, l]) => (
+              <SelectItem key={v} value={v}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as TipoEntrega | 'todos')}>
+          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los tipos</SelectItem>
+            {(Object.entries(TIPO_LABELS) as [TipoEntrega, string][]).map(([v, l]) => (
+              <SelectItem key={v} value={v}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+      )}
+
+      {view !== 'dashboard' && (search || filterEstado !== 'todos' || filterTipo !== 'todos') && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-1.5">
+          {search && (
+            <Badge variant="secondary" className="gap-1">
+              "{search}"
+              <button
+                className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                onClick={() => setSearch('')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filterEstado !== 'todos' && (
+            <Badge variant="secondary" className="gap-1">
+              {ESTADO_LABELS[filterEstado]}
+              <button
+                className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                onClick={() => setFilterEstado('todos')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filterTipo !== 'todos' && (
+            <Badge variant="secondary" className="gap-1">
+              {TIPO_LABELS[filterTipo]}
+              <button
+                className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                onClick={() => setFilterTipo('todos')}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs text-muted-foreground"
+            onClick={() => { setSearch(''); setFilterEstado('todos'); setFilterTipo('todos'); }}
+          >
+            Limpiar filtros
+          </Button>
+        </div>
       )}
 
       {/* Calendar view */}
@@ -840,25 +886,17 @@ export default function Entregas() {
       {view === 'table' && (
         <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-              Cargando…
-            </div>
+            <LoadingState label="Cargando entregas…" className="py-20 min-h-0" />
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-              <PackageCheck className="h-10 w-10 text-muted-foreground/30" />
-              <p className="text-muted-foreground font-medium">
-                {entregas.length === 0 ? 'Aún no hay entregas registradas' : 'Sin resultados para los filtros aplicados'}
-              </p>
-              {canWrite && entregas.length === 0 && (
-                <Button variant="outline" size="sm" onClick={openCreate} className="mt-1 gap-1">
-                  <Plus className="h-3.5 w-3.5" /> Registrar primera entrega
-                </Button>
-              )}
-            </div>
+            <EmptyState
+              icon={PackageCheck}
+              message={entregas.length === 0 ? 'Aún no hay entregas registradas' : 'Sin resultados para los filtros aplicados'}
+              action={canWrite && entregas.length === 0 ? { label: 'Registrar primera entrega', onClick: openCreate } : undefined}
+            />
           ) : (
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
+                <tr className="bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground">
                   <th className="px-4 py-3 text-left">Proyecto</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">Escuela</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">Nivel</th>
@@ -878,7 +916,7 @@ export default function Entregas() {
                   return (
                     <tr
                       key={e.id}
-                      className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors"
+                      className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
                       <td className="px-4 py-3 font-medium max-w-[180px]">
                         <p className="truncate" title={e.nombre_proyecto}>{e.nombre_proyecto}</p>
@@ -886,12 +924,12 @@ export default function Entregas() {
                           <p className="text-xs text-slate-400 truncate">→ {e.entregado_a}</p>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
                         {e.escuela ?? <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         {e.nivel_programa
-                          ? <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{NIVEL_LABELS[e.nivel_programa]}</span>
+                          ? <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{NIVEL_LABELS[e.nivel_programa]}</span>
                           : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-3 text-center text-slate-700 font-medium">
@@ -913,7 +951,7 @@ export default function Entregas() {
                         {materialesTags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {materialesTags.slice(0, 2).map((m, i) => (
-                              <span key={i} className="text-xs bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">{m}</span>
+                              <span key={i} className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">{m}</span>
                             ))}
                             {materialesTags.length > 2 && (
                               <span className="text-xs text-slate-400">+{materialesTags.length - 2}</span>

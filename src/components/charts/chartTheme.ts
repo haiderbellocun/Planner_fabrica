@@ -6,8 +6,10 @@ export const chartColors = {
   teal: '#0DD9D0',
   tealDeep: '#067A76',
   coral: '#FF6B4A',
-  blue: '#4F46E5',
-  indigoLight: '#6366F1',
+  // Deep warm accent — brand-safe stand-in for the old indigo/blue "second series" color
+  rust: '#B45309',
+  // Muted teal-grey neutral — for secondary/paused states (was indigoLight)
+  slate: '#7A9391',
   yellow: '#E8A317',
   green: '#0CA35A',
   magenta: '#E0619A',

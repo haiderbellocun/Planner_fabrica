@@ -1,7 +1,7 @@
 import { Component, ReactNode, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Package, Clock, BarChart3, CalendarDays, AlertTriangle, Users } from 'lucide-react';
+import { Loader2, Package, Clock, CalendarDays, AlertTriangle, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,13 +74,13 @@ import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
 import SankeyDiagram from '@/components/reports/SankeyDiagram';
-import { HeroBanner, StatTile, SpotlightCard, AttentionItem } from '@/components/shared/StoryUI';
+import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState } from '@/components/shared/StoryUI';
 
 // Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
 
 // Ranking colors for top collaborators
-const RANKING_COLORS = ['#FBBF24', '#4F46E5', '#0DD9D0', '#6366F1', '#BFEFF0'];
+const RANKING_COLORS = ['#FBBF24', CHART_COLORS.rust, '#0DD9D0', CHART_COLORS.slate, '#BFEFF0'];
 
 // ---------- Shared band-color helpers (puntualidad primaria, eficiencia de horas secundaria) ----------
 function punctualityBandColor(pct: number | null): string {
@@ -219,6 +219,8 @@ function TabResumen() {
   const { data: categories = [] } = useReportProjectCategories();
   const { data: weeklyTrend = [] } = useReportTasksWeeklyTrend();
   const { data: personMetrics } = useReportPersonMetrics();
+  const { data: timeDist = [] } = useReportTimeDistribution();
+  const { data: teamByCargo = [] } = useReportTeamByCargo();
 
   if (isLoading) {
     return <LoadingState />;
@@ -288,7 +290,7 @@ function TabResumen() {
 
   const projectBarConfig: ChartConfig = {
     completadas: { label: 'Completadas', color: CHART_COLORS.teal },
-    en_progreso: { label: 'En progreso', color: CHART_COLORS.indigo },
+    en_progreso: { label: 'En progreso', color: CHART_COLORS.rust },
     en_revision: { label: 'En revisión', color: CHART_COLORS.yellow },
     pendientes: { label: 'Pendientes', color: CHART_COLORS.muted },
   };
@@ -316,6 +318,15 @@ function TabResumen() {
   const puntualidadGlobal = personMetrics?.overall.puntualidad_pct ?? null;
   const puntualidadTone = puntualidadGlobal == null ? 'info' : puntualidadGlobal >= 90 ? 'good' : puntualidadGlobal >= 80 ? 'warning' : 'critical';
 
+  // Insights importantes — misma lógica de alertas que "Detalle analítico" (Eficiencia),
+  // aquí en su variante global/sin filtro de cargo, para el vistazo ejecutivo de 30s.
+  const avgTimeData = timeDist.filter((d) => d.count > 0).map((d) => ({ name: d.status_name, promedio: d.stats.mean }));
+  const bottleneck = avgTimeData.length > 0
+    ? avgTimeData.reduce((prev, curr) => (curr.promedio > prev.promedio ? curr : prev)) : null;
+  const overdueMembers = teamByCargo.filter((m) => m.overdue_tasks > 0);
+  const totalOverdue = overdueMembers.reduce((s, m) => s + m.overdue_tasks, 0);
+  const hasInsights = (bottleneck && bottleneck.promedio > 0) || totalOverdue > 0 || (puntualidadGlobal != null && puntualidadGlobal < 60);
+
   return (
     <div className="space-y-8">
       <HeroBanner
@@ -336,7 +347,7 @@ function TabResumen() {
       />
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-        <StatTile label="Proyectos activos" value={projectsData.active} sub={`${projectsData.total} totales`} />
+        <StatTile label="Proyectos activos" value={projectsData.active} sub={`${projectsData.total} totales`} emphasis="primary" />
         <StatTile label="Tareas totales" value={tasks.total ?? 0} sub={`${overview.recent_completed_30d ?? 0} completadas (30d)`} />
         <StatTile
           label="Materiales"
@@ -348,6 +359,7 @@ function TabResumen() {
           value={puntualidadGlobal != null ? `${puntualidadGlobal}%` : '—'}
           sub={personMetrics ? `${personMetrics.overall.entregas_a_tiempo} de ${personMetrics.overall.entregas_evaluables} a tiempo` : 'Cargando...'}
           pill={{ tone: puntualidadTone, label: puntualidadTone === 'good' ? 'Sólido' : puntualidadTone === 'warning' ? 'Atención' : puntualidadTone === 'critical' ? 'Riesgo' : 'Sin datos' }}
+          emphasis="primary"
         />
         <StatTile
           label="Equipo activo"
@@ -356,6 +368,33 @@ function TabResumen() {
         />
       </div>
 
+      {/* Insights importantes */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Insights importantes</p>
+        {hasInsights ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {bottleneck && bottleneck.promedio > 0 && (
+              <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-[11px] leading-relaxed">
+                <strong>Cuello de botella:</strong> promedio de <strong>{formatHours(bottleneck.promedio)}</strong> en estado "<strong>{bottleneck.name}</strong>".
+              </div>
+            )}
+            {totalOverdue > 0 && (
+              <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
+                <strong>{totalOverdue} tareas vencidas</strong> en {overdueMembers.length} colaborador(es): {overdueMembers.map((m) => m.full_name.split(' ')[0]).join(', ')}.
+              </div>
+            )}
+            {puntualidadGlobal != null && puntualidadGlobal < 60 && (
+              <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
+                <strong>Puntualidad crítica:</strong> promedio {puntualidadGlobal}%, muy por debajo de la meta del 85%.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 px-3 py-2 text-[11px]">✓ Sin alertas críticas en este momento.</div>
+        )}
+      </div>
+
+      {/* Estado de la operación */}
       {/* Row 2: Polar Area + Project Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
         <Card className={CARD_CLASS}>
@@ -386,7 +425,7 @@ function TabResumen() {
                   <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={55} tick={{ fill: axisTick.fill, fontSize: 12 }} />
                   <ChartTooltip content={<CustomTooltip />} />
                   <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.indigo} />
+                  <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.rust} />
                   <Bar dataKey="en_revision" stackId="a" fill={CHART_COLORS.yellow} />
                   <Bar dataKey="pendientes" stackId="a" fill={CHART_COLORS.muted} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                 </BarChart>
@@ -414,7 +453,7 @@ function TabResumen() {
                   const size = 60 + Math.min(c.total_projects * 15, 80);
                   const color =
                     c.category === 'academico'
-                      ? CHART_COLORS.indigo
+                      ? CHART_COLORS.rust
                       : c.category === 'marketing'
                         ? CHART_COLORS.teal
                         : c.category === 'otros'
@@ -451,7 +490,7 @@ function TabResumen() {
             ) : (
               <ChartContainer
                 config={{
-                  created: { label: 'Creadas', color: CHART_COLORS.indigo },
+                  created: { label: 'Creadas', color: CHART_COLORS.rust },
                   completed: { label: 'Finalizadas', color: CHART_COLORS.teal },
                 }}
                 className="h-[260px] w-full"
@@ -473,7 +512,7 @@ function TabResumen() {
                   <Line
                     type="monotone"
                     dataKey="created"
-                    stroke={CHART_COLORS.indigo}
+                    stroke={CHART_COLORS.rust}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />
@@ -688,7 +727,7 @@ function TabProyectos() {
                                 style={{
                                   left: `${startPct}%`,
                                   width: `${completedBarWidth}%`,
-                                  background: `linear-gradient(90deg, ${CHART_COLORS.teal}, ${CHART_COLORS.indigo})`,
+                                  background: `linear-gradient(90deg, ${CHART_COLORS.teal}, ${CHART_COLORS.rust})`,
                                   borderRadius: remainingBarWidth < 0.5 ? '6px' : '6px 0 0 6px',
                                 }}
                               >
@@ -792,7 +831,7 @@ function TabProyectos() {
                     )}
                   </CardDescription>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: CHART_COLORS.indigo }}>
+                <div className="text-2xl font-bold" style={{ color: CHART_COLORS.rust }}>
                   {p.completion_rate}%
                 </div>
               </div>
@@ -809,7 +848,7 @@ function TabProyectos() {
                   <p className="text-muted-foreground">Listas</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: CHART_COLORS.indigo }}>{p.in_progress_tasks}</p>
+                  <p className="font-semibold text-sm" style={{ color: CHART_COLORS.rust }}>{p.in_progress_tasks}</p>
                   <p className="text-muted-foreground">En curso</p>
                 </div>
                 <div>
@@ -899,7 +938,7 @@ function TabProyectos() {
                     overdue_tasks: p.overdue_tasks,
                     total_tasks: p.total_tasks,
                   }))}
-                  fill={CHART_COLORS.indigo}
+                  fill={CHART_COLORS.rust}
                   opacity={0.75}
                 >
                   {projects.map((p, index) => {
@@ -912,7 +951,7 @@ function TabProyectos() {
                           ? CHART_COLORS.yellow
                           : x >= 70
                             ? CHART_COLORS.teal
-                            : CHART_COLORS.indigo;
+                            : CHART_COLORS.rust;
                     return <Cell // eslint-disable-line react/no-array-index-key
                       key={index}
                       fill={fill}
@@ -1052,7 +1091,7 @@ function TabEquipo() {
 
   const workloadConfig: ChartConfig = {
     completed_tasks: { label: 'Completadas', color: CHART_COLORS.teal },
-    pending_tasks: { label: 'Pendientes', color: CHART_COLORS.indigo },
+    pending_tasks: { label: 'Pendientes', color: CHART_COLORS.rust },
   };
 
   const workloadData = workload.map(w => ({
@@ -1318,7 +1357,7 @@ function TabEquipo() {
                     {/* Metrics row */}
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div>
-                        <p className="text-lg font-bold" style={{ color: CHART_COLORS.indigo }}>
+                        <p className="text-lg font-bold" style={{ color: CHART_COLORS.rust }}>
                           {pm?.unidades_pendientes ?? '-'}
                         </p>
                         <p className="text-[10px] text-muted-foreground">Pendientes</p>
@@ -1359,7 +1398,7 @@ function TabEquipo() {
                             width: `${Math.min(barPct, 100)}%`,
                             background: isOverloaded
                               ? `linear-gradient(90deg, ${CHART_COLORS.yellow}, ${CHART_COLORS.coral})`
-                              : `linear-gradient(90deg, ${CHART_COLORS.indigo}, ${CHART_COLORS.tealDark})`,
+                              : `linear-gradient(90deg, ${CHART_COLORS.rust}, ${CHART_COLORS.tealDark})`,
                           }}
                         />
                       </div>
@@ -1423,7 +1462,7 @@ function TabEquipo() {
                 <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={130} tick={{ fill: axisTick.fill, fontSize: 12 }} />
                 <ChartTooltip content={<CustomTooltip />} />
                 <Bar dataKey="completed_tasks" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
-                <Bar dataKey="pending_tasks" stackId="a" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
+                <Bar dataKey="pending_tasks" stackId="a" fill={CHART_COLORS.rust} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -1646,7 +1685,7 @@ function TareasPorEstadoChart({ report }: { report: UserMiniReport }) {
   }
 
   const config: ChartConfig = {
-    count: { label: 'Tareas', color: CHART_COLORS.indigo },
+    count: { label: 'Tareas', color: CHART_COLORS.rust },
   };
 
   return (
@@ -1672,12 +1711,12 @@ function TareasPorEstadoChart({ report }: { report: UserMiniReport }) {
               tick={{ fill: axisTick.fill, fontSize: 11 }}
             />
             <ChartTooltip content={<CustomTooltip />} />
-            <Bar dataKey="count" fill={CHART_COLORS.indigo} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
+            <Bar dataKey="count" fill={CHART_COLORS.rust} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
               {data.map((item, idx) => (
                 <Cell
                   // eslint-disable-next-line react/no-array-index-key
                   key={idx}
-                  fill={item.is_completed ? CHART_COLORS.teal : CHART_COLORS.indigo}
+                  fill={item.is_completed ? CHART_COLORS.teal : CHART_COLORS.rust}
                 />
               ))}
             </Bar>
@@ -1870,14 +1909,7 @@ function CapacidadResumen({ report }: { report: UserMiniReport }) {
 // ---------- Tab: Eficiencia — helpers ----------
 
 function EficSectionHeader({ tag, title }: { tag: string; title: string }) {
-  return (
-    <div className="flex items-baseline gap-3 mb-5">
-      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">
-        {tag}
-      </span>
-      <h2 className="text-[15px] font-black tracking-tight text-foreground">{title}</h2>
-    </div>
-  );
+  return <SectionHeader tag={tag} title={title} />;
 }
 
 function BulletBar({ label, value, meta = 85 }: { label: string; value: number | null; meta?: number }) {
@@ -2153,7 +2185,7 @@ function TabEficiencia() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {([
-            { label: 'Proyectos activos', value: activeProjects, ctx: `de ${overview?.projects?.total ?? 0} total`, color: CHART_COLORS.blue },
+            { label: 'Proyectos activos', value: activeProjects, ctx: `de ${overview?.projects?.total ?? 0} total`, color: CHART_COLORS.rust },
             { label: 'Tareas totales', value: totalTasks, ctx: 'en el sistema', color: CHART_COLORS.magenta },
             { label: 'Finalizadas (30d)', value: finalizadas30d, ctx: 'último mes', color: CHART_COLORS.green },
             { label: 'Puntualidad prom.', value: avgPuntualidad != null ? `${avgPuntualidad}%` : '—', ctx: 'entregas a tiempo', color: avgPuntualidad != null && avgPuntualidad >= 85 ? CHART_COLORS.green : CHART_COLORS.yellow },
@@ -2264,7 +2296,7 @@ function TabEficiencia() {
           <div className="h-[300px] rounded-2xl bg-muted/40 animate-pulse mb-5" />
         ) : (
           <>
-        <div className="rounded-md bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 px-4 py-2 text-[11px] text-slate-700 mb-5">
+        <div className="rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-[11px] text-blue-900 mb-5">
           <strong>{totalTransitions} transiciones</strong> registradas · <strong>{transitions.length}</strong> rutas únicas · grosor de barra = volumen relativo de tareas.
         </div>
 
@@ -2475,7 +2507,7 @@ function TabEficiencia() {
                 </CardHeader>
               <CardContent>
                 <ChartContainer
-                  config={{ eficiencia_pct: { label: 'Eficiencia %', color: CHART_COLORS.indigo }, puntualidad_pct: { label: 'Puntualidad %', color: CHART_COLORS.teal } }}
+                  config={{ eficiencia_pct: { label: 'Eficiencia %', color: CHART_COLORS.rust }, puntualidad_pct: { label: 'Puntualidad %', color: CHART_COLORS.teal } }}
                   className="w-full" style={{ height: Math.max(filteredIndPerf.length * 44, 140) }}
                 >
                   <BarChart
@@ -2487,7 +2519,7 @@ function TabEficiencia() {
                     <YAxis type="category" dataKey="name" width={110} {...AXIS_STYLE} tick={{ fill: axisTick.fill, fontSize: 11 }} />
                     <ChartTooltip content={<CustomTooltip />} />
                     <ReferenceLine x={85} stroke={CHART_COLORS.green} strokeDasharray="4 2" label={{ value: 'Meta 85%', position: 'insideTopRight', fontSize: 10, fill: CHART_COLORS.green }} />
-                    <Bar dataKey="eficiencia_pct" fill={CHART_COLORS.indigo} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
+                    <Bar dataKey="eficiencia_pct" fill={CHART_COLORS.rust} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                     <Bar dataKey="puntualidad_pct" fill={CHART_COLORS.teal} barSize={12} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                   </BarChart>
                 </ChartContainer>
@@ -2720,11 +2752,7 @@ function IndividualPerformanceTab() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingState />;
   }
 
   const rendimientoTone = overall?.puntualidad_pct == null ? 'info' : overall.puntualidad_pct >= 90 ? 'good' : overall.puntualidad_pct >= 80 ? 'warning' : 'critical';
@@ -2820,10 +2848,7 @@ function IndividualPerformanceTab() {
         </CardHeader>
         <CardContent className="p-0">
           {activeMembers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Users className="h-10 w-10 mb-3 opacity-40" />
-              <p>No hay datos para los filtros seleccionados</p>
-            </div>
+            <EmptyState message="No hay datos para los filtros seleccionados" icon={Users} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2932,24 +2957,6 @@ function IndividualPerformanceTab() {
   );
 }
 
-// ---------- Helpers ----------
-function LoadingState() {
-  return (
-    <div className="flex items-center justify-center min-h-[300px]">
-      <Loader2 className="h-8 w-8 animate-spin" style={{ color: CHART_COLORS.indigo }} />
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <BarChart3 className="h-10 w-10 mb-3 opacity-40" />
-      <p className="text-sm">{message}</p>
-    </div>
-  );
-}
-
 // ---------- Main Page ----------
 export default function ReportsPage() {
   const { isAdmin, isProjectLeader } = useAuth();
@@ -2973,8 +2980,8 @@ export default function ReportsPage() {
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
             <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
-            <TabsTrigger value="eficiencia">Eficiencia</TabsTrigger>
             <TabsTrigger value="rendimiento">Rendimiento</TabsTrigger>
+            <TabsTrigger value="eficiencia">Detalle analítico</TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumen">
@@ -2989,12 +2996,12 @@ export default function ReportsPage() {
             <TabEquipo />
           </TabsContent>
 
-          <TabsContent value="eficiencia">
-            <TabEficiencia />
-          </TabsContent>
-
           <TabsContent value="rendimiento" className="space-y-6">
             <IndividualPerformanceTab />
+          </TabsContent>
+
+          <TabsContent value="eficiencia">
+            <TabEficiencia />
           </TabsContent>
         </Tabs>
       </div>

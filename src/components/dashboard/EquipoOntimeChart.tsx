@@ -3,7 +3,7 @@ import { useReportOntimeByEquipo } from '@/hooks/useReports';
 import { chartColors, axisTick, gridColor } from '@/components/charts/chartTheme';
 import { Loader2 } from 'lucide-react';
 
-const PALETTE = [chartColors.tealDeep, chartColors.blue] as const;
+const PALETTE = [chartColors.tealDeep, chartColors.rust] as const;
 
 function Figure({ cx, color }: { cx: number; color: string }) {
   return (
@@ -29,7 +29,7 @@ export function EquipoOntimeChart() {
   const rightColor = PALETTE[1];
 
   return (
-    <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] overflow-hidden">
+    <Card className="rounded-2xl border border-black/5 shadow-floating overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold text-foreground">Entregas a tiempo</CardTitle>
         <CardDescription className="text-xs">

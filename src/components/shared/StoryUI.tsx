@@ -3,6 +3,7 @@
 // .hero-banner / .spotlight-card / .attn-item / .status-pill classes in
 // index.css, so the visual recipe lives in one place.
 import type { ReactNode } from 'react';
+import { Loader2, Inbox, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ---------- Sparkline ----------
@@ -52,11 +53,14 @@ interface StatTileProps {
   decorationImage?: string;
   /** Second, smaller decorative illustration, bottom-left corner. */
   accentImage?: string;
+  /** Promote this tile above its siblings — the one or two KPIs that matter
+      most on the page, not every tile in a row (that would defeat the point). */
+  emphasis?: 'primary' | 'default';
 }
 
-export function StatTile({ label, value, sub, pill, sparkline, className, decorationImage, accentImage }: StatTileProps) {
+export function StatTile({ label, value, sub, pill, sparkline, className, decorationImage, accentImage, emphasis = 'default' }: StatTileProps) {
   return (
-    <div className={cn('stat-tile', className)}>
+    <div className={cn('stat-tile', emphasis === 'primary' && 'stat-tile-primary', className)}>
       {decorationImage && (
         <img src={decorationImage} alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none select-none" />
       )}
@@ -67,7 +71,7 @@ export function StatTile({ label, value, sub, pill, sparkline, className, decora
         <span className="stat-tile-label">{label}</span>
         {pill && <StatusPill tone={pill.tone}>{pill.label}</StatusPill>}
       </div>
-      <div className="relative stat-tile-value">{value}</div>
+      <div className={cn('relative stat-tile-value', emphasis === 'primary' && 'text-[32px]')}>{value}</div>
       {sub && <p className="relative text-xs text-muted-foreground mt-1">{sub}</p>}
       {sparkline && (
         <Sparkline
@@ -186,6 +190,81 @@ export function AttentionItem({ severity, title, description, cta, onClick }: At
           className="text-xs font-bold text-primary-deep whitespace-nowrap hover:underline flex-shrink-0"
         >
           {cta} →
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------- SectionHeader ----------
+// Tag pill + title — groups a block of content within a page. One recipe
+// shared across pages instead of each one redefining the same pill+h2 pair.
+
+export function SectionHeader({ tag, title, className }: { tag: string; title: string; className?: string }) {
+  return (
+    <div className={cn('flex items-baseline gap-3 mb-5', className)}>
+      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">
+        {tag}
+      </span>
+      <h2 className="text-[15px] font-black tracking-tight text-foreground">{title}</h2>
+    </div>
+  );
+}
+
+// ---------- FormSection ----------
+// Groups related fields under a small caption — the same Separator+h4 recipe
+// already used ad-hoc in TaskDetailSheet, formalized so create/edit dialogs
+// don't repeat the same markup or invent a second pattern.
+
+export function FormSection({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('space-y-3', className)}>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+}
+
+// ---------- LoadingState ----------
+// Shared spinner for section/page-level loading. Always brand teal — never a
+// one-off color per page (Reports used to force an indigo spinner here).
+
+interface LoadingStateProps {
+  label?: string;
+  className?: string;
+}
+
+export function LoadingState({ label = 'Cargando…', className }: LoadingStateProps = {}) {
+  return (
+    <div className={cn('flex items-center justify-center min-h-[300px]', className)} role="status" aria-label={label}>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+// ---------- EmptyState ----------
+// Shared "nothing here yet" panel — one recipe for every table/chart/section
+// in the app instead of each page reinventing its own icon/opacity/CTA.
+
+interface EmptyStateProps {
+  message: string;
+  icon?: LucideIcon;
+  action?: { label: string; onClick: () => void };
+  className?: string;
+}
+
+export function EmptyState({ message, icon: Icon = Inbox, action, className }: EmptyStateProps) {
+  return (
+    <div className={cn('flex flex-col items-center justify-center py-12 text-muted-foreground', className)}>
+      <Icon className="h-10 w-10 mb-3 opacity-40" />
+      <p className="text-sm text-center max-w-sm">{message}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="mt-4 text-xs font-bold text-primary-deep hover:underline"
+        >
+          {action.label}
         </button>
       )}
     </div>

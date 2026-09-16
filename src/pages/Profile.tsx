@@ -156,7 +156,7 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-1 text-xs text-indigo-600 hover:underline"
+                  className="mt-1 text-xs text-primary-deep hover:underline"
                 >
                   Subir foto de perfil (solo una vez)
                 </button>

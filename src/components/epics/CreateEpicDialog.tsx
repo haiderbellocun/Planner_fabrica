@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import { Epic, useCreateEpic, useUpdateEpic } from '@/hooks/useEpics';
 import { useEquipos } from '@/hooks/useEquipos';
 
@@ -23,7 +24,7 @@ interface CreateEpicDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6'];
+const PRESET_COLORS = ['#B45309', '#64748B', '#ec4899', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6'];
 
 const STATUS_OPTIONS: Array<{ value: Epic['status']; label: string }> = [
   { value: 'open', label: 'Abierta' },
@@ -103,7 +104,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className={DIALOG_SIZES.md}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{epic ? 'Editar épica' : 'Nueva épica'}</DialogTitle>

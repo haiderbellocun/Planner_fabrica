@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import {
   Sheet,
   SheetContent,
@@ -549,7 +550,7 @@ export default function ProximosProgramasPage() {
                         'text-xs',
                         p.clasificacion_programa === 'nuevo'
                           ? 'border-teal-300 text-teal-700 bg-teal-50'
-                          : 'border-purple-300 text-purple-700 bg-purple-50',
+                          : 'border-orange-300 text-orange-700 bg-orange-50',
                       )}
                     >
                       {CLASIFICACION_LABELS[p.clasificacion_programa]}
@@ -666,7 +667,7 @@ export default function ProximosProgramasPage() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`${DIALOG_SIZES.lg} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle>
               {editTarget ? 'Editar programa' : 'Agregar próximo programa'}

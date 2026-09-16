@@ -19,7 +19,7 @@ const FRIDAY_HOURS = 7.25;
 const WEEKLY_HOURS = MON_THU_HOURS * 4 + FRIDAY_HOURS; // 40.25
 const AVG_DAILY_HOURS = WEEKLY_HOURS / 5; // 8.05
 
-const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card';
 
 /**
  * Compute "total person-hours per unit" for each material type.
@@ -157,7 +157,7 @@ export default function ProjectCalculator() {
     return (
       <div className="page-container">
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -181,7 +181,7 @@ export default function ProjectCalculator() {
           <Card className={CARD_CLASS}>
             <CardContent className="pt-5 space-y-2">
               <Label htmlFor="subjects" className="flex items-center gap-2 text-sm font-medium">
-                <BookOpen className="h-4 w-4 text-indigo-500" />
+                <BookOpen className="h-4 w-4 text-primary" />
                 Asignaturas
               </Label>
               <Input
@@ -270,7 +270,7 @@ export default function ProjectCalculator() {
                 </thead>
                 <tbody>
                   {results.rows.map(row => (
-                    <tr key={row.id} className={`border-b last:border-0 ${row.qty > 0 ? 'bg-indigo-50/30' : ''}`}>
+                    <tr key={row.id} className={`border-b last:border-0 ${row.qty > 0 ? 'bg-secondary/40' : ''}`}>
                       <td className="py-2.5 px-2">
                         <div className="flex items-center gap-2">
                           <span className="text-base">{row.icon}</span>
@@ -311,7 +311,7 @@ export default function ProjectCalculator() {
                       </td>
                       <td className="py-2.5 px-2 text-center">
                         {row.subtotalHours > 0 ? (
-                          <span className="font-semibold text-indigo-600">{Math.round(row.subtotalHours * 10) / 10}h</span>
+                          <span className="font-semibold text-primary-deep">{Math.round(row.subtotalHours * 10) / 10}h</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -350,13 +350,13 @@ export default function ProjectCalculator() {
                 label="Total Materiales"
                 value={results.totalMaterials.toString()}
                 sublabel={`${numSubjects} asignaturas`}
-                color={chartColors.blue}
+                color={chartColors.rust}
               />
               <ResultCard
                 label="Horas-Persona"
                 value={`${results.totalPersonHours}h`}
                 sublabel="Total equipo"
-                color="#6366F1"
+                color={chartColors.slate}
               />
               <ResultCard
                 label="Horas/Persona"
@@ -409,7 +409,7 @@ export default function ProjectCalculator() {
                     <span className="text-muted-foreground ml-1">personas</span>
                   </div>
                   <div>
-                    <span className="font-semibold text-indigo-600">{results.workDaysPerPerson} días</span>
+                    <span className="font-semibold text-primary-deep">{results.workDaysPerPerson} días</span>
                   </div>
                 </div>
               </CardContent>

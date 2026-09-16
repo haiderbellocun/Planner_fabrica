@@ -8,8 +8,8 @@ export const CHART_COLORS = {
   teal: chartColors.teal,
   tealDark: chartColors.tealDeep,
   coral: chartColors.coral,
-  indigo: chartColors.blue,
-  indigoLight: chartColors.indigoLight,
+  rust: chartColors.rust,
+  slate: chartColors.slate,
   yellow: chartColors.yellow,
   yellowLight: '#F0BE5C',
   green: chartColors.green,
@@ -26,11 +26,11 @@ export const CHART_COLORS = {
 export const SERIES_COLORS = [
   CHART_COLORS.teal,
   CHART_COLORS.coral,
-  CHART_COLORS.indigo,
+  CHART_COLORS.rust,
   CHART_COLORS.yellow,
   CHART_COLORS.magenta,
   CHART_COLORS.green,
-  CHART_COLORS.indigoLight,
+  CHART_COLORS.slate,
   CHART_COLORS.yellowLight,
 ];
 
@@ -38,7 +38,7 @@ export const SERIES_COLORS = [
 export const STATUS_COLORS: Record<string, string> = {
   'Sin iniciar': axisTick.fill,
   'En proceso': CHART_COLORS.teal,
-  'En pausa': CHART_COLORS.indigoLight,
+  'En pausa': CHART_COLORS.slate,
   'En revisión': CHART_COLORS.yellow,
   'Ajustes': CHART_COLORS.coral,
   'Finalizado': CHART_COLORS.green,

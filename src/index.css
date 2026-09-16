@@ -101,7 +101,7 @@
     --chart-teal: #0DD9D0;
     --chart-teal-deep: #067A76;
     --chart-coral: #FF6B4A;
-    --chart-indigo: #4F46E5;
+    --chart-rust: #B45309;
     --chart-amber: #E8A317;
     --chart-green: #0CA35A;
     --chart-magenta: #E0619A;
@@ -231,7 +231,7 @@
 @layer components {
   /* Kanban column styling - Snapshot style */
   .kanban-column {
-    @apply bg-muted/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)];
+    @apply bg-muted/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-card;
   }
 
   .kanban-column-header {
@@ -240,7 +240,7 @@
 
   /* Task card - subtle shadow, rounded */
   .task-card {
-    @apply bg-card rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-border hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-primary/20 transition-all cursor-pointer;
+    @apply bg-card rounded-xl p-4 shadow-card border border-border hover:shadow-card-hover hover:border-primary/20 transition-all cursor-pointer;
   }
 
   .task-card-dragging {
@@ -319,11 +319,11 @@
 
   /* Widget card base — big radius, soft shadow */
   .widget-card {
-    @apply rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200;
+    @apply rounded-2xl border border-border bg-card shadow-card transition-all duration-200;
   }
 
   .widget-card:hover {
-    @apply shadow-[0_4px_16px_rgba(0,0,0,0.07)];
+    @apply shadow-card-hover;
   }
 
   /* ---- Storytelling primitives (shared across the whole app) ---- */
@@ -331,16 +331,17 @@
   /* Stat tile — label, monospace figure, optional sparkline + status pill.
      Replaces the old KpiCard's decorative-illustration recipe. */
   .stat-tile {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 transition-shadow duration-200;
-  }
-  .stat-tile:hover {
-    @apply shadow-[0_1px_2px_rgba(10,20,20,0.05),0_12px_28px_rgba(10,20,20,0.08)];
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card shadow-floating p-5 transition-shadow duration-200;
   }
   .stat-tile-label {
     @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
   }
   .stat-tile-value {
     @apply figure text-[26px] font-bold text-foreground leading-none;
+  }
+  /* Promoted KPI — a left accent + larger figure, never more than one or two per row */
+  .stat-tile-primary {
+    @apply border-l-[3px] border-l-primary;
   }
 
   /* Hero banner — the narrative "so what" strip at the top of a story page */
@@ -358,12 +359,12 @@
 
   /* Spotlight card — an individual/team callout, not a table row */
   .spotlight-card {
-    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] p-5 flex flex-col gap-3;
+    @apply rounded-2xl border border-border bg-card shadow-floating p-5 flex flex-col gap-3;
   }
 
   /* Attention item — an actionable callout, severity carried by the stripe */
   .attn-item {
-    @apply flex items-center gap-3.5 rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(10,20,20,0.04),0_8px_24px_rgba(10,20,20,0.05)] px-4 py-3.5;
+    @apply flex items-center gap-3.5 rounded-2xl border border-border bg-card shadow-floating px-4 py-3.5;
   }
   .attn-stripe {
     @apply w-1 self-stretch rounded-full flex-shrink-0;

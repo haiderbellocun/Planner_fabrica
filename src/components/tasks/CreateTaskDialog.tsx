@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { FormSection } from '@/components/shared/StoryUI';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import {
   Select,
   SelectContent,
@@ -92,7 +95,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${DIALOG_SIZES.md} max-h-[90vh] overflow-y-auto`}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Nueva Tarea</DialogTitle>
@@ -107,43 +110,60 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
             </div>
           )}
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Título *</Label>
-              <Input
-                id="title"
-                placeholder="Título de la tarea"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe la tarea..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-4">
+          <div className="space-y-5 py-4">
+            <FormSection title="Detalles">
               <div className="space-y-2">
-                <Label htmlFor="priority">Prioridad</Label>
-                <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baja</SelectItem>
-                    <SelectItem value="medium">Media</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="urgent">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Título *</Label>
+                <Input
+                  id="title"
+                  placeholder="Título de la tarea"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe la tarea..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </FormSection>
+
+            <Separator />
+
+            <FormSection title="Planificación">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Prioridad</Label>
+                  <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baja</SelectItem>
+                      <SelectItem value="medium">Media</SelectItem>
+                      <SelectItem value="high">Alta</SelectItem>
+                      <SelectItem value="urgent">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Fecha límite *</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -177,7 +197,11 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
                   </Select>
                 </div>
               )}
+            </FormSection>
 
+            <Separator />
+
+            <FormSection title="Vinculación">
               <div className="space-y-2">
                 <Label htmlFor="programa">Programa (opcional)</Label>
                 <Select
@@ -327,18 +351,7 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, tipoPrograma }
                   </Select>
                 </div>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Fecha límite *</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                required
-              />
-            </div>
+            </FormSection>
           </div>
 
           <DialogFooter>

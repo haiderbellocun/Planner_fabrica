@@ -12,7 +12,7 @@ export const BADGE_TONES = {
   // pantallas debe distinguirse visualmente tanto de "media" como de "urgente"/"crítica").
   escalated: 'bg-orange-100 text-orange-700',
   danger:    'bg-red-100 text-red-700',
-  special:   'bg-purple-100 text-purple-700',
+  special:   'bg-teal-100 text-teal-800',
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONES;

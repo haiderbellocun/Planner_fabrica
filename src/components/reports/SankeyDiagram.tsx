@@ -16,7 +16,7 @@ const NODE_COLORS: Record<string, string> = {
   'Sin iniciar': axisTick.fill,
   'En proceso':  chartColors.teal,
   'En revisión': chartColors.yellow,
-  'En pausa':    chartColors.indigoLight,
+  'En pausa':    chartColors.slate,
   'Ajustes':     chartColors.coral,
   'Finalizado':  chartColors.green,
 };
@@ -215,7 +215,7 @@ export default function SankeyDiagram({ nodes, links }: SankeyDiagramProps) {
 
   if (!placedNodes.length) {
     return (
-      <Card className="rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <Card className="rounded-2xl border border-border bg-card shadow-card">
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
           Sin datos de transiciones suficientes para el diagrama.
         </CardContent>
@@ -226,7 +226,7 @@ export default function SankeyDiagram({ nodes, links }: SankeyDiagramProps) {
   const aspectPct = (SVG_H / SVG_W) * 100;
 
   return (
-    <Card className="rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+    <Card className="rounded-2xl border border-border bg-card shadow-card">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">Diagrama de flujo — estados y volumen de transiciones</CardTitle>
         <CardDescription className="text-xs">

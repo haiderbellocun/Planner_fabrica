@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUpdateAsignatura } from '@/hooks/useAsignaturas';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import {
   useMaterialesAsignatura,
   useMaterialTypes,
@@ -145,7 +146,7 @@ export function EditAsignaturaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${DIALOG_SIZES.lg} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>Editar Asignatura</DialogTitle>
           <DialogDescription>

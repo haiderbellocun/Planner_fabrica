@@ -20,7 +20,7 @@ const TIPO_LABELS: Record<string, string> = {
 const TIPO_COLORS: Record<string, string> = {
   profesional: 'bg-blue-100 text-blue-700 border-blue-200',
   diplomado:   'bg-amber-100 text-amber-700 border-amber-200',
-  maestria:    'bg-purple-100 text-purple-700 border-purple-200',
+  maestria:    'bg-orange-100 text-orange-700 border-orange-200',
   doctorado:   'bg-emerald-100 text-emerald-700 border-emerald-200',
 };
 
@@ -128,7 +128,7 @@ export default function ProjectsPage() {
             key={s}
             onClick={() => setFilterStatus(s)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterStatus === s
                 ? 'bg-primary text-white border-primary'
                 : 'bg-white text-muted-foreground border-border hover:border-primary/40'
@@ -146,7 +146,7 @@ export default function ProjectsPage() {
             key={t}
             onClick={() => setFilterTipo(filterTipo === t ? 'all' : t)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterTipo === t
                 ? 'bg-teal-500 text-white border-teal-500'
                 : 'bg-white text-muted-foreground border-border hover:border-teal-400'
@@ -164,7 +164,7 @@ export default function ProjectsPage() {
             key={m}
             onClick={() => setFilterMonth(filterMonth === m ? -1 : m)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterMonth === m
                 ? 'bg-amber-400 text-white border-amber-400'
                 : 'bg-white text-muted-foreground border-border hover:border-amber-300'
@@ -177,7 +177,7 @@ export default function ProjectsPage() {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="ml-1 flex items-center gap-1 px-2 py-1.5 rounded-full text-xs text-muted-foreground hover:text-destructive border border-border hover:border-destructive/40 transition-colors"
+            className="ml-1 flex items-center gap-1 px-2 py-1.5 rounded-full text-xs text-muted-foreground hover:text-destructive border border-border hover:border-destructive/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1"
           >
             <X className="h-3 w-3" /> Limpiar
           </button>

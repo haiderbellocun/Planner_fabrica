@@ -19,10 +19,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { chartColors, axisTick, BAR_RADIUS } from '@/components/charts/chartTheme';
 import { AXIS_STYLE, GRID_STYLE } from '@/components/reports/ReportCharts';
+import { EmptyState as SharedEmptyState } from '@/components/shared/StoryUI';
 import { parseTags, type Entrega } from '@/hooks/useEntregas';
 import type { EntregaMaterialResumenRow } from '@/hooks/useEntregaMateriales';
 
-const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
+const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card transition-all duration-200';
 
 // Regla del negocio: cada materia entregada implica 5 materiales (uno de cada tipo requerido).
 // Se usa como estimado mientras la entrega no tiene el detalle real registrado en entrega_materiales.
@@ -77,12 +78,7 @@ function SectionHeader({ tag, title }: { tag: string; title: string }) {
 }
 
 function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <LayoutDashboard className="h-10 w-10 mb-3 opacity-30" />
-      <p className="text-sm">{message}</p>
-    </div>
-  );
+  return <SharedEmptyState message={message} icon={LayoutDashboard} />;
 }
 
 interface EntregasDashboardProps {
@@ -122,7 +118,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
     () =>
       Object.entries(estadoCounts)
         .filter(([, v]) => v > 0)
-        .map(([k, v]) => ({ estado: k, label: ESTADO_META[k]?.label ?? k, value: v, color: ESTADO_META[k]?.color ?? chartColors.blue })),
+        .map(([k, v]) => ({ estado: k, label: ESTADO_META[k]?.label ?? k, value: v, color: ESTADO_META[k]?.color ?? chartColors.rust })),
     [estadoCounts]
   );
 
@@ -192,9 +188,9 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
         <SectionHeader tag="① Resumen" title="Estado de las entregas" />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.blue}` }}>
+          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.rust}` }}>
             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total</p>
-            <p className="text-2xl font-black leading-none" style={{ color: chartColors.blue }}>{entregas.length}</p>
+            <p className="text-2xl font-black leading-none" style={{ color: chartColors.rust }}>{entregas.length}</p>
             <p className="text-[10px] text-muted-foreground mt-1">entregas registradas</p>
           </div>
           <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.tealDeep}` }}>
@@ -338,7 +334,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                       tick={{ fontSize: 11, fill: axisTick.fill }}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" name="Entregas" fill={chartColors.blue} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={22}>
+                    <Bar dataKey="value" name="Entregas" fill={chartColors.rust} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={22}>
                       <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F1A1A' }} />
                     </Bar>
                   </BarChart>

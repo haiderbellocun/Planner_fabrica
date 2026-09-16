@@ -12,7 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
+import { Loader2, ArrowUp, ArrowDown, ChevronsUpDown, ListTodo } from 'lucide-react';
+import { EmptyState } from '@/components/shared/StoryUI';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -215,9 +216,12 @@ export function TaskListView({
           </TableHeader>
           <TableBody>
             {paged.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columnCount} className="text-center py-8 text-muted-foreground">
-                  {hasActiveFilters ? 'Ningún resultado con los filtros actuales' : 'No hay tareas en este proyecto'}
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columnCount} className="py-0">
+                  <EmptyState
+                    icon={ListTodo}
+                    message={hasActiveFilters ? 'Ningún resultado con los filtros actuales' : 'No hay tareas en este proyecto'}
+                  />
                 </TableCell>
               </TableRow>
             ) : (

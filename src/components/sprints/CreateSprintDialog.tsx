@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { Sprint, useCreateSprint, useUpdateSprint } from '@/hooks/useSprints';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 
 interface CreateSprintDialogProps {
   projectId: string;
@@ -69,7 +70,7 @@ export function CreateSprintDialog({ projectId, sprint, open, onOpenChange }: Cr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className={DIALOG_SIZES.sm}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{sprint ? 'Editar sprint' : 'Nuevo sprint'}</DialogTitle>

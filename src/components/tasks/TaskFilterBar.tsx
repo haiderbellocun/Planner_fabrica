@@ -204,7 +204,9 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
           {filters.search && (
             <Badge variant="secondary" className="gap-1">
               "{filters.search}"
-              <button onClick={() => { setSearchInput(''); set('search', undefined); }}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => { setSearchInput(''); set('search', undefined); }}><X className="h-3 w-3" /></button>
             </Badge>
           )}
           {statusIds.map((id) => {
@@ -213,7 +215,9 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
             return (
               <Badge key={id} variant="secondary" className="gap-1">
                 {s.name}
-                <button onClick={() => {
+                <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => {
                   const next = statusIds.filter((x) => x !== id);
                   set('status_id', next.length > 0 ? next : undefined);
                 }}><X className="h-3 w-3" /></button>
@@ -223,7 +227,9 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
           {priorities.map((p) => (
             <Badge key={p} variant="secondary" className="gap-1">
               {priorityLabels[p] ?? p}
-              <button onClick={() => {
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => {
                 const next = priorities.filter((x) => x !== p);
                 set('priority', next.length > 0 ? next : undefined);
               }}><X className="h-3 w-3" /></button>
@@ -234,31 +240,41 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
               {filters.assignee_id === 'unassigned'
                 ? 'Sin asignar'
                 : profiles.find((p) => p.id === filters.assignee_id)?.full_name ?? 'Responsable'}
-              <button onClick={() => set('assignee_id', undefined)}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => set('assignee_id', undefined)}><X className="h-3 w-3" /></button>
             </Badge>
           )}
           {filters.tag && (
             <Badge variant="secondary" className="gap-1">
               #{filters.tag}
-              <button onClick={() => set('tag', undefined)}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => set('tag', undefined)}><X className="h-3 w-3" /></button>
             </Badge>
           )}
           {filters.epic_id && (
             <Badge variant="secondary" className="gap-1">
               {filters.epic_id === 'none' ? 'Sin épica' : epics.find((e) => e.id === filters.epic_id)?.title ?? 'Épica'}
-              <button onClick={() => set('epic_id', undefined)}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => set('epic_id', undefined)}><X className="h-3 w-3" /></button>
             </Badge>
           )}
           {filters.team_id && (
             <Badge variant="secondary" className="gap-1">
               {filters.team_id === 'none' ? 'Sin equipo' : teams.find((t) => t.id === filters.team_id)?.name ?? 'Equipo'}
-              <button onClick={() => set('team_id', undefined)}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => set('team_id', undefined)}><X className="h-3 w-3" /></button>
             </Badge>
           )}
           {filters.sprint_id && (
             <Badge variant="secondary" className="gap-1">
               {filters.sprint_id === 'none' ? 'Backlog' : sprints.find((s) => s.id === filters.sprint_id)?.name ?? 'Sprint'}
-              <button onClick={() => set('sprint_id', undefined)}><X className="h-3 w-3" /></button>
+              <button
+              className="rounded-full p-0.5 -mr-0.5 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              onClick={() => set('sprint_id', undefined)}><X className="h-3 w-3" /></button>
             </Badge>
           )}
         </div>

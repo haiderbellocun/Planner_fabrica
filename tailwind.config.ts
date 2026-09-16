@@ -100,8 +100,13 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
-        mono: ["ui-monospace", '"SF Mono"', '"Cascadia Code"', "Consolas", "monospace"],
+        sans: ['"IBM Plex Sans"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", '"SF Mono"', '"Cascadia Code"', "Consolas", "monospace"],
+      },
+      boxShadow: {
+        card: "0 1px 3px rgba(0,0,0,0.06)",
+        "card-hover": "0 4px 16px rgba(10,20,20,0.08)",
+        floating: "0 8px 24px rgba(10,20,20,0.10)",
       },
       keyframes: {
         "accordion-down": {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCreateTema, useUpdateTema, Tema } from '@/hooks/useTemas';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import {
   useMaterialTypes,
   useMaterialesTema,
@@ -136,7 +137,7 @@ export function CreateEditTemaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${DIALOG_SIZES.md} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Tema' : 'Crear Tema'}</DialogTitle>
           <DialogDescription>

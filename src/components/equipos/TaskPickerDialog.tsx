@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { StatusPill } from '@/components/shared/StoryUI';
 import { useTaskSearch } from '@/hooks/useEquipoPlan';
 import { parseDateOnly } from '@/lib/dates';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -51,7 +52,7 @@ export function TaskPickerDialog({ open, onOpenChange, defaultAssigneeId, onSele
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className={DIALOG_SIZES.sm}>
         <DialogHeader>
           <DialogTitle>Agregar tarea al plan</DialogTitle>
           <DialogDescription>Busca una tarea de cualquier proyecto para agregarla a esta semana.</DialogDescription>

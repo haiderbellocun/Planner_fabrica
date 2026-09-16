@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useMaterialTypes } from '@/hooks/useMateriales';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -398,7 +399,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${DIALOG_SIZES.xl} max-h-[90vh] overflow-y-auto`}>
         {step === 'category' ? (
           <>
             <DialogHeader>

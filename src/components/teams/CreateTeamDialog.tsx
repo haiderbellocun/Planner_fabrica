@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { FormSection } from '@/components/shared/StoryUI';
 import { Loader2 } from 'lucide-react';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import { useCreateTeam, useUpdateTeam, useSetTeamMembers } from '@/hooks/useTeams';
 import type { Team } from '@/types/database';
 import type { ProjectMember } from '@/types/database';
@@ -26,7 +29,7 @@ interface CreateTeamDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const PRESET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6'];
+const PRESET_COLORS = ['#B45309', '#64748B', '#ec4899', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6'];
 
 export function CreateTeamDialog({ projectId, team, members, open, onOpenChange }: CreateTeamDialogProps) {
   const createTeam = useCreateTeam(projectId);
@@ -79,7 +82,7 @@ export function CreateTeamDialog({ projectId, team, members, open, onOpenChange 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className={DIALOG_SIZES.sm}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{team ? 'Editar equipo' : 'Nuevo equipo'}</DialogTitle>
@@ -88,46 +91,49 @@ export function CreateTeamDialog({ projectId, team, members, open, onOpenChange 
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="team-name">Nombre *</Label>
-              <Input
-                id="team-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ej: Equipo Backend"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {PRESET_COLORS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setColor(preset)}
-                    className="h-7 w-7 rounded-full border-2 transition-all"
-                    style={{
-                      backgroundColor: preset,
-                      borderColor: color === preset ? '#111827' : 'transparent',
-                    }}
-                    aria-label={`Seleccionar color ${preset}`}
-                    title={preset}
-                  />
-                ))}
+          <div className="space-y-5 py-4">
+            <FormSection title="Identidad">
+              <div className="space-y-2">
+                <Label htmlFor="team-name">Nombre *</Label>
                 <Input
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="w-16 h-8 p-1"
+                  id="team-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ej: Equipo Backend"
+                  required
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Miembros</Label>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {PRESET_COLORS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setColor(preset)}
+                      className="h-7 w-7 rounded-full border-2 transition-all"
+                      style={{
+                        backgroundColor: preset,
+                        borderColor: color === preset ? '#111827' : 'transparent',
+                      }}
+                      aria-label={`Seleccionar color ${preset}`}
+                      title={preset}
+                    />
+                  ))}
+                  <Input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="w-16 h-8 p-1"
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <Separator />
+
+            <FormSection title="Miembros">
               {members.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Este proyecto no tiene miembros para agregar.</p>
               ) : (
@@ -152,7 +158,7 @@ export function CreateTeamDialog({ projectId, team, members, open, onOpenChange 
                   ))}
                 </div>
               )}
-            </div>
+            </FormSection>
           </div>
 
           <DialogFooter>

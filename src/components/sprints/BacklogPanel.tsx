@@ -13,6 +13,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { DIALOG_SIZES } from '@/lib/dialogSizes';
 import { Plus, Loader2 } from 'lucide-react';
 import { CreateSprintDialog } from './CreateSprintDialog';
 import { SprintSection } from './SprintSection';
@@ -303,7 +304,7 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
       />
 
       <Dialog open={!!completingSprint} onOpenChange={(open) => !open && setCompletingSprint(null)}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className={DIALOG_SIZES.sm}>
           <DialogHeader>
             <DialogTitle>Completar sprint</DialogTitle>
             <DialogDescription>

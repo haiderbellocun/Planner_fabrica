@@ -52,9 +52,9 @@ interface CalendarEvents {
 // ── Colors ─────────────────────────────────────────────────────────────────
 
 const PERSON_COLORS = [
-  '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B',
+  '#B45309', '#7A9391', '#EC4899', '#F59E0B',
   '#10B981', '#3B82F6', '#EF4444', '#14B8A6',
-  '#F97316', '#84CC16', '#06B6D4', '#A855F7',
+  '#F97316', '#84CC16', '#06B6D4', '#0D9488',
 ];
 
 function getPersonColor(id: string | null): string {
