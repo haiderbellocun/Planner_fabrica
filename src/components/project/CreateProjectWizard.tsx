@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
   const [links, setLinks] = useState<{ label: string; url: string }[]>([{ label: '', url: '' }]);
   const [endDate, setEndDate] = useState<string>(initialData?.end_date ?? '');
   const [category, setCategory] = useState<ProjectCategory | null>(initialData?.category ?? null);
+  const [esVirtualizacion, setEsVirtualizacion] = useState(false);
 
   // Información específica para proyectos de marketing
   const [marketingPiecesType, setMarketingPiecesType] = useState<'imagen' | 'video' | 'ambos' | ''>('');
@@ -213,6 +215,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
         end_date: endDate,
         category: category || null,
         tipo_programa: category === 'desarrollo' ? 'desarrollo' : null,
+        es_virtualizacion: esVirtualizacion,
       });
 
       const projectId = projectResponse.id;
@@ -569,6 +572,20 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="es_virtualizacion">¿Es un proyecto de virtualización?</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Virtualización de contenido académico, independiente del tipo de proyecto elegido.
+                  </p>
+                </div>
+                <Switch
+                  id="es_virtualizacion"
+                  checked={esVirtualizacion}
+                  onCheckedChange={setEsVirtualizacion}
                 />
               </div>
 

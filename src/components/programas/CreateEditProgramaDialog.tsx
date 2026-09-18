@@ -26,6 +26,7 @@ interface CreateEditProgramaDialogProps {
   programa: Programa | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialName?: string;
 }
 
 export function CreateEditProgramaDialog({
@@ -33,6 +34,7 @@ export function CreateEditProgramaDialog({
   programa,
   open,
   onOpenChange,
+  initialName,
 }: CreateEditProgramaDialogProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -51,12 +53,12 @@ export function CreateEditProgramaDialog({
       setDescription(programa.description || '');
       setTipoPrograma(programa.tipo_programa || '');
     } else {
-      setName('');
+      setName(initialName || '');
       setCode('');
       setDescription('');
       setTipoPrograma('');
     }
-  }, [programa, open]);
+  }, [programa, open, initialName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

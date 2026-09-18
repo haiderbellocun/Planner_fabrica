@@ -5,7 +5,10 @@ import { toast } from 'sonner';
 import { useTemas, useDeleteTema } from '@/hooks/useTemas';
 import { useMaterialTypes } from '@/hooks/useMateriales';
 import { CreateEditAsignaturaDialog } from '@/components/asignaturas/CreateEditAsignaturaDialog';
+import { QuickAddAsignaturasDialog } from '@/components/asignaturas/QuickAddAsignaturasDialog';
 import { CreateEditTemaDialog } from '@/components/temas/CreateEditTemaDialog';
+import { QuickAddTemasDialog } from '@/components/temas/QuickAddTemasDialog';
+import { CreateVideoDialog } from '@/components/programas/CreateVideoDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Plus, Video } from 'lucide-react';
 
 interface Asignatura {
   id: string;
@@ -41,6 +44,7 @@ interface ProgramaCardProps {
 function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; programaId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editTemaOpen, setEditTemaOpen] = useState(false);
+  const [quickAddTemasOpen, setQuickAddTemasOpen] = useState(false);
   const [editAsignaturaOpen, setEditAsignaturaOpen] = useState(false);
   const [selectedTema, setSelectedTema] = useState<any>(null);
 
@@ -175,18 +179,29 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
             ))
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => {
-              setSelectedTema(null);
-              setEditTemaOpen(true);
-            }}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Agregar Tema
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                setSelectedTema(null);
+                setEditTemaOpen(true);
+              }}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Agregar Gránulo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => setQuickAddTemasOpen(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Agregar varios
+            </Button>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
@@ -198,6 +213,12 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
           setEditTemaOpen(open);
           if (!open) setSelectedTema(null);
         }}
+      />
+
+      <QuickAddTemasDialog
+        asignaturaId={asignatura.id}
+        open={quickAddTemasOpen}
+        onOpenChange={setQuickAddTemasOpen}
       />
 
       <CreateEditAsignaturaDialog
@@ -218,6 +239,8 @@ export function ProgramaCardComplete({
 }: ProgramaCardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [asignaturaDialogOpen, setAsignaturaDialogOpen] = useState(false);
+  const [quickAddAsignaturasOpen, setQuickAddAsignaturasOpen] = useState(false);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
 
   const asignaturas = programa.asignaturas || [];
 
@@ -291,15 +314,35 @@ export function ProgramaCardComplete({
                 ))
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-2"
-                onClick={() => setAsignaturaDialogOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Asignatura
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setAsignaturaDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar Asignatura
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setQuickAddAsignaturasOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar varias
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setVideoDialogOpen(true)}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Agregar Video
+                </Button>
+              </div>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
@@ -310,6 +353,18 @@ export function ProgramaCardComplete({
         asignatura={null}
         open={asignaturaDialogOpen}
         onOpenChange={setAsignaturaDialogOpen}
+      />
+
+      <QuickAddAsignaturasDialog
+        programaId={programa.id}
+        open={quickAddAsignaturasOpen}
+        onOpenChange={setQuickAddAsignaturasOpen}
+      />
+
+      <CreateVideoDialog
+        programaId={programa.id}
+        open={videoDialogOpen}
+        onOpenChange={setVideoDialogOpen}
       />
     </>
   );

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProject, useCompleteProject, useDeleteProject, useUpdateProject, usePinProject, useUnpinProject } from '@/hooks/useProjects';
 import { useTasks, useTask, useTaskStatuses, TaskWithDetails } from '@/hooks/useTasks';
-import { useProgramas, useDeletePrograma, Programa } from '@/hooks/useProgramas';
+import { useProgramas, useCreatePrograma, useDeletePrograma, Programa } from '@/hooks/useProgramas';
 import { useEpics } from '@/hooks/useEpics';
 import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
 import { Epic } from '@/hooks/useEpics';
@@ -13,6 +13,7 @@ import { CreateTaskDialog } from '@/components/tasks/CreateTaskDialog';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { ProgramaCardComplete } from '@/components/programas/ProgramaCardComplete';
 import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgramaDialog';
+import { CreateVideoDialog } from '@/components/programas/CreateVideoDialog';
 import { EpicsPanel } from '@/components/epics/EpicsPanel';
 import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
 import { TeamsPanel } from '@/components/teams/TeamsPanel';
@@ -31,6 +32,7 @@ import { ProjectActivityFeed } from '@/components/projects/ProjectActivityFeed';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { VirtualizacionToggle } from '@/components/project/VirtualizacionToggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatTile } from '@/components/shared/StoryUI';
 import {
@@ -103,11 +105,15 @@ export default function ProjectDetailPage() {
     return defaults;
   });
   const [programaDialogOpen, setProgramaDialogOpen] = useState(false);
+  const [programaNameHint, setProgramaNameHint] = useState('');
   const [selectedPrograma, setSelectedPrograma] = useState<Programa | null>(null);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
   const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [videoProgramaId, setVideoProgramaId] = useState<string | null>(null);
 
   const deletePrograma = useDeletePrograma(projectId || '');
+  const createPrograma = useCreatePrograma(projectId || '');
   const completeProject = useCompleteProject();
   const deleteProject = useDeleteProject();
   const updateProject = useUpdateProject();
@@ -255,9 +261,29 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleCreatePrograma = () => {
+  const handleCreatePrograma = (suggestedName?: string) => {
     setSelectedPrograma(null);
+    setProgramaNameHint(suggestedName || '');
     setProgramaDialogOpen(true);
+  };
+
+  // "Solo Videos": crea (o reutiliza) el programa "Videos" en silencio y va
+  // directo al formulario de video (nombre + curso), sin pasar por el diálogo
+  // genérico de crear programa.
+  const handleStartSoloVideos = async () => {
+    const existing = programas.find((p: any) => p.name === 'Videos');
+    if (existing) {
+      setVideoProgramaId(existing.id);
+      setVideoDialogOpen(true);
+      return;
+    }
+    try {
+      const nuevo: any = await createPrograma.mutateAsync({ name: 'Videos' });
+      setVideoProgramaId(nuevo.id);
+      setVideoDialogOpen(true);
+    } catch {
+      // el toast de error ya lo muestra useCreatePrograma
+    }
   };
 
   if (projectLoading) {
@@ -311,6 +337,7 @@ export default function ProjectDetailPage() {
               const { label, className } = PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES];
               return <Badge className={className}>{label}</Badge>;
             })()}
+            <VirtualizacionToggle project={project} />
           </div>
           <p className="page-description">{project.description || 'Sin descripción'}</p>
 
@@ -508,7 +535,7 @@ export default function ProjectDetailPage() {
         <TabsList>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           {canManageAsignaturas && (
-            <TabsTrigger value="programas">Programas ({programas.length})</TabsTrigger>
+            <TabsTrigger value="programas">Proceso ({programas.length})</TabsTrigger>
           )}
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
           {isDesarrolloProject && (
@@ -636,15 +663,43 @@ export default function ProjectDetailPage() {
             </div>
           ) : programas.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
+              <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
                 <p className="text-muted-foreground text-center">
-                  Este proyecto no tiene programas configurados aún
+                  Este proyecto no tiene nada configurado en Proceso aún. ¿Qué vas a gestionar aquí?
                 </p>
                 {canManageAsignaturas && (
-                  <Button className="mt-4" onClick={handleCreatePrograma}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear Primer Programa
-                  </Button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+                    <button
+                      type="button"
+                      onClick={() => handleCreatePrograma()}
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                    >
+                      <p className="font-medium text-sm">Programas</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Estructura completa: programa, asignaturas por semestre y gránulos.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStartSoloVideos}
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                    >
+                      <p className="font-medium text-sm">Solo Videos</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Para proyectos que solo producen videos sueltos, sin semestres.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreatePrograma('Materia')}
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                    >
+                      <p className="font-medium text-sm">Materia</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Para trabajar una sola materia suelta, sin programa completo detrás.
+                      </p>
+                    </button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -652,7 +707,7 @@ export default function ProjectDetailPage() {
             <>
               {canManageAsignaturas && (
                 <div className="flex justify-end">
-                  <Button onClick={handleCreatePrograma}>
+                  <Button onClick={() => handleCreatePrograma()}>
                     <Plus className="h-4 w-4 mr-2" />
                     Crear Programa
                   </Button>
@@ -744,11 +799,20 @@ export default function ProjectDetailPage() {
         projectId={projectId!}
         programa={selectedPrograma}
         open={programaDialogOpen}
+        initialName={programaNameHint}
         onOpenChange={(open) => {
           setProgramaDialogOpen(open);
           if (!open) setSelectedPrograma(null);
         }}
       />
+
+      {videoProgramaId && (
+        <CreateVideoDialog
+          programaId={videoProgramaId}
+          open={videoDialogOpen}
+          onOpenChange={setVideoDialogOpen}
+        />
+      )}
 
       <CreateEpicDialog
         projectId={projectId!}

@@ -201,7 +201,7 @@ export const getProject = async (req: AuthRequest, res: Response) => {
  */
 export const createProject = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, key, start_date, end_date, tipo_programa, asignaturas, category, link, link_label } = req.body;
+    const { name, description, key, start_date, end_date, tipo_programa, asignaturas, category, link, link_label, es_virtualizacion } = req.body;
     const profileId = req.user?.profileId;
 
     if (!end_date) {
@@ -216,10 +216,10 @@ export const createProject = async (req: AuthRequest, res: Response) => {
     try {
       // 1. Insert project
       const projectResult = await query(
-        `INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category, link, link_label)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10)
+        `INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category, link, link_label, es_virtualizacion)
+         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11)
          RETURNING *`,
-        [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date, tipo_programa || null, category || null, link || null, link_label || null]
+        [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date, tipo_programa || null, category || null, link || null, link_label || null, es_virtualizacion ?? null]
       );
 
       const project = projectResult.rows[0];
@@ -429,7 +429,7 @@ export const completeProject = async (req: AuthRequest, res: Response) => {
 export const updateProject = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, status, start_date, end_date, link, link_label } = req.body;
+    const { name, description, status, start_date, end_date, link, link_label, es_virtualizacion } = req.body;
 
     // Build dynamic update query
     const updates: string[] = [];
@@ -463,6 +463,10 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     if (link_label !== undefined) {
       updates.push(`link_label = $${paramCount++}`);
       values.push(link_label || null);
+    }
+    if (es_virtualizacion !== undefined) {
+      updates.push(`es_virtualizacion = $${paramCount++}`);
+      values.push(es_virtualizacion);
     }
 
     if (updates.length === 0) {

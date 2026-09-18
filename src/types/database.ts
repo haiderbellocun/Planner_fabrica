@@ -46,6 +46,7 @@ export interface Project {
   end_date: string | null;
   owner_id: string | null;
   tipo_programa: TipoPrograma | null;
+  es_virtualizacion: boolean | null;
   link: string | null;
   link_label: string | null;
   created_at: string;

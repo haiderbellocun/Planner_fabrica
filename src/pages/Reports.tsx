@@ -280,7 +280,7 @@ function TabResumen() {
     const inProgress = Number(p.in_progress_tasks ?? 0);
     const inReview = Number(p.in_review_tasks ?? 0);
     return {
-      name: p.key,
+      name: p.name,
       completadas: completed,
       en_progreso: inProgress,
       en_revision: inReview,
@@ -422,7 +422,14 @@ function TabResumen() {
                 <BarChart data={projectBarData} layout="vertical" margin={{ left: 10, right: 10 }}>
                   <CartesianGrid horizontal={false} {...GRID_STYLE} />
                   <XAxis type="number" {...AXIS_STYLE} />
-                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={55} tick={{ fill: axisTick.fill, fontSize: 12 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    {...AXIS_STYLE}
+                    width={110}
+                    tick={{ fill: axisTick.fill, fontSize: 12 }}
+                    tickFormatter={(value: string) => (value.length > 16 ? `${value.slice(0, 15)}…` : value)}
+                  />
                   <ChartTooltip content={<CustomTooltip />} />
                   <Bar dataKey="completadas" stackId="a" fill={CHART_COLORS.teal} radius={[0, 0, 0, 0]} />
                   <Bar dataKey="en_progreso" stackId="a" fill={CHART_COLORS.rust} />

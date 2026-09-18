@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, FolderKanban, Loader2, X, CalendarClock, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
+import { VirtualizacionToggle } from '@/components/project/VirtualizacionToggle';
 import { cn } from '@/lib/utils';
 import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
 
@@ -45,6 +46,7 @@ export default function ProjectsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterTipo, setFilterTipo]     = useState<string>('all');
   const [filterMonth, setFilterMonth]   = useState<number>(-1); // -1 = todos
+  const [filterVirt, setFilterVirt]     = useState<string>('all'); // all | yes | no | unset
 
   const canCreateProject = user?.role === 'admin' || user?.role === 'project_leader';
 
@@ -85,13 +87,16 @@ export default function ProjectsPage() {
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (filterTipo !== 'all' && p.tipo_programa !== filterTipo) return false;
       if (filterMonth !== -1 && p.end_date && new Date(p.end_date).getMonth() !== filterMonth) return false;
+      if (filterVirt === 'yes' && p.es_virtualizacion !== true) return false;
+      if (filterVirt === 'no' && p.es_virtualizacion !== false) return false;
+      if (filterVirt === 'unset' && p.es_virtualizacion !== null) return false;
       return true;
     }),
-  [baseProjects, filterStatus, filterTipo, filterMonth]);
+  [baseProjects, filterStatus, filterTipo, filterMonth, filterVirt]);
 
-  const hasFilters = filterStatus !== 'all' || filterTipo !== 'all' || filterMonth !== -1;
+  const hasFilters = filterStatus !== 'all' || filterTipo !== 'all' || filterMonth !== -1 || filterVirt !== 'all';
 
-  const clearFilters = () => { setFilterStatus('all'); setFilterTipo('all'); setFilterMonth(-1); };
+  const clearFilters = () => { setFilterStatus('all'); setFilterTipo('all'); setFilterMonth(-1); setFilterVirt('all'); };
 
   if (isLoading) {
     return (
@@ -153,6 +158,28 @@ export default function ProjectsPage() {
             )}
           >
             {TIPO_LABELS[t] ?? t}
+          </button>
+        ))}
+
+        <div className="h-4 w-px bg-border mx-1" />
+
+        {/* Virtualización */}
+        {([
+          { v: 'yes', label: 'Virtualización' },
+          { v: 'no', label: 'No es virtualización' },
+          { v: 'unset', label: 'Sin clasificar' },
+        ] as const).map(({ v, label }) => (
+          <button
+            key={v}
+            onClick={() => setFilterVirt(filterVirt === v ? 'all' : v)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
+              filterVirt === v
+                ? 'bg-teal-600 text-white border-teal-600'
+                : 'bg-white text-muted-foreground border-border hover:border-teal-400'
+            )}
+          >
+            {label}
           </button>
         ))}
 
@@ -239,6 +266,7 @@ export default function ProjectsPage() {
                           {TIPO_LABELS[project.tipo_programa] ?? project.tipo_programa}
                         </span>
                       )}
+                      <VirtualizacionToggle project={project} />
                       {(() => {
                         const statusBadge = PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES];
                         if (!statusBadge) return null;
