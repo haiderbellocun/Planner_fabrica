@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Loader2, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -328,6 +328,13 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
 
   const isPending = updatingChecklist || assigningMaestro;
 
+  const [selectedPrograma, setSelectedPrograma] = useState('all');
+  const programaOptions = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.programa_name).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)),
+    [rows],
+  );
+  const filteredRows = selectedPrograma === 'all' ? rows : rows.filter((r) => r.programa_name === selectedPrograma);
+
   const handleUpdate = useCallback(
     (asignaturaId: string, data: ChecklistUpdate) => {
       updateChecklist({ asignaturaId, data });
@@ -360,9 +367,9 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
     );
   }
 
-  const total = rows.length;
-  const completas = rows.filter((r) => calcEstadoFinal(r) === 'Materia Completa').length;
-  const enProceso = rows.filter((r) => calcEstadoFinal(r) === 'En proceso').length;
+  const total = filteredRows.length;
+  const completas = filteredRows.filter((r) => calcEstadoFinal(r) === 'Materia Completa').length;
+  const enProceso = filteredRows.filter((r) => calcEstadoFinal(r) === 'En proceso').length;
   const sinIniciar = total - completas - enProceso;
 
   return (
@@ -380,6 +387,21 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
             <p className={cn('text-2xl font-semibold mt-0.5', s.color)}>{s.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Filtro por programa */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-slate-600">Programa</label>
+        <select
+          value={selectedPrograma}
+          onChange={(e) => setSelectedPrograma(e.target.value)}
+          className="text-xs rounded-md border border-slate-200 px-2 py-1 bg-white text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary min-w-[200px]"
+        >
+          <option value="all">Todos los programas ({rows.length})</option>
+          {programaOptions.map((p) => (
+            <option key={p} value={p!}>{p}</option>
+          ))}
+        </select>
       </div>
 
       {/* Legend */}
@@ -434,7 +456,7 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <ChecklistRowComponent
                 key={row.asignatura_id}
                 row={row}

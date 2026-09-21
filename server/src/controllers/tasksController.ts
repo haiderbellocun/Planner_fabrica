@@ -787,7 +787,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id, sprint_id, horas_estimadas } = req.body;
+    const { title, description, priority, assignee_id, due_date, tags, epic_id, team_id, sprint_id, horas_estimadas, asignatura_id } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -889,6 +889,10 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     if (horas_estimadas !== undefined) {
       updates.push(`horas_estimadas = $${paramCount++}`);
       values.push(horas_estimadas);
+    }
+    if (asignatura_id !== undefined) {
+      updates.push(`asignatura_id = $${paramCount++}`);
+      values.push(asignatura_id || null);
     }
 
     if (updates.length === 0) {

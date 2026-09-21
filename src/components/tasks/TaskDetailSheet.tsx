@@ -35,6 +35,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useProject } from '@/hooks/useProjects';
 import { useTeams } from '@/hooks/useTeams';
 import { useSprints } from '@/hooks/useSprints';
+import { useProgramas } from '@/hooks/useProgramas';
 import { TagsEditor } from './TagsEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -106,6 +107,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const { data: project } = useProject(task?.project_id);
   const { data: teams = [] } = useTeams(task?.project_id);
   const { data: sprints = [] } = useSprints(task?.project_id);
+  const { data: programas = [] } = useProgramas(task?.project_id);
   const { data: comments = [] } = useTaskComments(task?.id);
   const { user } = useAuth();
   const updateTask = useUpdateTask();
@@ -148,6 +150,16 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
   // Use full task data if available, otherwise fall back to prop
   const taskData = fullTask || task;
+
+  // Selector Programa -> Materia: el programa elegido es solo un filtro en pantalla
+  // (lo que persiste en la tarea es asignatura_id); se reinicia al cambiar de tarea.
+  const [pendingProgramaId, setPendingProgramaId] = useState<string | null>(null);
+  useEffect(() => {
+    setPendingProgramaId(null);
+  }, [taskData?.id]);
+  const effectiveProgramaId = pendingProgramaId ?? taskData?.programa?.id ?? '';
+  const selectedPrograma = (programas as any[]).find((p) => p.id === effectiveProgramaId);
+  const materiaOptions: any[] = selectedPrograma?.asignaturas ?? [];
 
   // Handle tema assignee change
   const handleTemaAssigneeChange = (temaId: string, assigneeId: string | null) => {
@@ -258,6 +270,15 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
   const handleSprintChange = (sprintId: string) => {
     updateTask.mutate({ id: taskData.id, sprint_id: sprintId || null });
+  };
+
+  const handleProgramaChange = (programaId: string) => {
+    // Solo cambia el filtro visible -- la tarea no se actualiza hasta que elijan una materia.
+    setPendingProgramaId(programaId);
+  };
+
+  const handleMateriaChange = (asignaturaId: string) => {
+    updateTask.mutate({ id: taskData.id, asignatura_id: asignaturaId || null });
   };
 
   // Check which status transitions are allowed for current user
@@ -405,7 +426,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
       >
         <div className={cn('flex', isMobile ? 'flex-col h-full' : 'h-full')} style={!isMobile ? { maxHeight: '88vh' } : undefined}>
           {/* ── LEFT PANEL (Detalles + Materiales en escritorio; contenido de pestañas en celular) ── */}
-          <div className={cn('flex flex-col flex-1 overflow-hidden', !isMobile && 'border-r border-border')}>
+          <div className={cn('flex flex-col flex-1 min-w-0 overflow-hidden', !isMobile && 'border-r border-border')}>
             {/* Task header */}
             <div className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
               {taskData.parent && (
@@ -494,7 +515,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 )}
               </DialogTitle>
               {taskData.description && (
-                <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed whitespace-pre-line max-h-40 overflow-y-auto pr-2">
+                <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed whitespace-pre-line break-all max-h-40 overflow-y-auto pr-2">
                   {taskData.description}
                 </DialogDescription>
               )}
@@ -636,6 +657,48 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {programas.length > 0 && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Programa</label>
+                  <Select value={effectiveProgramaId || 'none'} onValueChange={(v) => handleProgramaChange(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin programa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin programa</SelectItem>
+                      {(programas as any[]).map((programa) => (
+                        <SelectItem key={programa.id} value={programa.id}>
+                          {programa.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Materia</label>
+                  <Select
+                    value={taskData.asignatura_id || 'none'}
+                    onValueChange={(v) => handleMateriaChange(v === 'none' ? '' : v)}
+                    disabled={!effectiveProgramaId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin materia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin materia</SelectItem>
+                      {materiaOptions.map((asignatura) => (
+                        <SelectItem key={asignatura.id} value={asignatura.id}>
+                          {asignatura.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
           </div>
 
