@@ -19,24 +19,41 @@ export const listProgramas = async (req: AuthRequest, res: Response) => {
       [projectId]
     );
 
-    // For each programa, get its asignaturas
-    const programasWithAsignaturas = await Promise.all(
-      programasResult.rows.map(async (programa) => {
-        const asignaturasResult = await query(
-          `SELECT a.*
+    // Get every asignatura for every programa in one shot instead of one
+    // query per programa (N+1) -- with dozens of programas that pattern was
+    // firing that many near-simultaneous queries and exhausting the DB's
+    // connection pool.
+    const programaIds = programasResult.rows.map((p) => p.id);
+    const asignaturasResult = programaIds.length
+      ? await query(
+          `SELECT a.*, COUNT(t.id) AS temas_count
            FROM public.asignaturas a
-           WHERE a.programa_id = $1
-           ORDER BY a.display_order ASC, a.created_at ASC`,
-          [programa.id]
-        );
+           LEFT JOIN public.temas t ON t.asignatura_id = a.id
+           WHERE a.programa_id = ANY($1)
+           GROUP BY a.id
+           ORDER BY a.programa_id, a.display_order ASC, a.created_at ASC`,
+          [programaIds]
+        )
+      : { rows: [] as any[] };
 
-        return {
-          ...programa,
-          asignaturas: asignaturasResult.rows,
-          asignaturas_count: asignaturasResult.rows.length,
-        };
-      })
-    );
+    const asignaturasByPrograma = new Map<string, any[]>();
+    for (const asignatura of asignaturasResult.rows) {
+      const key = String(asignatura.programa_id);
+      if (!asignaturasByPrograma.has(key)) asignaturasByPrograma.set(key, []);
+      asignaturasByPrograma.get(key)!.push({
+        ...asignatura,
+        temas_count: parseInt(asignatura.temas_count, 10),
+      });
+    }
+
+    const programasWithAsignaturas = programasResult.rows.map((programa) => {
+      const asignaturas = asignaturasByPrograma.get(String(programa.id)) || [];
+      return {
+        ...programa,
+        asignaturas,
+        asignaturas_count: asignaturas.length,
+      };
+    });
 
     res.json(programasWithAsignaturas);
   } catch (error) {

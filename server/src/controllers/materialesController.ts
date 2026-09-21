@@ -91,7 +91,7 @@ export const createMaterialRequerido = async (req: AuthRequest, res: Response) =
 export const updateMaterialRequerido = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { cantidad, descripcion } = req.body;
+    const { cantidad, descripcion, completado } = req.body;
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -104,6 +104,10 @@ export const updateMaterialRequerido = async (req: AuthRequest, res: Response) =
     if (descripcion !== undefined) {
       updates.push(`descripcion = $${paramCount++}`);
       values.push(descripcion);
+    }
+    if (completado !== undefined) {
+      updates.push(`completado = $${paramCount++}`);
+      values.push(completado);
     }
 
     if (updates.length === 0) {

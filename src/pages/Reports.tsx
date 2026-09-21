@@ -246,6 +246,7 @@ function TabResumen() {
   const activeTasksCount = byStatus.filter(s => !s.is_completed).reduce((acc, s) => acc + (s.count ?? 0), 0);
   const projectsData = overview.projects ?? { total: 0, active: 0 };
   const materialsData = overview.materials ?? { total: 0, completed: 0, completion_rate: 0 };
+  const asignaturasData = overview.asignaturas ?? { total: 0, completed: 0, completion_rate: 0 };
   const teamData = overview.team ?? { active_members: 0 };
 
   // Polar area chart data (solo valores numéricos válidos)
@@ -352,12 +353,17 @@ function TabResumen() {
         ]}
       />
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
         <StatTile label="Proyectos activos" value={projectsData.active} sub={`${projectsData.total} totales`} emphasis="primary" />
         <StatTile label="Tareas totales" value={tasks.total ?? 0} sub={`${overview.recent_completed_30d ?? 0} completadas (30d)`} />
         <StatTile
+          label="Materias"
+          value={`${(asignaturasData.completion_rate ?? 0).toFixed(2)}%`}
+          sub={`${asignaturasData.completed} de ${asignaturasData.total} completadas`}
+        />
+        <StatTile
           label="Materiales"
-          value={`${materialsData.completion_rate ?? 0}%`}
+          value={`${(materialsData.completion_rate ?? 0).toFixed(2)}%`}
           sub={`${materialsData.completed} de ${materialsData.total} completados`}
         />
         <StatTile

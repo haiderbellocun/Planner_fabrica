@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { useTemas, useDeleteTema } from '@/hooks/useTemas';
+import { useTemas, useUpdateTema, useDeleteTema } from '@/hooks/useTemas';
 import { useMaterialTypes } from '@/hooks/useMateriales';
 import { CreateEditAsignaturaDialog } from '@/components/asignaturas/CreateEditAsignaturaDialog';
 import { QuickAddAsignaturasDialog } from '@/components/asignaturas/QuickAddAsignaturasDialog';
@@ -12,18 +12,22 @@ import { CreateVideoDialog } from '@/components/programas/CreateVideoDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Pencil, Trash2, Plus, Video } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Asignatura {
   id: string;
   name: string;
   code: string | null;
   description: string | null;
+  temas_count?: number;
+  completado?: boolean;
 }
 
 interface Programa {
@@ -49,8 +53,13 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
   const [selectedTema, setSelectedTema] = useState<any>(null);
 
   const queryClient = useQueryClient();
-  const { data: temas = [] } = useTemas(asignatura.id);
+  // Solo trae los gránulos cuando la asignatura está expandida -- con cientos
+  // de asignaturas en un programa, pedirlos todos al montar dispara esa
+  // misma cantidad de peticiones de una vez y satura la base de datos.
+  const { data: temas = [] } = useTemas(asignatura.id, isOpen);
+  const temasCount = isOpen ? temas.length : (asignatura.temas_count ?? temas.length);
   const deleteTema = useDeleteTema(asignatura.id);
+  const updateTema = useUpdateTema(asignatura.id);
 
   const handleDeleteAsignatura = async () => {
     if (
@@ -80,6 +89,18 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
     }
   };
 
+  const handleToggleAsignaturaCompletado = async (checked: boolean) => {
+    try {
+      // Marcarla completa cascada hacia gránulos y materiales en el backend.
+      await api.patch(`/api/asignaturas/${asignatura.id}`, { completado: checked });
+      queryClient.invalidateQueries({ queryKey: ['programa', programaId] });
+      queryClient.invalidateQueries({ queryKey: ['programas'] });
+      queryClient.invalidateQueries({ queryKey: ['temas', asignatura.id] });
+    } catch (error: any) {
+      toast.error('Error al actualizar: ' + error.message);
+    }
+  };
+
   return (
     <>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -94,9 +115,17 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
             </Button>
           </CollapsibleTrigger>
 
+          <Checkbox
+            checked={!!asignatura.completado}
+            onCheckedChange={handleToggleAsignaturaCompletado}
+            title="Marcar materia como completada"
+          />
+
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{asignatura.name}</span>
+              <span className={cn('font-medium text-sm', asignatura.completado && 'line-through text-muted-foreground')}>
+                {asignatura.name}
+              </span>
               {asignatura.code && (
                 <Badge variant="outline" className="text-xs">
                   {asignatura.code}
@@ -112,7 +141,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
 
           <div className="flex items-center gap-1">
             <Badge variant="secondary" className="text-xs">
-              {temas.length} temas
+              {temasCount} temas
             </Badge>
             <Button
               variant="ghost"
@@ -145,13 +174,25 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
                 className="p-2 rounded-md border bg-muted/30 text-sm"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <span className="font-medium">{tema.title}</span>
-                    {tema.description && (
-                      <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
-                        {tema.description}
-                      </p>
-                    )}
+                  <div className="flex items-start gap-2 flex-1">
+                    <Checkbox
+                      checked={!!tema.completado}
+                      onCheckedChange={(checked) =>
+                        updateTema.mutate({ id: tema.id, data: { completado: !!checked } })
+                      }
+                      title="Marcar gránulo como completado"
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <span className={cn('font-medium', tema.completado && 'line-through text-muted-foreground')}>
+                        {tema.title}
+                      </span>
+                      {tema.description && (
+                        <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
+                          {tema.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Badge variant="secondary" className="text-xs">

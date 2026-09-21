@@ -101,7 +101,7 @@ export const createTema = async (req: AuthRequest, res: Response) => {
 export const updateTema = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, display_order } = req.body;
+    const { title, description, display_order, completado } = req.body;
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -118,6 +118,10 @@ export const updateTema = async (req: AuthRequest, res: Response) => {
     if (display_order !== undefined) {
       updates.push(`display_order = $${paramCount++}`);
       values.push(display_order);
+    }
+    if (completado !== undefined) {
+      updates.push(`completado = $${paramCount++}`);
+      values.push(completado);
     }
 
     if (updates.length === 0) {

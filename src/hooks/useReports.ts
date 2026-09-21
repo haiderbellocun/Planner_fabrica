@@ -10,6 +10,7 @@ export interface ReportOverview {
     by_status: { name: string; color: string; is_completed: boolean; count: number }[];
   };
   materials: { total: number; completed: number; completion_rate: number };
+  asignaturas: { total: number; completed: number; completion_rate: number };
   team: { active_members: number };
   avg_completion_seconds: number;
   recent_completed_30d: number;

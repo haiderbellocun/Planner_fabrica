@@ -12,6 +12,7 @@ export interface Tema {
   updated_at: string;
   materiales_count?: number;
   materiales?: any[]; // Will be populated when fetching with materials
+  completado?: boolean;
 }
 
 export interface CreateTemaData {
@@ -24,16 +25,17 @@ export interface UpdateTemaData {
   title?: string;
   description?: string | null;
   display_order?: number;
+  completado?: boolean;
 }
 
-export function useTemas(asignaturaId: string | undefined) {
+export function useTemas(asignaturaId: string | undefined, enabled: boolean = true) {
   return useQuery({
     queryKey: ['temas', asignaturaId],
     queryFn: async (): Promise<Tema[]> => {
       if (!asignaturaId) return [];
       return await api.get(`/api/asignaturas/${asignaturaId}/temas`);
     },
-    enabled: !!asignaturaId,
+    enabled: !!asignaturaId && enabled,
   });
 }
 

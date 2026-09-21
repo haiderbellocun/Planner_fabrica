@@ -5,6 +5,7 @@ import {
   useMaterialTypes,
   useMaterialesTema,
   useCreateMaterialTema,
+  useUpdateMaterialTema,
   useDeleteMaterialTema,
 } from '@/hooks/useMateriales';
 import {
@@ -28,7 +29,9 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CreateEditTemaDialogProps {
   asignaturaId: string;
@@ -57,6 +60,7 @@ export function CreateEditTemaDialog({
   const { data: materialTypes = [] } = useMaterialTypes();
   const { data: materiales = [] } = useMaterialesTema(tema?.id);
   const createMaterial = useCreateMaterialTema(tema?.id || '');
+  const updateMaterial = useUpdateMaterialTema(tema?.id || '');
   const deleteMaterial = useDeleteMaterialTema(tema?.id || '');
 
   const isEditing = !!tema;
@@ -269,9 +273,16 @@ export function CreateEditTemaDialog({
                         className="flex items-center justify-between p-2 border rounded-md"
                       >
                         <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={!!material.completado}
+                            onCheckedChange={(checked) =>
+                              updateMaterial.mutate({ id: material.id, data: { completado: !!checked } })
+                            }
+                            title="Marcar material como completado"
+                          />
                           <span className="text-lg">{material.material_type.icon}</span>
                           <div>
-                            <div className="text-sm font-medium">
+                            <div className={cn('text-sm font-medium', material.completado && 'line-through text-muted-foreground')}>
                               {material.material_type.description}
                             </div>
                             {material.descripcion && (

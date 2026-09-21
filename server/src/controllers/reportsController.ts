@@ -24,7 +24,7 @@ import {
 export const getOverview = async (req: AuthRequest, res: Response) => {
   try {
     // Run all queries in parallel
-    const [projectsRes, tasksByStatusRes, materialsRes, teamRes, avgTimeRes, recentCompletedRes] = await Promise.all([
+    const [projectsRes, tasksByStatusRes, materialsRes, asignaturasRes, teamRes, avgTimeRes, recentCompletedRes] = await Promise.all([
       // Total projects
       query(`
         SELECT
@@ -43,15 +43,23 @@ export const getOverview = async (req: AuthRequest, res: Response) => {
         ORDER BY ts.display_order
       `),
 
-      // Materials: total required vs completed. Fixed: COUNT(mr.id) after joining tasks
-      // counted a material once per task referencing it, understating the denominator.
+      // Materials: total required vs completed. Uses materiales_requeridos.completado
+      // directly (checked off from Proceso) instead of inferring completion from a
+      // linked task -- most materiales_requeridos rows have no task behind them at
+      // all (e.g. bulk content-factory migrations), so that used to be stuck at 0%.
       query(`
         SELECT
-          COUNT(DISTINCT mr.id) as total_materials,
-          COUNT(DISTINCT t.material_requerido_id) FILTER (WHERE ts.is_completed = true) as completed_materials
-        FROM public.materiales_requeridos mr
-        LEFT JOIN public.tasks t ON t.material_requerido_id = mr.id
-        LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
+          COUNT(*) as total_materials,
+          COUNT(*) FILTER (WHERE completado = true) as completed_materials
+        FROM public.materiales_requeridos
+      `),
+
+      // Materias (asignaturas): total vs marcadas como completadas desde Proceso.
+      query(`
+        SELECT
+          COUNT(*) as total_asignaturas,
+          COUNT(*) FILTER (WHERE completado = true) as completed_asignaturas
+        FROM public.asignaturas
       `),
 
       // Active team members. Previously counted public.project_members — but that
@@ -103,6 +111,7 @@ export const getOverview = async (req: AuthRequest, res: Response) => {
     }));
     const totalTasks = tasksByStatus.reduce((sum, s) => sum + s.count, 0);
     const materials = materialsRes.rows[0];
+    const asignaturas = asignaturasRes.rows[0];
     const team = teamRes.rows[0];
     const avgTime = avgTimeRes.rows[0];
     const recentCompleted = recentCompletedRes.rows[0];
@@ -120,7 +129,14 @@ export const getOverview = async (req: AuthRequest, res: Response) => {
         total: parseInt(materials.total_materials),
         completed: parseInt(materials.completed_materials),
         completion_rate: parseInt(materials.total_materials) > 0
-          ? Math.round((parseInt(materials.completed_materials) / parseInt(materials.total_materials)) * 100)
+          ? Math.round((parseInt(materials.completed_materials) / parseInt(materials.total_materials)) * 10000) / 100
+          : 0,
+      },
+      asignaturas: {
+        total: parseInt(asignaturas.total_asignaturas),
+        completed: parseInt(asignaturas.completed_asignaturas),
+        completion_rate: parseInt(asignaturas.total_asignaturas) > 0
+          ? Math.round((parseInt(asignaturas.completed_asignaturas) / parseInt(asignaturas.total_asignaturas)) * 10000) / 100
           : 0,
       },
       team: {
@@ -164,7 +180,14 @@ export const getProjectsProgress = async (req: AuthRequest, res: Response) => {
           JOIN public.programas pg2 ON pg2.id = a2.programa_id
           WHERE pg2.project_id = p.id
         ) as total_materials,
-        COUNT(DISTINCT t.material_requerido_id) FILTER (WHERE ts.is_completed = true) as completed_materials
+        (
+          SELECT COUNT(mr2.id)
+          FROM public.materiales_requeridos mr2
+          JOIN public.temas tm2 ON tm2.id = mr2.tema_id
+          JOIN public.asignaturas a2 ON a2.id = tm2.asignatura_id
+          JOIN public.programas pg2 ON pg2.id = a2.programa_id
+          WHERE pg2.project_id = p.id AND mr2.completado = true
+        ) as completed_materials
       FROM public.projects p
       LEFT JOIN public.tasks t ON t.project_id = p.id
       LEFT JOIN public.task_statuses ts ON ts.id = t.status_id

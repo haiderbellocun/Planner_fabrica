@@ -18,6 +18,7 @@ export interface MaterialRequerido {
   descripcion: string | null;
   created_at: string;
   material_type: MaterialType;
+  completado?: boolean;
 }
 
 export interface CreateMaterialData {
@@ -29,6 +30,7 @@ export interface CreateMaterialData {
 export interface UpdateMaterialData {
   cantidad?: number;
   descripcion?: string | null;
+  completado?: boolean;
 }
 
 export function useMaterialTypes() {
@@ -76,6 +78,22 @@ export function useCreateMaterialTema(temaId: string) {
     },
     onError: (error: any) => {
       toast.error('Error al agregar material: ' + error.message);
+    },
+  });
+}
+
+export function useUpdateMaterialTema(temaId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateMaterialData }) => {
+      return await api.patch(`/api/materiales/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materiales', 'tema', temaId] });
+    },
+    onError: (error: any) => {
+      toast.error('Error al actualizar material: ' + error.message);
     },
   });
 }

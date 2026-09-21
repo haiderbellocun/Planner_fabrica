@@ -158,7 +158,7 @@ export const createAsignaturaInPrograma = async (req: AuthRequest, res: Response
 export const updateAsignatura = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, code, description, display_order, semestre, tipo_asignatura, maestro_id } = req.body;
+    const { name, code, description, display_order, semestre, tipo_asignatura, maestro_id, completado } = req.body;
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -192,6 +192,10 @@ export const updateAsignatura = async (req: AuthRequest, res: Response) => {
       updates.push(`maestro_id = $${paramCount++}`);
       values.push(maestro_id === '' ? null : maestro_id);
     }
+    if (completado !== undefined) {
+      updates.push(`completado = $${paramCount++}`);
+      values.push(completado);
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
@@ -208,6 +212,23 @@ export const updateAsignatura = async (req: AuthRequest, res: Response) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Asignatura not found' });
+    }
+
+    // Marcar la materia como completada también marca todo lo que tiene
+    // debajo (gránulos y sus materiales) -- desmarcarla NO los desmarca, para
+    // no borrar de un click progreso ya hecho a un nivel más fino.
+    if (completado === true) {
+      await query(
+        `UPDATE public.temas SET completado = true, updated_at = NOW() WHERE asignatura_id = $1`,
+        [id]
+      );
+      await query(
+        `UPDATE public.materiales_requeridos mr
+         SET completado = true, updated_at = NOW()
+         FROM public.temas t
+         WHERE mr.tema_id = t.id AND t.asignatura_id = $1`,
+        [id]
+      );
     }
 
     res.json(result.rows[0]);
