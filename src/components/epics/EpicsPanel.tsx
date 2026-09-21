@@ -144,7 +144,7 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
                           )}
                         </div>
                         {epic.description && (
-                          <p className="text-sm text-muted-foreground">{epic.description}</p>
+                          <p className="text-sm text-muted-foreground whitespace-pre-line">{epic.description}</p>
                         )}
                         {formatRange(epic.start_date, epic.end_date) && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">

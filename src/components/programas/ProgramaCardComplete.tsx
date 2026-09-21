@@ -104,7 +104,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
               )}
             </div>
             {asignatura.description && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
                 {asignatura.description}
               </p>
             )}
@@ -148,7 +148,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
                   <div className="flex-1">
                     <span className="font-medium">{tema.title}</span>
                     {tema.description && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">
                         {tema.description}
                       </p>
                     )}
@@ -278,7 +278,7 @@ export function ProgramaCardComplete({
                 </CardTitle>
               </div>
               {programa.description && (
-                <CardDescription className="mt-1 ml-7">
+                <CardDescription className="mt-1 ml-7 whitespace-pre-line">
                   {programa.description}
                 </CardDescription>
               )}

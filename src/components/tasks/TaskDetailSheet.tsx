@@ -494,7 +494,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 )}
               </DialogTitle>
               {taskData.description && (
-                <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                <DialogDescription className="mt-1 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                   {taskData.description}
                 </DialogDescription>
               )}

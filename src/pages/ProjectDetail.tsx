@@ -339,7 +339,7 @@ export default function ProjectDetailPage() {
             })()}
             <VirtualizacionToggle project={project} />
           </div>
-          <p className="page-description">{project.description || 'Sin descripción'}</p>
+          <p className="page-description whitespace-pre-line">{project.description || 'Sin descripción'}</p>
 
           {/* Links del proyecto */}
           {(() => {
