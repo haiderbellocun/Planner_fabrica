@@ -273,20 +273,26 @@ function TabResumen() {
     horas: { label: 'Horas entregadas', color: CHART_COLORS.teal },
   };
 
-  // Project progress for stacked bar
-  const projectBarData = (projectsProgress.slice(0, 8) ?? []).map(p => {
-    const total = Number(p.total_tasks ?? 0);
-    const completed = Number(p.completed_tasks ?? 0);
-    const inProgress = Number(p.in_progress_tasks ?? 0);
-    const inReview = Number(p.in_review_tasks ?? 0);
-    return {
-      name: p.name,
-      completadas: completed,
-      en_progreso: inProgress,
-      en_revision: inReview,
-      pendientes: Math.max(0, total - completed - inProgress - inReview),
-    };
-  });
+  // Project progress for stacked bar — solo proyectos activos, priorizando los
+  // que más tareas tienen (antes tomaba los primeros 8 alfabéticamente, lo que
+  // sacaba proyectos viejos ya completados solo por el orden del nombre).
+  const projectBarData = projectsProgress
+    .filter(p => p.status === 'active')
+    .sort((a, b) => Number(b.total_tasks ?? 0) - Number(a.total_tasks ?? 0))
+    .slice(0, 8)
+    .map(p => {
+      const total = Number(p.total_tasks ?? 0);
+      const completed = Number(p.completed_tasks ?? 0);
+      const inProgress = Number(p.in_progress_tasks ?? 0);
+      const inReview = Number(p.in_review_tasks ?? 0);
+      return {
+        name: p.name,
+        completadas: completed,
+        en_progreso: inProgress,
+        en_revision: inReview,
+        pendientes: Math.max(0, total - completed - inProgress - inReview),
+      };
+    });
 
   const projectBarConfig: ChartConfig = {
     completadas: { label: 'Completadas', color: CHART_COLORS.teal },
