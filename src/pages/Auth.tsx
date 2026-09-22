@@ -97,7 +97,9 @@ export default function AuthPage() {
                       ? 'Tu cuenta de Google no está registrada. Contacta al administrador.'
                       : googleError === 'disabled'
                         ? 'Tu cuenta está deshabilitada.'
-                        : 'Error al iniciar sesión con Google.')}
+                        : googleError === 'not_configured'
+                          ? 'El inicio con Google no está configurado en este entorno. Entra con email y contraseña.'
+                          : 'Error al iniciar sesión con Google.')}
                 </AlertDescription>
               </Alert>
             )}

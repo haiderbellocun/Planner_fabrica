@@ -62,7 +62,7 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
       'google',
       { session: false },
       (err: Error | null | undefined, user: { token: string } | false | undefined | null) => {
-if (err || !user) {
+        if (err || !user) {
           const msg = err instanceof Error ? err.message : '';
           const errorCode =
             msg === 'USER_NOT_FOUND'
@@ -79,6 +79,15 @@ if (err || !user) {
         );
       }
     )(req, res, next);
+  });
+} else {
+  // Sin credenciales de Google, la ruta no existía y otra ruta /api devolvía
+  // {"error":"No token provided"} en el navegador.
+  router.get('/google', (_req, res) => {
+    res.redirect(`${getFrontendOrigin()}#/auth?google_error=not_configured`);
+  });
+  router.get('/google/callback', (_req, res) => {
+    res.redirect(`${getFrontendOrigin()}#/auth?google_error=not_configured`);
   });
 }
 

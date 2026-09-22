@@ -8,7 +8,7 @@ const poolConfig: pg.PoolConfig = env.DATABASE_URL
       connectionString: env.DATABASE_URL,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000,
     }
   : {
       host: env.PGHOST!,
@@ -18,7 +18,7 @@ const poolConfig: pg.PoolConfig = env.DATABASE_URL
       password: env.PGPASSWORD!,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000,
     };
 
 export const pool = new Pool(poolConfig);
