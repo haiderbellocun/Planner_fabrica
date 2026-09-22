@@ -16,7 +16,7 @@ export const updateTemaAssignees = async (req, res) => {
         }
         const projectId = taskResult.rows[0].project_id;
         // Check permission: only admin and project_leader can assign
-        if (userRole !== 'admin') {
+        if (userRole !== 'admin' && userRole !== 'project_leader') {
             const leaderResult = await query('SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader', [projectId, profileId]);
             if (!leaderResult.rows[0]?.is_leader) {
                 return res.status(403).json({
@@ -29,12 +29,15 @@ export const updateTemaAssignees = async (req, res) => {
         try {
             // Delete existing assignments for this task
             await query('DELETE FROM public.task_tema_assignees WHERE task_id = $1', [taskId]);
-            // Insert new assignments
+            // Insert new assignments (un usuario desactivado no puede recibir asignaciones nuevas)
             if (assignments && Array.isArray(assignments) && assignments.length > 0) {
+                const activeIdsResult = await query(`SELECT p.id FROM public.profiles p
+           JOIN public.users u ON u.id = p.user_id AND u.is_active = true`);
+                const activeProfileIds = new Set(activeIdsResult.rows.map((r) => r.id));
                 for (const assignment of assignments) {
                     const { tema_id, assignee_id } = assignment;
-                    // Skip if no assignee selected
-                    if (!assignee_id)
+                    // Skip if no assignee selected, or if the assignee is deactivated
+                    if (!assignee_id || !activeProfileIds.has(assignee_id))
                         continue;
                     await query(`INSERT INTO public.task_tema_assignees (task_id, tema_id, assignee_id)
              VALUES ($1, $2, $3)`, [taskId, tema_id, assignee_id]);

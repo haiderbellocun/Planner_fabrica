@@ -73,7 +73,7 @@ export const createMaterialRequerido = async (req, res) => {
 export const updateMaterialRequerido = async (req, res) => {
     try {
         const { id } = req.params;
-        const { cantidad, descripcion } = req.body;
+        const { cantidad, descripcion, completado } = req.body;
         const updates = [];
         const values = [];
         let paramCount = 1;
@@ -84,6 +84,10 @@ export const updateMaterialRequerido = async (req, res) => {
         if (descripcion !== undefined) {
             updates.push(`descripcion = $${paramCount++}`);
             values.push(descripcion);
+        }
+        if (completado !== undefined) {
+            updates.push(`completado = $${paramCount++}`);
+            values.push(completado);
         }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields to update' });

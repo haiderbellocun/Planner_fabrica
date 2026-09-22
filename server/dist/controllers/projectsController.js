@@ -13,28 +13,18 @@ export const listProjects = async (req, res) => {
         const profileId = req.user?.profileId;
         const userRole = req.user?.role;
         let result;
-        if (userRole === 'admin') {
-            // Admins see ALL projects
+        if (userRole === 'admin' || userRole === 'project_leader') {
+            // Admins and project leaders see ALL projects
             result = await query(`SELECT
           p.*,
           COUNT(DISTINCT pm.id) as members_count,
-          COUNT(DISTINCT t.id) as tasks_count
+          COUNT(DISTINCT t.id) as tasks_count,
+          COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed = true) as completed_tasks,
+          EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $1) AS is_pinned
          FROM public.projects p
          LEFT JOIN public.project_members pm ON pm.project_id = p.id
          LEFT JOIN public.tasks t ON t.project_id = p.id
-         GROUP BY p.id
-         ORDER BY p.created_at DESC`);
-        }
-        else if (userRole === 'project_leader') {
-            // Project leaders see projects where they are members
-            result = await query(`SELECT
-          p.*,
-          COUNT(DISTINCT pm.id) as members_count,
-          COUNT(DISTINCT t.id) as tasks_count
-         FROM public.projects p
-         JOIN public.project_members pm_user ON pm_user.project_id = p.id AND pm_user.user_id = $1
-         LEFT JOIN public.project_members pm ON pm.project_id = p.id
-         LEFT JOIN public.tasks t ON t.project_id = p.id
+         LEFT JOIN public.task_statuses ts ON ts.id = t.status_id
          GROUP BY p.id
          ORDER BY p.created_at DESC`, [profileId]);
         }
@@ -44,7 +34,9 @@ export const listProjects = async (req, res) => {
             result = await query(`SELECT DISTINCT ON (p.id)
           p.*,
           (SELECT COUNT(DISTINCT pm2.id) FROM public.project_members pm2 WHERE pm2.project_id = p.id) as members_count,
-          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 WHERE t2.project_id = p.id) as tasks_count
+          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 WHERE t2.project_id = p.id) as tasks_count,
+          (SELECT COUNT(DISTINCT t2.id) FROM public.tasks t2 JOIN public.task_statuses ts2 ON ts2.id = t2.status_id WHERE t2.project_id = p.id AND ts2.is_completed = true) as completed_tasks,
+          EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $1) AS is_pinned
          FROM public.projects p
          JOIN public.tasks t ON t.project_id = p.id
          WHERE (
@@ -116,12 +108,13 @@ export const getProject = async (req, res) => {
         const result = await query(`SELECT
         p.*,
         COUNT(DISTINCT pm.id) as members_count,
-        COUNT(DISTINCT t.id) as tasks_count
+        COUNT(DISTINCT t.id) as tasks_count,
+        EXISTS(SELECT 1 FROM public.project_pins pp WHERE pp.project_id = p.id AND pp.user_id = $2) AS is_pinned
        FROM public.projects p
        LEFT JOIN public.project_members pm ON pm.project_id = p.id
        LEFT JOIN public.tasks t ON t.project_id = p.id
        WHERE p.id = $1
-       GROUP BY p.id`, [id]);
+       GROUP BY p.id`, [id, req.user?.profileId]);
         if (env.NODE_ENV !== 'production') {
             console.log('📊 Query result rows:', result.rows.length);
         }
@@ -176,7 +169,7 @@ export const getProject = async (req, res) => {
  */
 export const createProject = async (req, res) => {
     try {
-        const { name, description, key, start_date, end_date, tipo_programa, asignaturas, category } = req.body;
+        const { name, description, key, start_date, end_date, tipo_programa, asignaturas, category, link, link_label, es_virtualizacion } = req.body;
         const profileId = req.user?.profileId;
         if (!end_date) {
             return res.status(400).json({
@@ -187,9 +180,9 @@ export const createProject = async (req, res) => {
         await query('BEGIN');
         try {
             // 1. Insert project
-            const projectResult = await query(`INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
-         RETURNING *`, [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date, tipo_programa || null, category || null]);
+            const projectResult = await query(`INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category, link, link_label, es_virtualizacion)
+         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11)
+         RETURNING *`, [name, description || null, key.toUpperCase(), profileId, start_date || null, end_date, tipo_programa || null, category || null, link || null, link_label || null, es_virtualizacion ?? null]);
             const project = projectResult.rows[0];
             // 2. Add creator as project leader
             await query(`INSERT INTO public.project_members (project_id, user_id, role, can_view, can_create, can_edit, can_assign, invited_by)
@@ -352,7 +345,7 @@ export const completeProject = async (req, res) => {
 export const updateProject = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, status, start_date, end_date } = req.body;
+        const { name, description, status, start_date, end_date, link, link_label, es_virtualizacion } = req.body;
         // Build dynamic update query
         const updates = [];
         const values = [];
@@ -376,6 +369,18 @@ export const updateProject = async (req, res) => {
         if (end_date !== undefined) {
             updates.push(`end_date = $${paramCount++}`);
             values.push(end_date);
+        }
+        if (link !== undefined) {
+            updates.push(`link = $${paramCount++}`);
+            values.push(link || null);
+        }
+        if (link_label !== undefined) {
+            updates.push(`link_label = $${paramCount++}`);
+            values.push(link_label || null);
+        }
+        if (es_virtualizacion !== undefined) {
+            updates.push(`es_virtualizacion = $${paramCount++}`);
+            values.push(es_virtualizacion);
         }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields to update' });

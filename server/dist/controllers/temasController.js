@@ -76,7 +76,7 @@ export const createTema = async (req, res) => {
 export const updateTema = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, display_order } = req.body;
+        const { title, description, display_order, completado } = req.body;
         const updates = [];
         const values = [];
         let paramCount = 1;
@@ -91,6 +91,10 @@ export const updateTema = async (req, res) => {
         if (display_order !== undefined) {
             updates.push(`display_order = $${paramCount++}`);
             values.push(display_order);
+        }
+        if (completado !== undefined) {
+            updates.push(`completado = $${paramCount++}`);
+            values.push(completado);
         }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields to update' });

@@ -2156,3 +2156,105 @@ export const getProductionByPerson = async (req: AuthRequest, res: Response) => 
   }
 };
 
+/**
+ * GET /api/reports/content-overview
+ * High-level Proceso (content factory) counts: programas, temas, and a
+ * per-project breakdown of programas/asignaturas/temas/materiales -- only
+ * projects that actually have programas are included, to avoid a long tail
+ * of zero-rows from the hundreds of projects with no content structure.
+ */
+export const getContentOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    const [programasRes, temasRes, byProjectRes] = await Promise.all([
+      query(`SELECT COUNT(*) as total FROM public.programas`),
+
+      query(`
+        SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE completado = true) as completed
+        FROM public.temas
+      `),
+
+      query(`
+        SELECT
+          p.id, p.name,
+          COUNT(DISTINCT pr.id) as programas,
+          COUNT(DISTINCT a.id) as asignaturas,
+          COUNT(DISTINCT a.id) FILTER (WHERE a.completado = true) as asignaturas_completadas,
+          COUNT(DISTINCT tm.id) as temas,
+          COUNT(DISTINCT tm.id) FILTER (WHERE tm.completado = true) as temas_completados,
+          COUNT(DISTINCT mr.id) as materiales,
+          COUNT(DISTINCT mr.id) FILTER (WHERE mr.completado = true) as materiales_completados
+        FROM public.projects p
+        JOIN public.programas pr ON pr.project_id = p.id
+        LEFT JOIN public.asignaturas a ON a.programa_id = pr.id
+        LEFT JOIN public.temas tm ON tm.asignatura_id = a.id
+        LEFT JOIN public.materiales_requeridos mr ON mr.tema_id = tm.id
+        GROUP BY p.id
+        ORDER BY programas DESC, p.name
+      `),
+    ]);
+
+    const temas = temasRes.rows[0];
+
+    res.json({
+      programas: { total: parseInt(programasRes.rows[0].total) },
+      temas: {
+        total: parseInt(temas.total),
+        completed: parseInt(temas.completed),
+        completion_rate: parseInt(temas.total) > 0
+          ? Math.round((parseInt(temas.completed) / parseInt(temas.total)) * 10000) / 100
+          : 0,
+      },
+      by_project: byProjectRes.rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        programas: parseInt(r.programas),
+        asignaturas: parseInt(r.asignaturas),
+        asignaturas_completadas: parseInt(r.asignaturas_completadas),
+        temas: parseInt(r.temas),
+        temas_completados: parseInt(r.temas_completados),
+        materiales: parseInt(r.materiales),
+        materiales_completados: parseInt(r.materiales_completados),
+      })),
+    });
+  } catch (error) {
+    console.error('Content overview error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/user-locations
+ * Where each active user is working right now: one row per (user, project)
+ * with how many active (not completed) tasks they have there.
+ */
+export const getUserLocations = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT
+        p.id as profile_id, p.full_name, p.avatar_url, p.cargo,
+        proj.id as project_id, proj.name as project_name,
+        COUNT(DISTINCT t.id) as task_count
+      FROM public.tasks t
+      JOIN public.task_statuses ts ON ts.id = t.status_id
+      JOIN public.profiles p ON p.id = t.assignee_id
+      JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+      JOIN public.projects proj ON proj.id = t.project_id
+      WHERE ts.is_completed = false
+      GROUP BY p.id, proj.id
+      ORDER BY p.full_name, task_count DESC
+    `);
+
+    res.json(result.rows.map(r => ({
+      profile_id: r.profile_id,
+      full_name: r.full_name,
+      avatar_url: r.avatar_url,
+      cargo: r.cargo,
+      project_id: r.project_id,
+      project_name: r.project_name,
+      task_count: parseInt(r.task_count),
+    })));
+  } catch (error) {
+    console.error('User locations error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

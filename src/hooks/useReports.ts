@@ -245,6 +245,24 @@ export interface UnassignedMaterial {
   project_id: string;
 }
 
+export interface ContentOverviewByProject {
+  id: string;
+  name: string;
+  programas: number;
+  asignaturas: number;
+  asignaturas_completadas: number;
+  temas: number;
+  temas_completados: number;
+  materiales: number;
+  materiales_completados: number;
+}
+
+export interface ContentOverview {
+  programas: { total: number };
+  temas: { total: number; completed: number; completion_rate: number };
+  by_project: ContentOverviewByProject[];
+}
+
 // --- Hooks ---
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
@@ -630,3 +648,30 @@ export function useReportThroughput(
     staleTime: STALE_TIME,
   });
 }
+
+export function useReportContentOverview() {
+  return useQuery({
+    queryKey: ['report-content-overview'],
+    queryFn: () => api.get<ContentOverview>('/api/reports/content-overview'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface UserLocationRow {
+  profile_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  cargo: string | null;
+  project_id: string;
+  project_name: string;
+  task_count: number;
+}
+
+export function useReportUserLocations() {
+  return useQuery({
+    queryKey: ['report-user-locations'],
+    queryFn: () => api.get<UserLocationRow[]>('/api/reports/user-locations'),
+    staleTime: STALE_TIME,
+  });
+}
+

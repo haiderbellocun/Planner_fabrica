@@ -1,8 +1,5 @@
 import { TaskWithDetails, useTask, useTaskHistory, useTaskActivityLog, useTaskStatuses } from '@/hooks/useTasks';
 import { useTaskComments, useCreateTaskComment, useDeleteTaskComment } from '@/hooks/useTaskComments';
-import { useUpdateTemaAssignees, TemaAssignment } from '@/hooks/useTemaAssignees';
-import { useUpdateMaterialAssignees, MaterialAssignment } from '@/hooks/useMaterialAssignees';
-import { useTiempoTarea } from '@/hooks/useTiemposEstimados';
 import {
   Dialog,
   DialogContent,
@@ -113,8 +110,6 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const updateTask = useUpdateTask();
   const updateTaskStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
-  const updateTemaAssignees = useUpdateTemaAssignees();
-  const updateMaterialAssignees = useUpdateMaterialAssignees();
   const createComment = useCreateTaskComment(task?.id || '');
   const deleteComment = useDeleteTaskComment(task?.id || '');
   const createSubtask = useCreateSubtask();
@@ -129,7 +124,6 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const [titleSaveState, setTitleSaveState] = useState<SaveState>('idle');
   const [dueDateSaveState, setDueDateSaveState] = useState<SaveState>('idle');
   const [horasSaveState, setHorasSaveState] = useState<SaveState>('idle');
-  const { data: tiempoTarea } = useTiempoTarea(task?.id);
 
   // "Guardado" es una confirmación transitoria, no un estado permanente -- se oculta sola.
   useEffect(() => {
@@ -160,65 +154,6 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   const effectiveProgramaId = pendingProgramaId ?? taskData?.programa?.id ?? '';
   const selectedPrograma = (programas as any[]).find((p) => p.id === effectiveProgramaId);
   const materiaOptions: any[] = selectedPrograma?.asignaturas ?? [];
-
-  // Handle tema assignee change
-  const handleTemaAssigneeChange = (temaId: string, assigneeId: string | null) => {
-    if (!taskData?.id || !taskData?.temas_materiales) return;
-
-    // Build assignments array for all temas
-    const assignments: TemaAssignment[] = taskData.temas_materiales.map(tema => ({
-      tema_id: tema.id,
-      assignee_id: tema.id === temaId ? assigneeId : tema.assignee?.id || null,
-    }));
-
-    updateTemaAssignees.mutate({
-      taskId: taskData.id,
-      assignments,
-    });
-  };
-
-  // Collect all material assignments preserving existing data
-  const collectAssignments = (overrides?: { materialId: string; assigneeId?: string | null; horas_estimadas?: number | null }) => {
-    const assignments: MaterialAssignment[] = [];
-    taskData?.temas_materiales?.forEach((tema: any) => {
-      if (tema.materiales) {
-        tema.materiales.forEach((mat: any) => {
-          const isTarget = overrides && mat.id === overrides.materialId;
-          assignments.push({
-            material_id: mat.id,
-            assignee_id: isTarget && overrides.assigneeId !== undefined ? overrides.assigneeId : mat.assignee?.id || null,
-            horas_estimadas: isTarget && overrides.horas_estimadas !== undefined ? overrides.horas_estimadas : mat.horas_estimadas || null,
-          });
-        });
-      }
-    });
-    return assignments;
-  };
-
-  // Handle material assignee change
-  const handleMaterialAssigneeChange = (materialId: string, assigneeId: string | null) => {
-    if (!taskData?.id || !taskData?.temas_materiales) return;
-
-    // When changing assignee, reset horas_estimadas since cargo may differ
-    const assignments = collectAssignments({ materialId, assigneeId, horas_estimadas: null });
-
-    updateMaterialAssignees.mutate({
-      taskId: taskData.id,
-      assignments,
-    });
-  };
-
-  // Handle material duration change
-  const handleMaterialHorasChange = (materialId: string, horas: number | null) => {
-    if (!taskData?.id || !taskData?.temas_materiales) return;
-
-    const assignments = collectAssignments({ materialId, horas_estimadas: horas });
-
-    updateMaterialAssignees.mutate({
-      taskId: taskData.id,
-      assignments,
-    });
-  };
 
   if (!taskData) return null;
 
@@ -957,182 +892,6 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                             - Semestre {taskData.asignatura.semestre}
                           </span>
                         )}
-                      </div>
-                    </div>
-                  )}
-                  {/* Show all temas and materiales */}
-                  {taskData.temas_materiales && taskData.temas_materiales.length > 0 && (
-                    <div className="py-2 px-3 rounded-lg bg-secondary/30">
-                      <div className="text-xs text-muted-foreground mb-2">Temas y Materiales a Elaborar</div>
-                      <div className="space-y-3">
-                        {taskData.temas_materiales.map((tema) => (
-                          <div key={tema.id} className="space-y-2">
-                            <div className="text-sm font-semibold text-primary flex items-center gap-2">
-                              <span>📚</span>
-                              {tema.title}
-                            </div>
-
-                            {/* Assignee selector for tema (only for project leaders) */}
-                            {canChangeAssignee && (
-                              <div className="ml-6 mb-2">
-                                <Select
-                                  value={tema.assignee?.id || 'unassigned'}
-                                  onValueChange={(value) => handleTemaAssigneeChange(tema.id, value === 'unassigned' ? null : value)}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue placeholder="Asignar responsable del tema">
-                                      {tema.assignee ? (
-                                        <div className="flex items-center gap-2">
-                                          <User className="h-3 w-3" />
-                                          <span>{tema.assignee.full_name}</span>
-                                        </div>
-                                      ) : (
-                                        <span className="text-muted-foreground">Sin asignar</span>
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                    {buildAssigneeOptions(profiles, tema.assignee).map((opt) => (
-                                      <SelectItem key={opt.id} value={opt.id} disabled={opt.disabled}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-
-                            {/* Show assigned user (read-only for normal users) */}
-                            {!canChangeAssignee && tema.assignee && (
-                              <div className="ml-6 mb-2 text-xs text-muted-foreground flex items-center gap-2">
-                                <User className="h-3 w-3" />
-                                <span>Responsable: {tema.assignee.full_name}</span>
-                              </div>
-                            )}
-
-                            {tema.materiales && tema.materiales.length > 0 ? (
-                              <div className="ml-6 space-y-2">
-                                {tema.materiales.map((material: any) => (
-                                  <div key={material.id} className="space-y-1">
-                                    <div className="text-sm text-foreground/80 flex items-start gap-2">
-                                      <span>{material.material_type.icon}</span>
-                                      <span>
-                                        {material.material_type.name}
-                                        {material.descripcion && (
-                                          <span className="text-muted-foreground text-xs"> - {material.descripcion}</span>
-                                        )}
-                                      </span>
-                                    </div>
-
-                                    {/* Material assignee selector (for project leaders) */}
-                                    {canChangeAssignee && (
-                                      <div className="ml-6 flex items-center gap-2">
-                                        <Select
-                                          value={material.assignee?.id || 'unassigned'}
-                                          onValueChange={(value) => handleMaterialAssigneeChange(material.id, value === 'unassigned' ? null : value)}
-                                        >
-                                          <SelectTrigger className="h-7 text-xs flex-1">
-                                            <SelectValue placeholder="Asignar responsable">
-                                              {material.assignee ? (
-                                                <div className="flex items-center gap-1">
-                                                  <User className="h-3 w-3" />
-                                                  <span>{material.assignee.full_name}</span>
-                                                </div>
-                                              ) : (
-                                                <span className="text-muted-foreground">Sin asignar</span>
-                                              )}
-                                            </SelectValue>
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="unassigned">Sin asignar</SelectItem>
-                                            {buildAssigneeOptions(profiles, material.assignee).map((opt) => (
-                                              <SelectItem key={opt.id} value={opt.id} disabled={opt.disabled}>
-                                                {opt.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-
-                                        {/* Duration selector - shown when material has an assignee */}
-                                        {material.assignee && (() => {
-                                          const estimation = tiempoTarea?.material_assignee_estimations?.find(
-                                            (ma) => ma.assignee_id === material.assignee?.id &&
-                                              ma.material_type === material.material_type.name
-                                          );
-                                          const tiempos = estimation?.tiempos_disponibles || [];
-                                          return tiempos.length > 0 ? (
-                                            <Select
-                                              value={material.horas_estimadas != null ? String(Number(material.horas_estimadas)) : 'none'}
-                                              onValueChange={(value) => handleMaterialHorasChange(material.id, value === 'none' ? null : parseFloat(value))}
-                                            >
-                                              <SelectTrigger className="h-7 text-xs w-[130px]">
-                                                <SelectValue placeholder="Duración">
-                                                  {material.horas_estimadas != null ? (
-                                                    <div className="flex items-center gap-1">
-                                                      <Clock className="h-3 w-3" />
-                                                      <span>{Number(material.horas_estimadas)}h</span>
-                                                    </div>
-                                                  ) : (
-                                                    <span className="text-muted-foreground">Duración</span>
-                                                  )}
-                                                </SelectValue>
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="none">Sin asignar</SelectItem>
-                                                {tiempos.map((t) => (
-                                                  <SelectItem key={t.id} value={String(Number(t.horas))}>
-                                                    {t.cantidad_descripcion} — {Number(t.horas)}h
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          ) : null;
-                                        })()}
-                                      </div>
-                                    )}
-
-                                    {/* Show assigned user and duration (read-only for normal users) */}
-                                    {!canChangeAssignee && material.assignee && (
-                                      <div className="ml-6 text-xs text-muted-foreground flex items-center gap-2">
-                                        <User className="h-3 w-3" />
-                                        <span>{material.assignee.full_name}</span>
-                                        {material.horas_estimadas != null && (
-                                          <Badge variant="outline" className="text-xs py-0 px-1.5">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            {Number(material.horas_estimadas)}h
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Show duration badge for admins too (next to the selectors) */}
-                                    {canChangeAssignee && material.assignee && material.horas_estimadas != null && (() => {
-                                      const estimation = tiempoTarea?.material_assignee_estimations?.find(
-                                        (ma) => ma.assignee_id === material.assignee?.id &&
-                                          ma.material_type === material.material_type.name
-                                      );
-                                      const tiempos = estimation?.tiempos_disponibles || [];
-                                      // If no tiempos available, show the saved value as a badge
-                                      return tiempos.length === 0 ? (
-                                        <div className="ml-6">
-                                          <Badge variant="outline" className="text-xs py-0 px-1.5">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            {Number(material.horas_estimadas)}h
-                                          </Badge>
-                                        </div>
-                                      ) : null;
-                                    })()}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="ml-6 text-xs text-muted-foreground italic">
-                                Sin materiales en este tema
-                              </div>
-                            )}
-                          </div>
-                        ))}
                       </div>
                     </div>
                   )}

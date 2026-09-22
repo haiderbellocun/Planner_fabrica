@@ -10,7 +10,7 @@ export const projectCreateSchema = z.object({
 export const projectUpdateSchema = z.object({
     name: z.string().min(2).max(100).optional(),
     description: z.string().optional(),
-    status: z.enum(['active', 'completed', 'archived']).optional(),
+    status: z.enum(['active', 'paused', 'completed', 'archived']).optional(),
     start_date: z.string().optional(),
     end_date: z.string().optional(),
 });
@@ -23,6 +23,10 @@ export const taskCreateSchema = z.object({
     due_date: z.string().optional(),
     tags: z.array(z.string()).optional(),
     material_requerido_id: z.string().uuid().optional(),
+    epic_id: z.string().uuid().optional().nullable(),
+    team_id: z.string().uuid().optional().nullable(),
+    sprint_id: z.string().uuid().optional().nullable(),
+    horas_estimadas: z.number().positive().max(999).optional().nullable(),
 });
 export const taskUpdateSchema = z.object({
     title: z.string().min(1).max(200).optional(),
@@ -31,7 +35,23 @@ export const taskUpdateSchema = z.object({
     assignee_id: z.string().uuid().optional().nullable(),
     due_date: z.string().optional().nullable(),
     tags: z.array(z.string()).optional(),
+    epic_id: z.string().uuid().optional().nullable(),
+    team_id: z.string().uuid().optional().nullable(),
+    sprint_id: z.string().uuid().optional().nullable(),
+    horas_estimadas: z.number().positive().max(999).optional().nullable(),
 });
+// Exactly one of status_id/assignee_id/sprint_id per call -- mixing fields
+// would blur which permission rule applies (see bulkUpdateTasks).
+export const bulkTaskUpdateSchema = z
+    .object({
+    project_id: z.string().uuid(),
+    task_ids: z.array(z.string().uuid()).min(1).max(500),
+    status_id: z.string().uuid().optional(),
+    assignee_id: z.string().uuid().optional().nullable(),
+    sprint_id: z.string().uuid().optional().nullable(),
+})
+    .refine((data) => [data.status_id !== undefined, data.assignee_id !== undefined, data.sprint_id !== undefined]
+    .filter(Boolean).length === 1, { message: 'Debes especificar exactamente uno de: status_id, assignee_id, sprint_id' });
 // Middleware factory for validation
 export const validate = (schema) => {
     return (req, res, next) => {
@@ -58,3 +78,4 @@ export const validateProjectCreate = validate(projectCreateSchema);
 export const validateProjectUpdate = validate(projectUpdateSchema);
 export const validateTaskCreate = validate(taskCreateSchema);
 export const validateTaskUpdate = validate(taskUpdateSchema);
+export const validateBulkTaskUpdate = validate(bulkTaskUpdateSchema);

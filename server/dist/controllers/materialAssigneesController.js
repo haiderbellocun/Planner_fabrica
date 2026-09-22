@@ -21,7 +21,7 @@ export const updateMaterialAssignees = async (req, res) => {
         const parentTask = taskResult.rows[0];
         const projectId = parentTask.project_id;
         // Check permission: only admin and project_leader can assign
-        if (userRole !== 'admin') {
+        if (userRole !== 'admin' && userRole !== 'project_leader') {
             const leaderResult = await query('SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader', [projectId, profileId]);
             if (!leaderResult.rows[0]?.is_leader) {
                 return res.status(403).json({
@@ -39,11 +39,16 @@ export const updateMaterialAssignees = async (req, res) => {
             await query('DELETE FROM public.task_material_assignees WHERE task_id = $1', [taskId]);
             // Insert new assignments + create user tasks
             const newAssignments = [];
+            // Un usuario desactivado no puede recibir asignaciones nuevas -- se resuelven todas
+            // de una vez para no hacer una consulta por cada material.
+            const activeIdsResult = await query(`SELECT p.id FROM public.profiles p
+         JOIN public.users u ON u.id = p.user_id AND u.is_active = true`);
+            const activeProfileIds = new Set(activeIdsResult.rows.map((r) => r.id));
             if (assignments && Array.isArray(assignments) && assignments.length > 0) {
                 for (const assignment of assignments) {
                     const { material_id, assignee_id, horas_estimadas } = assignment;
-                    // Skip if no assignee selected
-                    if (!assignee_id)
+                    // Skip if no assignee selected, or if the assignee is deactivated
+                    if (!assignee_id || !activeProfileIds.has(assignee_id))
                         continue;
                     await query(`INSERT INTO public.task_material_assignees (task_id, material_id, assignee_id, horas_estimadas)
              VALUES ($1, $2, $3, $4)`, [taskId, material_id, assignee_id, horas_estimadas || null]);

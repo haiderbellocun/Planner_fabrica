@@ -4,7 +4,7 @@ import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 const secret = env.JWT_SECRET;
 const signOptions = {
-    expiresIn: (env.JWT_EXPIRES_IN ?? '7d'),
+    expiresIn: (env.JWT_EXPIRES_IN ?? '4h'),
 };
 export const login = async (req, res) => {
     try {
@@ -79,7 +79,8 @@ export const getCurrentUser = async (req, res) => {
        FROM public.users u
        LEFT JOIN public.profiles p ON p.user_id = u.id
        LEFT JOIN public.user_roles ur ON ur.user_id = p.id
-       WHERE u.id = $1`, [req.user.id]);
+       WHERE u.id = $1
+       LIMIT 1`, [req.user.id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }

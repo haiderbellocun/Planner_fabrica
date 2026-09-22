@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { reportsAccessMiddleware } from '../middleware/permissions.js';
-import { getOverview, getProjectsProgress, getProjectsTimeline, getTeamPerformance, getTeamCapacity, getMaterialProduction, getTimeDistribution, getWorkflowTransitions, getWorkloadByCargo, getProjectCategoriesSummary, getTasksWeeklyTrend, getUserMiniReport, getTeamMonthlyCompletion, getTeamByCargo, getWeeklyByCargo, getUnassignedMaterials, getIndividualPerformance, } from '../controllers/reportsController.js';
+import { getOverview, getProjectsProgress, getProjectsTimeline, getTeamPerformance, getTeamCapacity, getMaterialProduction, getTimeDistribution, getWorkflowTransitions, getWorkloadByCargo, getProjectCategoriesSummary, getTasksWeeklyTrend, getUserMiniReport, getTeamMonthlyCompletion, getTeamByCargo, getWeeklyByCargo, getUnassignedMaterials, getIndividualPerformance, getTimeByPhase, getTasksDetail, getOntimeByEquipo, getPersonMetrics, getCapacityForecast, getThroughput, getProductionByPerson, getContentOverview, getUserLocations, } from '../controllers/reportsController.js';
 const router = Router();
 // All report endpoints require authentication and admin or project_leader role
 router.use(authMiddleware);
@@ -23,4 +23,13 @@ router.get('/team-by-cargo', getTeamByCargo);
 router.get('/weekly-by-cargo', getWeeklyByCargo);
 router.get('/unassigned-materials', getUnassignedMaterials);
 router.get('/individual-performance', getIndividualPerformance);
+router.get('/time-by-phase', getTimeByPhase);
+router.get('/tasks-detail', getTasksDetail);
+router.get('/ontime-by-equipo', getOntimeByEquipo);
+router.get('/person-metrics', getPersonMetrics);
+router.get('/capacity-forecast', getCapacityForecast);
+router.get('/throughput', getThroughput);
+router.get('/production-by-person', getProductionByPerson);
+router.get('/content-overview', getContentOverview);
+router.get('/user-locations', getUserLocations);
 export default router;

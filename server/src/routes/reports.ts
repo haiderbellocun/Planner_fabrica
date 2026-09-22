@@ -26,6 +26,8 @@ import {
   getCapacityForecast,
   getThroughput,
   getProductionByPerson,
+  getContentOverview,
+  getUserLocations,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -58,5 +60,7 @@ router.get('/person-metrics', getPersonMetrics);
 router.get('/capacity-forecast', getCapacityForecast);
 router.get('/throughput', getThroughput);
 router.get('/production-by-person', getProductionByPerson);
+router.get('/content-overview', getContentOverview);
+router.get('/user-locations', getUserLocations);
 
 export default router;

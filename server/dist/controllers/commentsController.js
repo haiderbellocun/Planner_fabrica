@@ -1,4 +1,7 @@
 import { query } from '../config/database.js';
+import { ensureWatcher, notifyWatchers } from '../utils/taskWatchers.js';
+import { env } from '../config/env.js';
+import { sendTaskAssignedEmail, buildMentionEmailHtml } from '../services/emailService.js';
 /**
  * GET /api/tasks/:id/comments
  * Get all comments for a task
@@ -51,7 +54,7 @@ export const getTaskComments = async (req, res) => {
 export const createTaskComment = async (req, res) => {
     try {
         const { id: taskId } = req.params;
-        const { comment } = req.body;
+        const { comment, mentioned_ids } = req.body;
         const userId = req.user?.profileId;
         if (!comment || comment.trim() === '') {
             return res.status(400).json({ error: 'Comment cannot be empty' });
@@ -65,41 +68,61 @@ export const createTaskComment = async (req, res) => {
        FROM public.profiles
        WHERE id = $1`, [userId]);
         const user = userResult.rows[0];
-        // Create notifications based on who commented and who owns/has assigned task
+        // Commenting makes you a watcher; notify every other watcher of the task
+        // (reporter and assignee are auto-watchers, so this covers the old
+        // leader<->assignee-only cases plus anyone who opted in manually).
         try {
-            const taskResult = await query(`SELECT project_id, title, assignee_id, reporter_id
-         FROM public.tasks
-         WHERE id = $1`, [taskId]);
-            const task = taskResult.rows[0];
-            if (task && userId) {
-                const { project_id: projectId, title, assignee_id: assigneeId, reporter_id: reporterId } = task;
-                // Check if reporter is a project leader for this project
-                let isReporterLeader = false;
-                if (reporterId) {
-                    const pmResult = await query(`SELECT role
-             FROM public.project_members
-             WHERE project_id = $1 AND user_id = $2`, [projectId, reporterId]);
-                    isReporterLeader = pmResult.rows.some((row) => row.role === 'leader');
-                }
-                // Case 1: alguien (no el líder) comenta -> notificar al project_leader que creó la tarea
-                if (reporterId && isReporterLeader && userId !== reporterId) {
-                    await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
-             VALUES ($1, $2, $3, 'task_commented', 'Nuevo comentario en tarea', $4)`, [
-                        reporterId,
-                        projectId,
-                        taskId,
-                        `Han comentado en la tarea "${title}"`,
-                    ]);
-                }
-                // Case 2: el project_leader que creó la tarea comenta -> notificar al responsable de la tarea
-                if (isReporterLeader && reporterId && userId === reporterId && assigneeId && assigneeId !== reporterId) {
-                    await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
-             VALUES ($1, $2, $3, 'task_commented', 'Nuevo comentario en tu tarea', $4)`, [
-                        assigneeId,
-                        projectId,
-                        taskId,
-                        `El líder del proyecto comentó en la tarea "${title}"`,
-                    ]);
+            if (userId) {
+                await ensureWatcher(taskId, userId);
+                const taskResult = await query('SELECT project_id, title FROM public.tasks WHERE id = $1', [taskId]);
+                const task = taskResult.rows[0];
+                if (task) {
+                    // Mentioned people get a dedicated "te mencionaron" notification
+                    // instead of the generic watcher one, so they're excluded from it
+                    // below to avoid a double notification for the same comment.
+                    let mentionedValidIds = [];
+                    if (Array.isArray(mentioned_ids) && mentioned_ids.length > 0) {
+                        const validResult = await query('SELECT id FROM public.profiles WHERE id = ANY($1::uuid[])', [mentioned_ids]);
+                        mentionedValidIds = validResult.rows
+                            .map((r) => r.id)
+                            .filter((id) => id !== userId);
+                        await Promise.all(mentionedValidIds.map(async (mentionedId) => {
+                            await ensureWatcher(taskId, mentionedId);
+                            await query(`INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
+                   VALUES ($1, $2, $3, 'task_commented', 'Te mencionaron', $4)`, [mentionedId, task.project_id, taskId, `${user?.full_name || 'Alguien'} te mencionó en un comentario de "${task.title}"`]);
+                        }));
+                        try {
+                            const [mentionedProfiles, projectResult] = await Promise.all([
+                                query(`SELECT p.id, p.full_name, u.email
+                   FROM public.profiles p
+                   JOIN public.users u ON u.id = p.user_id
+                   WHERE p.id = ANY($1::uuid[])`, [mentionedValidIds]),
+                                query('SELECT name FROM public.projects WHERE id = $1', [task.project_id]),
+                            ]);
+                            const projectName = projectResult.rows[0]?.name ?? 'un proyecto';
+                            const frontendUrl = (env.FRONTEND_URL ?? '').replace(/\/$/, '');
+                            const taskLink = frontendUrl ? `${frontendUrl}#/my-tasks` : '';
+                            const excerpt = comment.trim().length > 160 ? `${comment.trim().slice(0, 160)}…` : comment.trim();
+                            await Promise.allSettled(mentionedProfiles.rows
+                                .filter((p) => p.email)
+                                .map((p) => sendTaskAssignedEmail({
+                                to: p.email,
+                                subject: `${user?.full_name || 'Alguien'} te mencionó en ${projectName}`,
+                                html: buildMentionEmailHtml({
+                                    mentionedName: p.full_name ?? '',
+                                    commenterName: user?.full_name || 'Alguien',
+                                    projectName,
+                                    taskTitle: task.title,
+                                    commentExcerpt: excerpt,
+                                    taskLink,
+                                }),
+                            })));
+                        }
+                        catch (mentionEmailError) {
+                            console.error('Error sending mention emails:', mentionEmailError);
+                        }
+                    }
+                    await notifyWatchers(taskId, task.project_id, 'task_commented', 'Nuevo comentario en tarea', `${user?.full_name || 'Alguien'} comentó en la tarea "${task.title}"`, [userId, ...mentionedValidIds]);
                 }
             }
         }
