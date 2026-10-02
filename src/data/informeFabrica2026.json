@@ -1,0 +1,4865 @@
+{
+  "fuente": "INFORME DE PROYECTOS FÁBRICA DE CONTENIDO - 2026",
+  "programas": [
+    {
+      "id": "Tania-2",
+      "linea": "Tania",
+      "nombre": "Especialización en seguridad y salud en el trabajo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-3",
+      "linea": "Tania",
+      "nombre": "Especialización en prospectiva estratégica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-4",
+      "linea": "Tania",
+      "nombre": "Especialización en paz y desarrollo territorial",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-5",
+      "linea": "Tania",
+      "nombre": "Especialización en marketing digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-6",
+      "linea": "Tania",
+      "nombre": "Especialización en inteligencia de negocios",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-7",
+      "linea": "Tania",
+      "nombre": "Especializacion en gestion de negocios digitales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-8",
+      "linea": "Tania",
+      "nombre": "Especialización en gestión de la innovación del sistema moda",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-9",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia para la transición energética",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-10",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia financiera",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-11",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia educativa",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-12",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia de proyectos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Tania-13",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia de la marca",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS GIF: Semestre 1 y 2 completo ANALISTAS: Semestre 1 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-14",
+      "linea": "Tania",
+      "nombre": "Especialización en desarrollo organizacional y gestión del talento humano",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS GIF: Semestre 1 y 2 completo ANALISTAS: Semestre 1 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "NO APLICA VIDEOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Tania-15",
+      "linea": "Tania",
+      "nombre": "Especialización en contratación estatal",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS GIF: Semestre 1 y 2 completo ANALISTAS: Semestre 1 y 2 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "NO APLICA VIDEOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Tania-16",
+      "linea": "Tania",
+      "nombre": "Especialización en analítica de datos",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-17",
+      "linea": "Tania",
+      "nombre": "Especialización en alta gerencia",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS GIF: Semestre 1 y 2 completo ANALISTAS: Semestre 1 y 2 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "NO APLICA VIDEOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Tania-18",
+      "linea": "Tania",
+      "nombre": "Especialización en paz y desarrollo territorial",
+      "area": "",
+      "nota": "PRESENTADORAS: En pausa GIF: En proceso semestre 1 y 2 ANALISTAS: Plantilla de materiales completo",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Tania-19",
+      "linea": "Tania",
+      "nombre": "Especialización en transformación digital",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS ANALISTAS: Semestre 1 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "NO APLICA VIDEOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Tania-20",
+      "linea": "Tania",
+      "nombre": "Especializacion en gestion de tecnologias de la informacion",
+      "area": "",
+      "nota": "PRESENTADORAS: NO APLICA VIDEOS GIF: Semestre 1 completo ANALISTAS: Semestre 1 completo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-21",
+      "linea": "Tania",
+      "nombre": "Especialización en analítica de datos",
+      "area": "",
+      "nota": "Se entrega solo semestre 1",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-22",
+      "linea": "Tania",
+      "nombre": "Especialización en gerencia de la marca",
+      "area": "",
+      "nota": "Se entrega solo semestre 1",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-23",
+      "linea": "Tania",
+      "nombre": "Especializacion en gobernanza de la inteligencia artificial",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-24",
+      "linea": "Tania",
+      "nombre": "Especializacion en marketing politico",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-25",
+      "linea": "Tania",
+      "nombre": "Especializacion en diseño y desarrollo de videojuegos",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "NO APLICA VIDEOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Tania-26",
+      "linea": "Tania",
+      "nombre": "Especializacion en inteligencia artificial",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Tania-27",
+      "linea": "Tania",
+      "nombre": "Especializacion ciberseguridad",
+      "area": "",
+      "nota": "Completos semestre 1 y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "presentadoras": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-2",
+      "linea": "Producto",
+      "nombre": "Derecho Por Ciclos Propedeuticos",
+      "area": "",
+      "nota": "SE ENTREGA SOLO SEMESTRE 1, 2 y 7",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-3",
+      "linea": "Producto",
+      "nombre": "Diplomado En Construccion De Paz",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-4",
+      "linea": "Producto",
+      "nombre": "Diplomado En Casacion Laboral",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-5",
+      "linea": "Producto",
+      "nombre": "Diplomado Branding Politico",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-6",
+      "linea": "Producto",
+      "nombre": "Diplomado En Gerencia Social",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-7",
+      "linea": "Producto",
+      "nombre": "Diplomado En Justicia Transicional Y Derechos Humanos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-8",
+      "linea": "Producto",
+      "nombre": "Diplomado En Participacion Ciudadana",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-9",
+      "linea": "Producto",
+      "nombre": "Especializacion En Derecho Penal",
+      "area": "",
+      "nota": "SE ENTREGA SOLO SEMESTRE 1",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-10",
+      "linea": "Producto",
+      "nombre": "Especializacion Gerencia Publica",
+      "area": "",
+      "nota": "SE ENTREGA SOLO SEMESTRE 1",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-11",
+      "linea": "Producto",
+      "nombre": "Diplomado En Competitividad Sistemica En Transicion Energetica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-12",
+      "linea": "Producto",
+      "nombre": "Diplomado En Desarrollo Sostenible Y Transicion Energetica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-13",
+      "linea": "Producto",
+      "nombre": "Diplomado En Diseno Y Modelado De Reactores Quimicos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-14",
+      "linea": "Producto",
+      "nombre": "Diplomado En Hacking Etico Y Ciberdefensa",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-15",
+      "linea": "Producto",
+      "nombre": "Diplomado En Programacion Segura Y Automatizacion En Ciberseguridad",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-16",
+      "linea": "Producto",
+      "nombre": "Diplomado En Produccion Industrial Sostenible Y Eficiencia Energetica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-17",
+      "linea": "Producto",
+      "nombre": "Diplomado En Procesamiento De Lenguaje Natural",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-18",
+      "linea": "Producto",
+      "nombre": "Ingenieria Industrial",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 2 y 3",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-19",
+      "linea": "Producto",
+      "nombre": "Especializacion En Biotecnologia",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 1 Y 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-20",
+      "linea": "Producto",
+      "nombre": "Diplomado En Valoracion Economica De Recursos Naturales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-21",
+      "linea": "Producto",
+      "nombre": "Diplomado En Telesalud Y Salud Digital Con Aplicacion De La Inteligencia Artificial",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-22",
+      "linea": "Producto",
+      "nombre": "Diplomado En Sostenibilidad Para La Transicion Energetica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-23",
+      "linea": "Producto",
+      "nombre": "Diplomado En Psicologia Del Comportamiento Y Psiconeuroinmunologia Enfoque A La Salud Y Bienestar",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-24",
+      "linea": "Producto",
+      "nombre": "Tecnica Profesional En Soporte De Sistemas E Informatica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "CORRECCIONES SOLICITADAS",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Producto-25",
+      "linea": "Producto",
+      "nombre": "Ingenieria Energias",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 2",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-26",
+      "linea": "Producto",
+      "nombre": "Diplomado En Analitica De Datos Para El Sistema Moda",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-27",
+      "linea": "Producto",
+      "nombre": "Diplomado En Branding",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-28",
+      "linea": "Producto",
+      "nombre": "Diplomado En Comunicacion Organizacional",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-29",
+      "linea": "Producto",
+      "nombre": "Diplomado En Social Media Y Comunity Mangement",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-30",
+      "linea": "Producto",
+      "nombre": "Diplomado En Marketing En Entornos Digitales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-31",
+      "linea": "Producto",
+      "nombre": "Diplomado En Gerencia De Diseno Y Portafolio",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-32",
+      "linea": "Producto",
+      "nombre": "Diplomado En Finanzas Para El Sector Moda",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-33",
+      "linea": "Producto",
+      "nombre": "Diplomado En Edicion Y Composicion Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-34",
+      "linea": "Producto",
+      "nombre": "Diplomado En Creatividad Estrategica Y Direccion Creativa Con Ia",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-35",
+      "linea": "Producto",
+      "nombre": "Diplomado En Social Media Y Marketing De Influencers",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-36",
+      "linea": "Producto",
+      "nombre": "Diseno De Espacios",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-37",
+      "linea": "Producto",
+      "nombre": "Especializacion En Experiencias Gastronomicas",
+      "area": "",
+      "nota": "SE ENTREGA SOLO SEMESTRE 1",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-38",
+      "linea": "Producto",
+      "nombre": "Mercadeo Y Publicidad",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "CORRECCIONES SOLICITADAS",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Producto-39",
+      "linea": "Producto",
+      "nombre": "Curso Corto Vacunacion En Ninos Y Adultos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-40",
+      "linea": "Producto",
+      "nombre": "Curso Esterilizacion",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-41",
+      "linea": "Producto",
+      "nombre": "Curso Historia Clinica Electronica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-42",
+      "linea": "Producto",
+      "nombre": "Curso Ia En Salud Usos Usos Eticos Y Tendencias Globales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-43",
+      "linea": "Producto",
+      "nombre": "Diplomado Tele Monitoreo Predictivo Y Odontologia Ubicua",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-44",
+      "linea": "Producto",
+      "nombre": "Diplomado Inteligencia Artificial En La Practica Odontologica Moderna",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-45",
+      "linea": "Producto",
+      "nombre": "Diplomado Inteligencia Artificial Aplicada A La Investigacion Biomedica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-46",
+      "linea": "Producto",
+      "nombre": "Diplomado En Sistema General De Seguridad Social En Salud",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-47",
+      "linea": "Producto",
+      "nombre": "Curso Proteccion Radiologica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-48",
+      "linea": "Producto",
+      "nombre": "Gerontologia",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-49",
+      "linea": "Producto",
+      "nombre": "Quimica Farmaceutica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-50",
+      "linea": "Producto",
+      "nombre": "Administracion De Empresas Virtual",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 1,5 Y 7",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-51",
+      "linea": "Producto",
+      "nombre": "Administracion Financiera Digital",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 1, 2, 3, 4, 5, 6, 7, 8 Y 9",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-52",
+      "linea": "Producto",
+      "nombre": "Contaduria Publica",
+      "area": "",
+      "nota": "SE ENTREGAN SEMESTRE 2, 3 y 4",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-53",
+      "linea": "Producto",
+      "nombre": "Diplomado En Administracion Deportiva",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-54",
+      "linea": "Producto",
+      "nombre": "Diplomado En Gobernanza Corporativa",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-55",
+      "linea": "Producto",
+      "nombre": "Diplomado En Gestion De La Medicina Preventiva En El Trabajo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-56",
+      "linea": "Producto",
+      "nombre": "Diplomado En Desarrollo De Mercados Digitales Estrategias De Crecimiento Pricing Y Automatizacion",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-57",
+      "linea": "Producto",
+      "nombre": "Diplomado En Creacion Agil De Productos Digitales De La Idea Al Mvp",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-58",
+      "linea": "Producto",
+      "nombre": "Diplomado En Construccion De Negocios Digitales Escalabilidad Ia Y Gobernanza Para El Crecimiento Sostenible",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-59",
+      "linea": "Producto",
+      "nombre": "Diplomado En Innovacion Y Gestion Del Cambio En El Entorno Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-60",
+      "linea": "Producto",
+      "nombre": "Diplomado En Mercados Financieros Y De Inversion",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-61",
+      "linea": "Producto",
+      "nombre": "Diplomado En Marketing Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-62",
+      "linea": "Producto",
+      "nombre": "Diplomado En Prevencion Accion Y Asistencia Humanitaria",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-63",
+      "linea": "Producto",
+      "nombre": "Diplomado En Valoracion E Inversion En Startups Tecnologicas Finanzas De Nueva Generacion",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Producto-64",
+      "linea": "Producto",
+      "nombre": "Marketing Político y Electoral",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-65",
+      "linea": "Producto",
+      "nombre": "Habildiades para Aprendizaje",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-66",
+      "linea": "Producto",
+      "nombre": "Curso Antibiograma",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-67",
+      "linea": "Producto",
+      "nombre": "Curso Vacunación",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-68",
+      "linea": "Producto",
+      "nombre": "Curso Esterilización",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-69",
+      "linea": "Producto",
+      "nombre": "Curso Historia Clínica Electrónica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-70",
+      "linea": "Producto",
+      "nombre": "Curso Radiológica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-71",
+      "linea": "Producto",
+      "nombre": "Curso VIH",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-72",
+      "linea": "Producto",
+      "nombre": "Curso IA en salud usos usos éticos y tendencias globales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-73",
+      "linea": "Producto",
+      "nombre": "Diplomado IA en Investigación Biomédica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-74",
+      "linea": "Producto",
+      "nombre": "Curso Redacción de Artículo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-75",
+      "linea": "Producto",
+      "nombre": "Curso Corto Cultivo Celular",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-76",
+      "linea": "Producto",
+      "nombre": "Cocina Saludable",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-77",
+      "linea": "Producto",
+      "nombre": "Auditoría de Cuentas Médicas, Facturación y Gestión de Glosas",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-78",
+      "linea": "Producto",
+      "nombre": "Verificación de Condiciones de Habilitación en Servicios de Salud",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-79",
+      "linea": "Producto",
+      "nombre": "Curso de PAMEC y Mejoramien",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-80",
+      "linea": "Producto",
+      "nombre": "Sueroterapia Clínica y Terapia Intravenosa Segura",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-81",
+      "linea": "Producto",
+      "nombre": "FARMACOVIGILANCIA Y TECNOVIGILANCIA EN SERVICIOS DE SALUD",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-82",
+      "linea": "Producto",
+      "nombre": "Bebidas Saludables basada en vegetales y proteinas",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-83",
+      "linea": "Producto",
+      "nombre": "Suplementación nutricional deportiva",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-84",
+      "linea": "Producto",
+      "nombre": "Alimentación vegetariana y vegana",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-85",
+      "linea": "Producto",
+      "nombre": "Repostería básica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-86",
+      "linea": "Producto",
+      "nombre": "Inteligencia Artificial en la Práctica Odontológica Moderna",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Producto-87",
+      "linea": "Producto",
+      "nombre": "Tele-Monitoreo Predictivo y Odontología Ubicua",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Registro calificado-2",
+      "linea": "Registro calificado",
+      "nombre": "Técnica Profesional en Operación de Procesos Administrativos en Empresas Turísticas y Hoteleras",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-3",
+      "linea": "Registro calificado",
+      "nombre": "Tecnología en Gestión Administrativa de Empresas Turísticas y Hoteleras",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-4",
+      "linea": "Registro calificado",
+      "nombre": "Administración de Empresas Turísticas y Hoteleras",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Registro calificado-5",
+      "linea": "Registro calificado",
+      "nombre": "Técnica Profesional en Operación de Procesos Químicos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-6",
+      "linea": "Registro calificado",
+      "nombre": "Tecnología en Gestión de Procesos Químicos Industriales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-7",
+      "linea": "Registro calificado",
+      "nombre": "Ingeniería Química",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-8",
+      "linea": "Registro calificado",
+      "nombre": "Especialización en Música para Medios Audiovisuales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-9",
+      "linea": "Registro calificado",
+      "nombre": "Especialización en Negociación y Toma de Decisiones",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-10",
+      "linea": "Registro calificado",
+      "nombre": "Especialización en Derechos Humanos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "EN PROCESO DE ENTREGA",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Registro calificado-11",
+      "linea": "Registro calificado",
+      "nombre": "Especialización en Marketing Político",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-12",
+      "linea": "Registro calificado",
+      "nombre": "Diseño de Experiencias Interactivas",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-13",
+      "linea": "Registro calificado",
+      "nombre": "Tecnología en Desarrollo de Productos Digitales Innovadores: UX/UI",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-14",
+      "linea": "Registro calificado",
+      "nombre": "Técnica Profesional en Procesos Operativos de Experiencia e Interfaz de Usuario (UX/UI)",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-15",
+      "linea": "Registro calificado",
+      "nombre": "Marketing Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-16",
+      "linea": "Registro calificado",
+      "nombre": "Tecnología en Gestión de Marketing Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-17",
+      "linea": "Registro calificado",
+      "nombre": "Tecnica profesional en Proceso Operativos del Marketing Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-18",
+      "linea": "Registro calificado",
+      "nombre": "Negocios Internacionales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-19",
+      "linea": "Registro calificado",
+      "nombre": "Tecnología en Gestión Logística de Comercio Exterior",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Registro calificado-20",
+      "linea": "Registro calificado",
+      "nombre": "Técnico Profesional en Operación de Procesos de Comercio Exterior",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomados internos-2",
+      "linea": "Diplomados internos",
+      "nombre": "ADN_ DIRECCION_DE_OPERACIONES",
+      "area": "Proyección Académica",
+      "nota": "PRESETADORAS: Plan de estructuración total, de guiones y planes de rodale ANALISTAS: Revista en avistes GIF: Contenido listo",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "EN PROCESO PLANTILLA",
+          "presencia": "proceso"
+        },
+        "presentadoras": {
+          "raw": "EN PROCESO DE CONTENIDOS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    },
+    {
+      "id": "Diplomados internos-3",
+      "linea": "Diplomados internos",
+      "nombre": "Sembrando bienestar",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SOLO PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomados internos-4",
+      "linea": "Diplomados internos",
+      "nombre": "Ejes esenciales del sistema de salud",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SOLO PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomados internos-5",
+      "linea": "Diplomados internos",
+      "nombre": "Administración estratégica en el deporte",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SOLO PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomados internos-6",
+      "linea": "Diplomados internos",
+      "nombre": "Patronaje de prendas Infantiles avanzado",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-7",
+      "linea": "Diplomados internos",
+      "nombre": "Derecho ambiental y sostenibilidad- Marco normativo y retos actuales",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-8",
+      "linea": "Diplomados internos",
+      "nombre": "Excel intermedio para el manejo de datos, reportes y control administrativo",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-9",
+      "linea": "Diplomados internos",
+      "nombre": "Fundamentos esenciales para el manejo integrado de enfermedades en cultivos sostenibles",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-10",
+      "linea": "Diplomados internos",
+      "nombre": "Lombricompostaje Aplicado a la Producción Agropecuaria",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-11",
+      "linea": "Diplomados internos",
+      "nombre": "Gestión de organizaciones deportivas bajo el marco DEI (Diversidad, Equidad e Inclusión)",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-12",
+      "linea": "Diplomados internos",
+      "nombre": "Gestión del talento humano en el deporte",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-13",
+      "linea": "Diplomados internos",
+      "nombre": "Gestión del servicio en seguridad",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-14",
+      "linea": "Diplomados internos",
+      "nombre": "El impacto de las innovaciones biotecnológicas en los sistemas agropecuarios modernos",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-15",
+      "linea": "Diplomados internos",
+      "nombre": "La microbiología como motor fundamental de la agricultura sostenible",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-16",
+      "linea": "Diplomados internos",
+      "nombre": "Beneficios estratégicos de las compensaciones ambientales para productores del agro.",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-17",
+      "linea": "Diplomados internos",
+      "nombre": "Transformación de los productores rurales en empresarios agropecuarios visionarios",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-18",
+      "linea": "Diplomados internos",
+      "nombre": "Humanización en los servicios de salud y trato digno",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-19",
+      "linea": "Diplomados internos",
+      "nombre": "Mecanismos de participación social en salud y la resolución 2063 de 2017",
+      "area": "Proyección Social",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-20",
+      "linea": "Diplomados internos",
+      "nombre": "Cargo para Profesional en Competencias Comunicación escrita",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-21",
+      "linea": "Diplomados internos",
+      "nombre": "Analista de Datos",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-22",
+      "linea": "Diplomados internos",
+      "nombre": "Experto en Calidad Educativa y cumplimiento jurídico académico",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-23",
+      "linea": "Diplomados internos",
+      "nombre": "Experto en Modelos de Evaluación",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-24",
+      "linea": "Diplomados internos",
+      "nombre": "Gestor Administrativo de Evaluación y Registro",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-25",
+      "linea": "Diplomados internos",
+      "nombre": "Profesional en Competencias Lectura Crítica",
+      "area": "Saber PRO",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomados internos-26",
+      "linea": "Diplomados internos",
+      "nombre": "Calidad educativa y cumplimiento jurídico académico",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SOLO PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomados internos-27",
+      "linea": "Diplomados internos",
+      "nombre": "Competencias lectura crítica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        },
+        "analistas": {
+          "raw": "SOLO PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Correcciones-2",
+      "linea": "Correcciones",
+      "nombre": "Especializaciones en Derechos Humanos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-3",
+      "linea": "Correcciones",
+      "nombre": "Especialización en Marketing Político",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-4",
+      "linea": "Correcciones",
+      "nombre": "Mercadeo y Publicidad",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-5",
+      "linea": "Correcciones",
+      "nombre": "Ingeniería En Energías",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-6",
+      "linea": "Correcciones",
+      "nombre": "Ingeniería de Datos e Inteligencia Artificial",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-7",
+      "linea": "Correcciones",
+      "nombre": "Ingeniería de Software",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-8",
+      "linea": "Correcciones",
+      "nombre": "Negocios Internacionales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-9",
+      "linea": "Correcciones",
+      "nombre": "Administración de Empresas Virtual - Renovación",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-10",
+      "linea": "Correcciones",
+      "nombre": "Especialización En Diseño Y Desarrollo De Videojuegos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-11",
+      "linea": "Correcciones",
+      "nombre": "Diseño de experiencias Interactivas",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-12",
+      "linea": "Correcciones",
+      "nombre": "Marketing Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-13",
+      "linea": "Correcciones",
+      "nombre": "Administración De Empresas Turísticas Y Hoteleras actualización",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-14",
+      "linea": "Correcciones",
+      "nombre": "Contaduría Pública",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-15",
+      "linea": "Correcciones",
+      "nombre": "Ingeniería En Logística",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-16",
+      "linea": "Correcciones",
+      "nombre": "Administración Financiera Digital",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        },
+        "analistas": {
+          "raw": "TERMINADO",
+          "presencia": "dentro"
+        }
+      },
+      "cobertura": "completo"
+    },
+    {
+      "id": "Correcciones-17",
+      "linea": "Correcciones",
+      "nombre": "Administración de la Seguridad y Salud en el Trabajo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Correcciones-18",
+      "linea": "Correcciones",
+      "nombre": "Especialización en Riesgos y Cumplimiento Corporativo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Correcciones-19",
+      "linea": "Correcciones",
+      "nombre": "Especialización en Negociación y Toma de decisiones",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Correcciones-20",
+      "linea": "Correcciones",
+      "nombre": "Formato Realimentación vigente",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "EN PROCESO",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "parcial"
+    },
+    {
+      "id": "Diplomado de salud-2",
+      "linea": "Diplomado de salud",
+      "nombre": "18. Curso de vigilancia epidemiologica de infecciones",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-4",
+      "linea": "Diplomado de salud",
+      "nombre": "22. Curso Protección Radiológica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-5",
+      "linea": "Diplomado de salud",
+      "nombre": "25. Curso Yoga y Pilates",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-6",
+      "linea": "Diplomado de salud",
+      "nombre": "26. Tecnologia deportiva para la monitorizacion, control y valoracion de la carga de entrenamiento en el futbol",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-7",
+      "linea": "Diplomado de salud",
+      "nombre": "27. Salud mental en la primera infancia",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-8",
+      "linea": "Diplomado de salud",
+      "nombre": "30. Primeros Auxilios Psicologicos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-9",
+      "linea": "Diplomado de salud",
+      "nombre": "32. Curso inteligencia Artificial en Salud: usos eticos y tendencias globales",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-10",
+      "linea": "Diplomado de salud",
+      "nombre": "34. Curso Redaccion de Articulos Cientificos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-11",
+      "linea": "Diplomado de salud",
+      "nombre": "39. Curso corto de PAMEC y Mejoramiento continuo de la calidad",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-12",
+      "linea": "Diplomado de salud",
+      "nombre": "40. Curso Certificación en Sueroterapia Clínica y Terapia Intravenosa Segura",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-13",
+      "linea": "Diplomado de salud",
+      "nombre": "41. Curso Farmacovigilancia y Tecnovigilancia en Servicios de Salud",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-14",
+      "linea": "Diplomado de salud",
+      "nombre": "42. Curso Preparacion de Bebidas Saludables Basadas en Proteinas Vegetales y Funciones para el Bienestar y el Rendimiento Fisico",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-15",
+      "linea": "Diplomado de salud",
+      "nombre": "43. Curso Suplementos Nutricionales para deportistas (enfoque clinico-deportivo)",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-16",
+      "linea": "Diplomado de salud",
+      "nombre": "44. Cursio alimentacion vegetariana y Vegana con enfoque funcional",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-17",
+      "linea": "Diplomado de salud",
+      "nombre": "45. Curso Reposteria basica Productiva",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-18",
+      "linea": "Diplomado de salud",
+      "nombre": "47. Inteligencia Artificial en la Práctica Odontológica Moderna",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-19",
+      "linea": "Diplomado de salud",
+      "nombre": "48. Tele-Monitoreo Predictivo y Odontología Ubicua",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-20",
+      "linea": "Diplomado de salud",
+      "nombre": "14. Curso corto asesoria de VIH",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-21",
+      "linea": "Diplomado de salud",
+      "nombre": "15. Curso corto de lectura de Antibiograma",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-22",
+      "linea": "Diplomado de salud",
+      "nombre": "19. Curso Corto Vacunación en Niños y Adultos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-23",
+      "linea": "Diplomado de salud",
+      "nombre": "20. Curso corto Esterilización en Odontología",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-24",
+      "linea": "Diplomado de salud",
+      "nombre": "21. Curso Corto Historia Clínica Electrónica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-25",
+      "linea": "Diplomado de salud",
+      "nombre": "35. Curso corto: Fundamentos y Gestión del Cultivo Celular para Investigación Biomédica",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-26",
+      "linea": "Diplomado de salud",
+      "nombre": "5. Soporte vital avanzado",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-27",
+      "linea": "Diplomado de salud",
+      "nombre": "6. Soporte vital basico",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-28",
+      "linea": "Diplomado de salud",
+      "nombre": "7. Atención Integral a Víctimas de Ataques con Agentes Químicos",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-29",
+      "linea": "Diplomado de salud",
+      "nombre": "8. Acompañamiento y gestion del duelo",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "PLANTILLA LISTA",
+          "presencia": "puerta"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "puerta"
+    },
+    {
+      "id": "Diplomado de salud-30",
+      "linea": "Diplomado de salud",
+      "nombre": "9. Seguridad del paciente",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR PLANTILLA",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomado de salud-31",
+      "linea": "Diplomado de salud",
+      "nombre": "10. Atencion integral a la victima de violencia sexual",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR PLANTILLA",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomado de salud-32",
+      "linea": "Diplomado de salud",
+      "nombre": "11. Toma de Citologia Cervico uterina",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "N/A",
+          "presencia": "na"
+        },
+        "analistas": {
+          "raw": "SIN INICIAR PLANTILLA",
+          "presencia": "fuera"
+        },
+        "presentadoras": {
+          "raw": "SIN INICIAR",
+          "presencia": "fuera"
+        }
+      },
+      "cobertura": "fuera"
+    },
+    {
+      "id": "Diplomado de salud-34",
+      "linea": "Diplomado de salud",
+      "nombre": "OTROS DIPLOMADOS",
+      "area": "",
+      "nota": "",
+      "frentes": {
+        "gif": {
+          "raw": "ESTADO GIF",
+          "presencia": "proceso"
+        },
+        "analistas": {
+          "raw": "ESTADO ANALISTAS",
+          "presencia": "proceso"
+        },
+        "presentadoras": {
+          "raw": "ESTADO PRESENTADORAS",
+          "presencia": "proceso"
+        }
+      },
+      "cobertura": "proceso"
+    }
+  ],
+  "openDental": {
+    "modulos": [
+      {
+        "id": "M1",
+        "nombre": "Fundamentos y navegación",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Completo",
+            "presencia": "dentro"
+          }
+        ]
+      },
+      {
+        "id": "M2",
+        "nombre": "Configuración inicial y seguridad",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Completo",
+            "presencia": "dentro"
+          }
+        ]
+      },
+      {
+        "id": "M3",
+        "nombre": "Family: paciente, familia y garante",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Hay 1 editado (Ingles y Español) y faltan 4 por editar (Ingles y Español)",
+            "presencia": "proceso"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "En proceso",
+            "presencia": "proceso"
+          }
+        ]
+      },
+      {
+        "id": "M4",
+        "nombre": "Seguros y planes de beneficios",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M5",
+        "nombre": "Appointments: agenda y recall",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M6",
+        "nombre": "Chart: registro clínico",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M7",
+        "nombre": "Treatment Plan",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "En proceso",
+            "presencia": "proceso"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M8",
+        "nombre": "Account: cartera, pagos y reclamaciones",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M9",
+        "nombre": "Imaging y gestión documental",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      },
+      {
+        "id": "M10",
+        "nombre": "Manage, reportes y eServices",
+        "etapas": [
+          {
+            "etapa": "Guiones maestro",
+            "raw": "Completo",
+            "presencia": "dentro"
+          },
+          {
+            "etapa": "Guiones videos",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Audiovisual",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Instructivos",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Grabación",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "Edición",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          },
+          {
+            "etapa": "PDF",
+            "raw": "Sin iniciar",
+            "presencia": "fuera"
+          }
+        ]
+      }
+    ],
+    "cursosHtml": [
+      {
+        "nombre": "dms_ai_foundations Español",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "dms_ai_foundations Ingles",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "dms mistery call Español",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "dms mistery call Ingles",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "sense Dental IA-onboarding Español",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "sense Dental IA-onboarding Ingles",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "the new patient line Español",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "the new patient line Ingles",
+        "equipo": "ANALISTAS",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      }
+    ]
+  },
+  "escuela": {
+    "fases": [
+      {
+        "nombre": "Estructuración",
+        "raw": "Completado",
+        "entregables": "Reestructuración Sílabo (5x5)",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Planificación",
+        "raw": "Completado",
+        "entregables": "Plan de rodaje y guiones multiformato",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Módulo 1: Fundamentos y Marca Personal",
+        "raw": "Completado",
+        "entregables": "5 Videos, 1 Podcast, 2 Guías PDF, 1 Quiz",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Módulo 2: Creación de Contenido",
+        "raw": "En Pausa",
+        "entregables": "5 Videos, 1 Podcast, Plantillas de guiones",
+        "presencia": "fuera"
+      },
+      {
+        "nombre": "Módulo 3: Producción y Edición",
+        "raw": "En Pausa",
+        "entregables": "5 Videos demostrativos, 1 Podcast, Kit de recursos",
+        "presencia": "fuera"
+      },
+      {
+        "nombre": "Módulo 4: Estrategia y Algoritmos",
+        "raw": "En Pausa",
+        "entregables": "5 Videos analíticos, 1 Podcast, Infografías",
+        "presencia": "fuera"
+      },
+      {
+        "nombre": "Módulo 5: Monetización y Negocios",
+        "raw": "En Pausa",
+        "entregables": "5 Videos estratégicos, 1 Podcast, Kit de contratos",
+        "presencia": "fuera"
+      },
+      {
+        "nombre": "Fase Final: Correcciones",
+        "raw": "En Pausa",
+        "entregables": "Control de calidad, correcciones y publicación final",
+        "presencia": "fuera"
+      }
+    ],
+    "etapas": [
+      {
+        "nombre": "Etapa 1: Rodaje y Captura",
+        "avance": 0.3
+      },
+      {
+        "nombre": "Etapa 2: Postproducción Audiovisual",
+        "avance": 0.0
+      },
+      {
+        "nombre": "Etapa 3: Materiales Multiformato",
+        "avance": 0.0
+      },
+      {
+        "nombre": "Etapa 4: Control de Calidad y Carga",
+        "avance": 0.0
+      }
+    ]
+  },
+  "tendencias": {
+    "pausado": true,
+    "indicadores": [
+      {
+        "nombre": "Volumen de Producción Semanal",
+        "meta": "2 Videos grabados y editados / semana",
+        "avance": "2/2 Semanales",
+        "estado": "Completado cada semana"
+      },
+      {
+        "nombre": "Investigación de Tendencias",
+        "meta": "2 Sesiones de investigación / semana",
+        "avance": "2/2 Semanales",
+        "estado": ""
+      },
+      {
+        "nombre": "Eficiencia en Edición y Entrega",
+        "meta": "Entrega el mismo día de grabación",
+        "avance": "90% puntualidad",
+        "estado": ""
+      }
+    ],
+    "semana": [
+      {
+        "dia": "Lunes",
+        "actividad": "Investigación General",
+        "entregable": "Reporte de Temas + Propuestas de Guion",
+        "estado": "Completado cada semana"
+      },
+      {
+        "dia": "Martes",
+        "actividad": "Grabación y Edición Video 1",
+        "entregable": "Master Video 1 Finalizado",
+        "estado": ""
+      },
+      {
+        "dia": "Miércoles",
+        "actividad": "Investigación de Virales",
+        "entregable": "Análisis de Tendencias Virales + Ganchos",
+        "estado": ""
+      },
+      {
+        "dia": "Jueves",
+        "actividad": "Grabación y Edición Video 2",
+        "entregable": "Master Video 2 Finalizado",
+        "estado": ""
+      }
+    ],
+    "inicio": "2026-08-05",
+    "fechasProgramadas": 14,
+    "noEntregados": 2,
+    "entregados": 12,
+    "nota": "Dos fechas (1 martes y 1 jueves) quedaron sin video. El proyecto está pausado."
+  },
+  "bienestar": {
+    "materiales": [
+      {
+        "tipo": "Videos",
+        "total": 17,
+        "listos": 5,
+        "pendientes": 12
+      },
+      {
+        "tipo": "Infografías",
+        "total": 28,
+        "listos": 28,
+        "pendientes": 0
+      },
+      {
+        "tipo": "Pódcast",
+        "total": 2,
+        "listos": 2,
+        "pendientes": 0
+      }
+    ],
+    "apps": [
+      {
+        "nombre": "Bienvenida",
+        "videos": 1,
+        "infografias": 0,
+        "podcast": 0,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "CAMITICKETS",
+        "videos": 2,
+        "infografias": 4,
+        "podcast": 0,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "CDIGITAL",
+        "videos": 2,
+        "infografias": 5,
+        "podcast": 0,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "Portal de Pagos",
+        "videos": 1,
+        "infografias": 1,
+        "podcast": 0,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "CTAYUDA",
+        "videos": 4,
+        "infografias": 9,
+        "podcast": 1,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "CUN 360",
+        "videos": 5,
+        "infografias": 5,
+        "podcast": 1,
+        "estadoVideos": "COMPLETADO"
+      },
+      {
+        "nombre": "SINU",
+        "videos": 2,
+        "infografias": 4,
+        "podcast": 0,
+        "estadoVideos": "COMPLETADO"
+      }
+    ],
+    "proyectoTerminado": true,
+    "nota": "La hoja marca el proyecto y cada aplicativo como terminados. El conteo deja 12 videos sin registrar como listos (5 de 17)."
+  },
+  "remasterizacion": {
+    "programas": [
+      {
+        "nombre": "Especialización en Derechos Humanos",
+        "tipo": "Especialización",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Especialización en Gobernanza de la IA",
+        "tipo": "Especialización",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Diseño de Experiencias Interactivas",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Especialización en Música para Medios Audiovisuales",
+        "tipo": "Especialización",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Ingeniería Química",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Especialización en Riesgos y Cumplimiento Corporativo",
+        "tipo": "Especialización",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Negocios Internacionales",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Administración Agroindustrial",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Administración de la Seguridad y Salud en el Trabajo",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Pregrado en Administración de Empresas Turísticas y Hoteleras",
+        "tipo": "Pregrado",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      },
+      {
+        "nombre": "Especialización en Negociación y Toma de Decisiones",
+        "tipo": "Especialización",
+        "raw": "TERMINADO",
+        "presencia": "dentro"
+      }
+    ],
+    "hitos": [
+      {
+        "fecha": "2026-09-22",
+        "actividad": "Grabación",
+        "alcance": "Turísticas y Hoteleras y Negociación y Toma de Decisiones"
+      },
+      {
+        "fecha": "2026-09-22",
+        "actividad": "Edición",
+        "alcance": "Diseño de Experiencias Interactivas"
+      },
+      {
+        "fecha": "2026-09-22",
+        "actividad": "Edición",
+        "alcance": "Música para Medios Audiovisuales"
+      },
+      {
+        "fecha": "2026-09-22",
+        "actividad": "Edición",
+        "alcance": "Ingeniería Química"
+      },
+      {
+        "fecha": "2026-09-23",
+        "actividad": "Edición",
+        "alcance": "Riesgos y Cumplimiento Corporativo"
+      },
+      {
+        "fecha": "2026-09-23",
+        "actividad": "Edición",
+        "alcance": "Negocios Internacionales"
+      },
+      {
+        "fecha": "2026-09-24",
+        "actividad": "Edición",
+        "alcance": "Administración Agroindustrial"
+      },
+      {
+        "fecha": "2026-09-24",
+        "actividad": "Edición",
+        "alcance": "Seguridad y Salud en el Trabajo"
+      },
+      {
+        "fecha": "2026-09-25",
+        "actividad": "Edición",
+        "alcance": "Administración de Empresas Turísticas y Hoteleras"
+      },
+      {
+        "fecha": "2026-09-25",
+        "actividad": "Edición",
+        "alcance": "Negociación y Toma de Decisiones"
+      },
+      {
+        "fecha": "2026-10-28",
+        "actividad": "Control de calidad",
+        "alcance": "Revisión de los 11 videos y ajustes finales"
+      },
+      {
+        "fecha": "2026-09-30",
+        "actividad": "Entrega final",
+        "alcance": "Paquete completo de 11 videos (FINALIZADO)"
+      }
+    ],
+    "proyectoTerminado": true,
+    "resumen": {
+      "total": 11,
+      "editados": 11,
+      "grabadosPorEditar": 11,
+      "pendientesGrabacion": 0
+    }
+  }
+}

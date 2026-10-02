@@ -42,7 +42,6 @@ import {
   useUserMiniReport,
   type UserMiniReport,
   useReportProjectsTimeline,
-  useReportTeamByCargo,
   useReportTasksDetail,
   type TaskDetail,
   useReportPersonMetrics,
@@ -61,6 +60,8 @@ import {
 } from '@/components/reports/ReportCharts';
 import { axisTick, gridColor, chartColors } from '@/components/charts/chartTheme';
 import { PlanDeTrabajoTab } from '@/components/plan-trabajo/PlanDeTrabajoTab';
+import { CapacidadFabricaTab } from '@/components/reports/CapacidadFabricaTab';
+import { CoberturaFabricaTab } from '@/components/reports/CoberturaFabricaTab';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
@@ -210,7 +211,6 @@ function TabResumen() {
   const { data: weeklyTrend = [] } = useReportTasksWeeklyTrend();
   const { data: personMetrics } = useReportPersonMetrics();
   const { data: timeDist = [] } = useReportTimeDistribution();
-  const { data: teamByCargo = [] } = useReportTeamByCargo();
 
   if (isLoading) {
     return <LoadingState />;
@@ -320,9 +320,7 @@ function TabResumen() {
   const avgTimeData = timeDist.filter((d) => d.count > 0).map((d) => ({ name: d.status_name, promedio: d.stats.mean }));
   const bottleneck = avgTimeData.length > 0
     ? avgTimeData.reduce((prev, curr) => (curr.promedio > prev.promedio ? curr : prev)) : null;
-  const overdueMembers = teamByCargo.filter((m) => m.overdue_tasks > 0);
-  const totalOverdue = overdueMembers.reduce((s, m) => s + m.overdue_tasks, 0);
-  const hasInsights = (bottleneck && bottleneck.promedio > 0) || totalOverdue > 0 || (puntualidadGlobal != null && puntualidadGlobal < 60);
+  const hasInsights = (bottleneck && bottleneck.promedio > 0) || (puntualidadGlobal != null && puntualidadGlobal < 60);
 
   return (
     <div className="space-y-8">
@@ -378,11 +376,6 @@ function TabResumen() {
             {bottleneck && bottleneck.promedio > 0 && (
               <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-[11px] leading-relaxed">
                 <strong>Cuello de botella:</strong> promedio de <strong>{formatHours(bottleneck.promedio)}</strong> en estado "<strong>{bottleneck.name}</strong>".
-              </div>
-            )}
-            {totalOverdue > 0 && (
-              <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
-                <strong>{totalOverdue} tareas vencidas</strong> en {overdueMembers.length} colaborador(es): {overdueMembers.map((m) => m.full_name.split(' ')[0]).join(', ')}.
               </div>
             )}
             {puntualidadGlobal != null && puntualidadGlobal < 60 && (
@@ -2422,17 +2415,23 @@ export default function ReportsPage() {
         </div>
 
         <Tabs defaultValue="resumen" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-6 max-w-[820px]">
+          <TabsList className="flex h-auto max-w-5xl flex-wrap justify-start gap-1 rounded-3xl py-1.5">
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="cobertura">Cobertura</TabsTrigger>
             <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="rendimiento">Rendimiento</TabsTrigger>
+            <TabsTrigger value="capacidad">Capacidad</TabsTrigger>
             <TabsTrigger value="eficiencia">Detalle analítico</TabsTrigger>
             <TabsTrigger value="plan-trabajo">Plan de Trabajo</TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumen">
             <TabResumen />
+          </TabsContent>
+
+          <TabsContent value="cobertura">
+            <CoberturaFabricaTab />
           </TabsContent>
 
           <TabsContent value="proyectos">
@@ -2445,6 +2444,10 @@ export default function ReportsPage() {
 
           <TabsContent value="rendimiento" className="space-y-6">
             <IndividualPerformanceTab />
+          </TabsContent>
+
+          <TabsContent value="capacidad">
+            <CapacidadFabricaTab />
           </TabsContent>
 
           <TabsContent value="eficiencia">

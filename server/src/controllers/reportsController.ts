@@ -494,12 +494,12 @@ export const getTimeDistribution = async (req: AuthRequest, res: Response) => {
         ts.color,
         ts.display_order,
         COUNT(*)::int                                                          AS count,
-        ROUND(MIN(tsh.duration_seconds)  / 3600.0, 2)                         AS min_h,
-        ROUND(MAX(tsh.duration_seconds)  / 3600.0, 2)                         AS max_h,
-        ROUND(AVG(tsh.duration_seconds)  / 3600.0, 2)                         AS mean_h,
-        ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS q1_h,
-        ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS median_h,
-        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0, 2) AS q3_h
+        ROUND((MIN(tsh.duration_seconds) / 3600.0)::numeric, 2)                         AS min_h,
+        ROUND((MAX(tsh.duration_seconds) / 3600.0)::numeric, 2)                         AS max_h,
+        ROUND((AVG(tsh.duration_seconds) / 3600.0)::numeric, 2)                         AS mean_h,
+        ROUND((PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0)::numeric, 2) AS q1_h,
+        ROUND((PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0)::numeric, 2) AS median_h,
+        ROUND((PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY tsh.duration_seconds) / 3600.0)::numeric, 2) AS q3_h
       FROM public.task_status_history tsh
       JOIN public.task_statuses ts ON ts.id = tsh.from_status_id
       WHERE tsh.duration_seconds IS NOT NULL AND tsh.duration_seconds > 0
@@ -1427,11 +1427,11 @@ export const getTimeByPhase = async (req: AuthRequest, res: Response) => {
         ts.color                                                 AS status_color,
         ts.display_order,
         COUNT(*)::int                                            AS sample_count,
-        ROUND(AVG(tsh.duration_seconds) / 3600.0, 2)            AS avg_hours,
-        ROUND(
+        ROUND((AVG(tsh.duration_seconds) / 3600.0)::numeric, 2)            AS avg_hours,
+        ROUND((
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tsh.duration_seconds)
-          / 3600.0, 2
-        )                                                        AS median_hours
+          / 3600.0
+        )::numeric, 2)                                               AS median_hours
       FROM public.task_status_history tsh
       JOIN public.tasks t  ON t.id  = tsh.task_id
       JOIN public.profiles p ON p.id = t.assignee_id
@@ -1517,11 +1517,11 @@ export const getTasksDetail = async (req: AuthRequest, res: Response) => {
         t.created_at,
         t.due_date,
         CASE WHEN ts_cur.is_completed THEN t.updated_at ELSE NULL END        AS closed_at,
-        ROUND(COALESCE(pt.sec_espera,   0) / 3600.0, 2)                     AS h_espera,
-        ROUND(COALESCE(pt.sec_proceso,  0) / 3600.0, 2)                     AS h_proceso,
-        ROUND(COALESCE(pt.sec_revision, 0) / 3600.0, 2)                     AS h_revision,
-        ROUND(COALESCE(pt.sec_ajustes,  0) / 3600.0, 2)                     AS h_ajustes,
-        ROUND(COALESCE(pt.sec_espera + pt.sec_proceso + pt.sec_revision + pt.sec_ajustes, 0) / 3600.0, 2) AS h_total,
+        ROUND((COALESCE(pt.sec_espera,   0) / 3600.0)::numeric, 2)                     AS h_espera,
+        ROUND((COALESCE(pt.sec_proceso,  0) / 3600.0)::numeric, 2)                     AS h_proceso,
+        ROUND((COALESCE(pt.sec_revision, 0) / 3600.0)::numeric, 2)                     AS h_revision,
+        ROUND((COALESCE(pt.sec_ajustes,  0) / 3600.0)::numeric, 2)                     AS h_ajustes,
+        ROUND((COALESCE(pt.sec_espera + pt.sec_proceso + pt.sec_revision + pt.sec_ajustes, 0) / 3600.0)::numeric, 2) AS h_total,
         COALESCE(ac.cnt, 0)                                                  AS devoluciones
       FROM public.tasks t
       JOIN public.task_statuses ts_cur ON ts_cur.id = t.status_id
@@ -2255,6 +2255,405 @@ export const getUserLocations = async (req: AuthRequest, res: Response) => {
     })));
   } catch (error) {
     console.error('User locations error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/project-utilization
+ * Macro view for the "Capacidad de fábrica" dashboard: per project, pending hours
+ * (backlog not yet completed) against the weekly capacity of the people who have
+ * work assigned in that project — i.e. what share of that team's week the project
+ * is currently occupying. Plus a factory-wide summary for the headline KPIs.
+ */
+export const getProjectUtilization = async (req: AuthRequest, res: Response) => {
+  try {
+    const projectsRes = await query(`
+      WITH ${ASSIGNED_WORK_CTE},
+      project_hours AS (
+        SELECT
+          project_id,
+          SUM(horas_estimadas) FILTER (WHERE NOT is_completed) AS horas_pendientes,
+          SUM(horas_estimadas) AS horas_totales,
+          COUNT(DISTINCT task_id) FILTER (WHERE NOT is_completed) AS tareas_pendientes
+        FROM assigned_work
+        WHERE horas_estimadas IS NOT NULL
+        GROUP BY project_id
+      ),
+      project_people AS (
+        SELECT DISTINCT project_id, profile_id
+        FROM assigned_work
+        WHERE profile_id IS NOT NULL
+      ),
+      project_capacity AS (
+        SELECT
+          pp.project_id,
+          SUM(COALESCE(pr.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS})) AS capacidad_semanal,
+          COUNT(*) AS n_personas
+        FROM project_people pp
+        JOIN public.profiles pr ON pr.id = pp.profile_id
+        GROUP BY pp.project_id
+      )
+      SELECT
+        p.id, p.name, p.key, p.status,
+        COALESCE(ph.horas_pendientes, 0) AS horas_pendientes,
+        COALESCE(ph.horas_totales, 0) AS horas_totales,
+        COALESCE(ph.tareas_pendientes, 0) AS tareas_pendientes,
+        COALESCE(pc.capacidad_semanal, 0) AS capacidad_semanal,
+        COALESCE(pc.n_personas, 0) AS n_personas
+      FROM public.projects p
+      JOIN project_hours ph ON ph.project_id = p.id
+      LEFT JOIN project_capacity pc ON pc.project_id = p.id
+      ORDER BY horas_pendientes DESC, horas_totales DESC
+    `);
+
+    const projects = projectsRes.rows.map(r => {
+      const horasPendientes = Math.round(parseFloat(r.horas_pendientes) * 10) / 10;
+      const horasTotales = Math.round(parseFloat(r.horas_totales) * 10) / 10;
+      const capacidadSemanal = Math.round(parseFloat(r.capacidad_semanal) * 10) / 10;
+      const utilizationPct = capacidadSemanal > 0 ? Math.round((horasPendientes / capacidadSemanal) * 1000) / 10 : null;
+      const band = utilizationPct != null ? riskBand(utilizationPct, true) : null;
+
+      return {
+        id: r.id,
+        name: r.name,
+        key: r.key,
+        status: r.status,
+        horas_pendientes: horasPendientes,
+        horas_totales: horasTotales,
+        tareas_pendientes: parseInt(r.tareas_pendientes),
+        capacidad_semanal: capacidadSemanal,
+        n_personas: parseInt(r.n_personas),
+        utilization_pct: utilizationPct,
+        risk_level: band?.level ?? 'unknown',
+        risk_label: band?.label ?? 'SIN EQUIPO',
+        risk_color: band?.color ?? 'slate',
+      };
+    });
+
+    // Factory-wide headline numbers, scoped to active people with a defined cargo
+    // (same population `team-capacity` already uses) so this stays consistent with
+    // the rest of the Reportes module.
+    const summaryRes = await query(`
+      WITH ${ASSIGNED_WORK_CTE},
+      factory_population AS (
+        SELECT p.id, COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_hours_capacity
+        FROM public.profiles p
+        JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+        WHERE p.cargo IS NOT NULL
+      )
+      SELECT
+        (SELECT COALESCE(SUM(horas_estimadas), 0) FROM assigned_work WHERE NOT is_completed) AS horas_pendientes_fabrica,
+        (SELECT COUNT(DISTINCT profile_id) FROM assigned_work WHERE NOT is_completed AND profile_id IS NOT NULL) AS personas_con_pendientes,
+        (SELECT COALESCE(SUM(fp.weekly_hours_capacity), 0)
+           FROM factory_population fp
+           WHERE fp.id IN (SELECT DISTINCT profile_id FROM assigned_work WHERE NOT is_completed AND profile_id IS NOT NULL)
+        ) AS capacidad_semanal_ocupada,
+        (SELECT COALESCE(SUM(weekly_hours_capacity), 0) FROM factory_population) AS capacidad_semanal_fabrica,
+        (SELECT COUNT(*) FROM factory_population) AS n_personas_fabrica
+    `);
+
+    const s = summaryRes.rows[0];
+    const horasPendientesFabrica = Math.round(parseFloat(s.horas_pendientes_fabrica) * 10) / 10;
+    const capacidadFabrica = Math.round(parseFloat(s.capacidad_semanal_fabrica) * 10) / 10;
+    const capacidadOcupada = Math.round(parseFloat(s.capacidad_semanal_ocupada) * 10) / 10;
+
+    res.json({
+      projects,
+      summary: {
+        horas_pendientes_fabrica: horasPendientesFabrica,
+        personas_con_pendientes: parseInt(s.personas_con_pendientes),
+        n_personas_fabrica: parseInt(s.n_personas_fabrica),
+        capacidad_semanal_ocupada: capacidadOcupada,
+        capacidad_semanal_fabrica: capacidadFabrica,
+        utilizacion_pct_equipo_ocupado: capacidadOcupada > 0 ? Math.round((horasPendientesFabrica / capacidadOcupada) * 1000) / 10 : 0,
+        utilizacion_pct_fabrica: capacidadFabrica > 0 ? Math.round((horasPendientesFabrica / capacidadFabrica) * 1000) / 10 : 0,
+      },
+    });
+  } catch (error) {
+    console.error('Project utilization error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/project-utilization/:projectId
+ * Micro (drill-down) view for one project: its team, each person's pending hours
+ * vs. their own weekly capacity, and the top pending tasks driving the backlog.
+ */
+export const getProjectUtilizationDetail = async (req: AuthRequest, res: Response) => {
+  try {
+    const projectId = validUuidOrNull(req.params.projectId);
+    if (!projectId) {
+      return res.status(400).json({ error: 'projectId inválido' });
+    }
+
+    const projectRes = await query(
+      `SELECT id, name, key, status, start_date, end_date FROM public.projects WHERE id = $1`,
+      [projectId],
+    );
+    if (projectRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    const [teamRes, tasksRes] = await Promise.all([
+      query(
+        `
+          WITH ${ASSIGNED_WORK_CTE}
+          SELECT
+            pr.id, pr.full_name, pr.cargo, pr.avatar_url,
+            COALESCE(pr.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_hours_capacity,
+            COUNT(DISTINCT aw.task_id) FILTER (WHERE NOT aw.is_completed) AS tareas_pendientes,
+            COALESCE(SUM(aw.horas_estimadas) FILTER (WHERE NOT aw.is_completed), 0) AS horas_pendientes,
+            COALESCE(SUM(aw.horas_estimadas) FILTER (WHERE aw.is_completed), 0) AS horas_completadas
+          FROM assigned_work aw
+          JOIN public.profiles pr ON pr.id = aw.profile_id
+          WHERE aw.project_id = $1
+          GROUP BY pr.id, pr.full_name, pr.cargo, pr.avatar_url, pr.weekly_hours_capacity
+          ORDER BY horas_pendientes DESC
+        `,
+        [projectId],
+      ),
+      query(
+        `
+          WITH ${ASSIGNED_WORK_CTE}
+          SELECT
+            t.id, t.title, t.priority, aw.due_date, aw.status_name,
+            SUM(aw.horas_estimadas) AS horas_estimadas,
+            pr.id AS assignee_id, pr.full_name AS assignee_name, pr.avatar_url AS assignee_avatar
+          FROM assigned_work aw
+          JOIN public.tasks t ON t.id = aw.task_id
+          LEFT JOIN public.profiles pr ON pr.id = aw.profile_id
+          WHERE aw.project_id = $1 AND NOT aw.is_completed
+          GROUP BY t.id, t.title, t.priority, aw.due_date, aw.status_name, pr.id, pr.full_name, pr.avatar_url
+          ORDER BY COALESCE(aw.due_date, CURRENT_DATE + INTERVAL '365 days'), horas_estimadas DESC NULLS LAST
+          LIMIT 15
+        `,
+        [projectId],
+      ),
+    ]);
+
+    const team = teamRes.rows.map(r => {
+      const weekly = Math.round(parseFloat(r.weekly_hours_capacity) * 10) / 10;
+      const pendientes = Math.round(parseFloat(r.horas_pendientes) * 10) / 10;
+      const utilizationPct = weekly > 0 ? Math.round((pendientes / weekly) * 1000) / 10 : null;
+      const band = utilizationPct != null ? riskBand(utilizationPct, true) : null;
+
+      return {
+        id: r.id,
+        full_name: r.full_name,
+        cargo: r.cargo,
+        avatar_url: r.avatar_url,
+        weekly_hours_capacity: weekly,
+        tareas_pendientes: parseInt(r.tareas_pendientes),
+        horas_pendientes: pendientes,
+        horas_completadas: Math.round(parseFloat(r.horas_completadas) * 10) / 10,
+        utilization_pct: utilizationPct,
+        risk_level: band?.level ?? 'unknown',
+        risk_color: band?.color ?? 'slate',
+      };
+    });
+
+    const capacidadSemanal = Math.round(team.reduce((sum, m) => sum + m.weekly_hours_capacity, 0) * 10) / 10;
+    const horasPendientes = Math.round(team.reduce((sum, m) => sum + m.horas_pendientes, 0) * 10) / 10;
+    const utilizationPct = capacidadSemanal > 0 ? Math.round((horasPendientes / capacidadSemanal) * 1000) / 10 : null;
+    const band = utilizationPct != null ? riskBand(utilizationPct, true) : null;
+
+    res.json({
+      project: projectRes.rows[0],
+      summary: {
+        n_personas: team.length,
+        horas_pendientes: horasPendientes,
+        capacidad_semanal: capacidadSemanal,
+        utilization_pct: utilizationPct,
+        risk_level: band?.level ?? 'unknown',
+        risk_label: band?.label ?? 'SIN EQUIPO',
+        risk_color: band?.color ?? 'slate',
+      },
+      team,
+      tasks: tasksRes.rows.map(r => ({
+        id: r.id,
+        title: r.title,
+        priority: r.priority,
+        due_date: r.due_date,
+        status_name: r.status_name,
+        horas_estimadas: r.horas_estimadas != null ? Math.round(parseFloat(r.horas_estimadas) * 10) / 10 : null,
+        assignee_id: r.assignee_id,
+        assignee_name: r.assignee_name,
+        assignee_avatar: r.assignee_avatar,
+      })),
+    });
+  } catch (error) {
+    console.error('Project utilization detail error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Cargos that fabricate content materials directly (design, animation, on-camera
+ * presenting, video editing, AI-assisted art). Everything else — marketing,
+ * development, analytics, and the accounts with no cargo set (mostly leadership/
+ * admin logins, verified by spot-checking: "Dirección de operaciones", "Desarrollo") —
+ * is counted as indirect/support capacity. There's no such flag in the schema, so
+ * this list is the single place that defines the split; keep it in sync with the
+ * `cargo` values actually in use (see `production-capacity`'s `by_cargo` breakdown).
+ */
+const DIRECT_PRODUCTION_CARGOS = new Set([
+  'Analista de diseño',
+  'GIF',
+  'Presentadora',
+  'Editor de Videos',
+  'Realizador',
+  'Artista Integral IA',
+]);
+
+/**
+ * GET /api/reports/production-capacity
+ * Estimated direct production capacity: weekly hours of staff in content-producing
+ * roles vs. support/indirect roles (see DIRECT_PRODUCTION_CARGOS above).
+ */
+export const getProductionCapacity = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT TRIM(p.cargo) AS cargo, COUNT(*) AS n_personas,
+        COALESCE(SUM(COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS})), 0) AS capacidad_semanal
+      FROM public.profiles p
+      JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+      WHERE p.cargo IS NOT NULL
+      GROUP BY TRIM(p.cargo)
+
+      UNION ALL
+
+      SELECT 'Sin cargo definido' AS cargo, COUNT(*) AS n_personas,
+        COALESCE(SUM(COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS})), 0) AS capacidad_semanal
+      FROM public.profiles p
+      JOIN public.users u ON u.id = p.user_id AND u.is_active = true
+      WHERE p.cargo IS NULL
+
+      ORDER BY capacidad_semanal DESC
+    `);
+
+    const rows = result.rows.map(r => ({
+      cargo: r.cargo,
+      n_personas: parseInt(r.n_personas),
+      capacidad_semanal: Math.round(parseFloat(r.capacidad_semanal) * 10) / 10,
+      is_direct: DIRECT_PRODUCTION_CARGOS.has(r.cargo),
+    }));
+
+    const bucket = (isDirect: boolean) => {
+      const rowsInBucket = rows.filter(r => r.is_direct === isDirect);
+      return {
+        n_personas: rowsInBucket.reduce((sum, r) => sum + r.n_personas, 0),
+        capacidad_semanal: Math.round(rowsInBucket.reduce((sum, r) => sum + r.capacidad_semanal, 0) * 10) / 10,
+        by_cargo: rowsInBucket.map(({ is_direct, ...rest }) => rest),
+      };
+    };
+
+    const direct = bucket(true);
+    const indirect = bucket(false);
+    const totalCapacidad = Math.round((direct.capacidad_semanal + indirect.capacidad_semanal) * 10) / 10;
+    const totalPersonas = direct.n_personas + indirect.n_personas;
+
+    res.json({
+      direct: {
+        ...direct,
+        pct_of_total: totalCapacidad > 0 ? Math.round((direct.capacidad_semanal / totalCapacidad) * 1000) / 10 : 0,
+      },
+      indirect: {
+        ...indirect,
+        pct_of_total: totalCapacidad > 0 ? Math.round((indirect.capacidad_semanal / totalCapacidad) * 1000) / 10 : 0,
+      },
+      total: {
+        n_personas: totalPersonas,
+        capacidad_semanal: totalCapacidad,
+      },
+    });
+  } catch (error) {
+    console.error('Production capacity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/reports/people-workload
+ * "Who's doing what, on which project, right now": one row per active person
+ * (same population as team-capacity), each with the list of projects they have
+ * pending work in and how many hours/tasks on each. People with no pending work
+ * still appear (with an empty `projects` array) — that's useful signal too, it's
+ * who has open capacity. Feeds both the person-centric view and the per-project
+ * team-avatar previews in the Capacidad dashboard (grouped client-side).
+ */
+export const getPeopleWorkload = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(`
+      WITH ${ASSIGNED_WORK_CTE}
+      SELECT
+        pr.id, pr.full_name, pr.cargo, pr.avatar_url,
+        COALESCE(pr.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_hours_capacity,
+        aw.project_id, p.name AS project_name, p.key AS project_key,
+        COUNT(DISTINCT aw.task_id) FILTER (WHERE NOT aw.is_completed) AS tareas_pendientes,
+        COALESCE(SUM(aw.horas_estimadas) FILTER (WHERE NOT aw.is_completed), 0) AS horas_pendientes
+      FROM public.profiles pr
+      JOIN public.users u ON u.id = pr.user_id AND u.is_active = true
+      LEFT JOIN assigned_work aw ON aw.profile_id = pr.id AND NOT aw.is_completed
+      LEFT JOIN public.projects p ON p.id = aw.project_id
+      WHERE pr.cargo IS NOT NULL
+      GROUP BY pr.id, pr.full_name, pr.cargo, pr.avatar_url, pr.weekly_hours_capacity, aw.project_id, p.name, p.key
+      ORDER BY pr.full_name
+    `);
+
+    const byPerson = new Map<string, {
+      id: string; full_name: string; cargo: string | null; avatar_url: string | null;
+      weekly_hours_capacity: number;
+      projects: { project_id: string; project_name: string; project_key: string; tareas_pendientes: number; horas_pendientes: number }[];
+    }>();
+
+    for (const r of result.rows) {
+      if (!byPerson.has(r.id)) {
+        byPerson.set(r.id, {
+          id: r.id,
+          full_name: r.full_name,
+          cargo: r.cargo,
+          avatar_url: r.avatar_url,
+          weekly_hours_capacity: Math.round(parseFloat(r.weekly_hours_capacity) * 10) / 10,
+          projects: [],
+        });
+      }
+      if (r.project_id) {
+        byPerson.get(r.id)!.projects.push({
+          project_id: r.project_id,
+          project_name: r.project_name,
+          project_key: r.project_key,
+          tareas_pendientes: parseInt(r.tareas_pendientes),
+          horas_pendientes: Math.round(parseFloat(r.horas_pendientes) * 10) / 10,
+        });
+      }
+    }
+
+    const people = Array.from(byPerson.values())
+      .map(p => {
+        const projects = [...p.projects].sort((a, b) => b.horas_pendientes - a.horas_pendientes);
+        const horasPendientesTotal = Math.round(projects.reduce((sum, pr) => sum + pr.horas_pendientes, 0) * 10) / 10;
+        const utilizationPct = p.weekly_hours_capacity > 0
+          ? Math.round((horasPendientesTotal / p.weekly_hours_capacity) * 1000) / 10
+          : 0;
+        const band = riskBand(utilizationPct, true);
+
+        return {
+          ...p,
+          projects,
+          horas_pendientes_total: horasPendientesTotal,
+          utilization_pct: utilizationPct,
+          risk_level: band.level,
+          risk_label: band.label,
+          risk_color: band.color,
+        };
+      })
+      .sort((a, b) => b.horas_pendientes_total - a.horas_pendientes_total);
+
+    res.json({ people });
+  } catch (error) {
+    console.error('People workload error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
