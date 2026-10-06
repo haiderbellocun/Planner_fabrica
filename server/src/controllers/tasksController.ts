@@ -978,7 +978,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
 export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { status_id } = req.body;
+    const { status_id, due_date } = req.body;
     const userRole = req.user?.role;
     const profileId = req.user?.profileId;
 
@@ -1029,14 +1029,40 @@ export const updateTaskStatus = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update status
-    const result = await query(
-      `UPDATE public.tasks
-       SET status_id = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING *`,
-      [status_id, id]
-    );
+    // Pausar siempre quita la fecha límite -- si no, una tarea pausada por semanas
+    // sigue contando como "vencida" en todos lados (reportes, plan de trabajo, etc.)
+    // aunque esté detenida a propósito. Al reanudarla (salir de "En pausa"), por lo
+    // tanto ya no tiene fecha, así que se exige una nueva antes de permitir el cambio.
+    let dueDateToSet: string | null | undefined; // undefined = no tocar la columna
+    if (newStatusName === 'En pausa') {
+      dueDateToSet = null;
+    } else if (currentStatusName === 'En pausa' && newStatusName !== 'En pausa') {
+      const resolvedDueDate = due_date || currentTask.due_date;
+      if (!resolvedDueDate) {
+        return res.status(400).json({
+          error: 'Debes asignar una nueva fecha límite para reanudar esta tarea',
+          detail: 'Esta tarea quedó sin fecha límite al pausarse. Define una nueva fecha antes de cambiar su estado.',
+        });
+      }
+      if (due_date) dueDateToSet = due_date;
+    }
+
+    // Update status (y fecha límite, si corresponde)
+    const result = dueDateToSet !== undefined
+      ? await query(
+          `UPDATE public.tasks
+           SET status_id = $1, due_date = $2, updated_at = NOW()
+           WHERE id = $3
+           RETURNING *`,
+          [status_id, dueDateToSet, id]
+        )
+      : await query(
+          `UPDATE public.tasks
+           SET status_id = $1, updated_at = NOW()
+           WHERE id = $2
+           RETURNING *`,
+          [status_id, id]
+        );
 
     const task = result.rows[0];
 
@@ -1120,7 +1146,7 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
     }
 
     const tasksResult = await query(
-      `SELECT t.id, t.title, t.assignee_id, t.sprint_id, t.parent_task_id, t.status_id, ts.name AS status_name
+      `SELECT t.id, t.title, t.assignee_id, t.sprint_id, t.parent_task_id, t.status_id, t.due_date, ts.name AS status_name
        FROM public.tasks t
        JOIN public.task_statuses ts ON ts.id = t.status_id
        WHERE t.id = ANY($1::uuid[]) AND t.project_id = $2`,
@@ -1158,6 +1184,14 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
             detail: `"${t.title}" debe ser asignada a un responsable antes de poder finalizarla.`,
           });
         }
+        // Mismo resguardo que en updateTaskStatus: una tarea pausada se queda sin
+        // fecha límite, así que no puede salir de "En pausa" en bloque sin una.
+        if (t.status_name === 'En pausa' && newStatusName !== 'En pausa' && !t.due_date) {
+          return res.status(400).json({
+            error: 'Hay tareas pausadas sin fecha límite',
+            detail: `"${t.title}" está pausada y no tiene fecha límite. Reanúdala individualmente asignándole una nueva fecha.`,
+          });
+        }
       }
     } else if (assignee_id !== undefined) {
       field = 'assignee_id';
@@ -1171,9 +1205,11 @@ export const bulkUpdateTasks = async (req: AuthRequest, res: Response) => {
       await Promise.all(taskIds.map((taskId: string) => ensureWatcher(taskId, value)));
     }
 
+    // Pausar en bloque también limpia la fecha límite, igual que el cambio individual.
+    const clearDueDateOnPause = field === 'status_id' && newStatusName === 'En pausa';
     const result = await query(
       `UPDATE public.tasks
-       SET ${field} = $1, updated_at = NOW()
+       SET ${field} = $1, updated_at = NOW()${clearDueDateOnPause ? ', due_date = NULL' : ''}
        WHERE id = ANY($2::uuid[]) AND project_id = $3
        RETURNING id, title, assignee_id, status_id, sprint_id, project_id`,
       [value, taskIds, projectId]

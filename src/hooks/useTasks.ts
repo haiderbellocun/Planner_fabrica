@@ -209,8 +209,8 @@ export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, statusId, projectId }: { taskId: string; statusId: string; projectId?: string }) => {
-      const task = await api.patch<Task>(`/api/tasks/${taskId}/status`, { status_id: statusId });
+    mutationFn: async ({ taskId, statusId, projectId, dueDate }: { taskId: string; statusId: string; projectId?: string; dueDate?: string }) => {
+      const task = await api.patch<Task>(`/api/tasks/${taskId}/status`, { status_id: statusId, ...(dueDate ? { due_date: dueDate } : {}) });
       return { ...task, project_id: projectId || task.project_id };
     },
     onSuccess: (task) => {

@@ -6,6 +6,7 @@ import { TaskStatus } from '@/types/database';
 import { TaskCard } from './TaskCard';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface KanbanBoardProps {
   tasks: TaskWithDetails[];
@@ -53,6 +54,22 @@ export function KanbanBoard({ tasks, projectKey, projectId, onTaskClick, isLoadi
 
     const destStatusId = destination.droppableId;
     const sameColumn = destStatusId === source.droppableId;
+
+    // Pausar quita la fecha límite de la tarea (si no, se marca "vencida" mientras
+    // está pausada a propósito). Por eso, al sacarla de "En pausa", hace falta una
+    // fecha nueva -- eso requiere un selector de fecha que el drag-and-drop no
+    // puede mostrar a mitad de un arrastre, así que aquí solo se bloquea el
+    // movimiento y se pide abrir la tarea (TaskDetailSheet sí pide la fecha).
+    if (!sameColumn) {
+      const sourceTask = tasksByStatus.get(source.droppableId)?.find((t) => t.id === draggableId);
+      const sourceStatusName = statuses.find((s) => s.id === source.droppableId)?.name;
+      const destStatusName = statuses.find((s) => s.id === destStatusId)?.name;
+      if (sourceStatusName === 'En pausa' && destStatusName !== 'En pausa' && !sourceTask?.due_date) {
+        toast.error('Esta tarea está pausada sin fecha límite. Ábrela y asigna una nueva fecha antes de moverla.');
+        return;
+      }
+    }
+
     // destination.index is expressed against the list with the dragged card already removed.
     const destList = (tasksByStatus.get(destStatusId) ?? []).filter((t) => t.id !== draggableId);
     const prev = destList[destination.index - 1] ?? null;

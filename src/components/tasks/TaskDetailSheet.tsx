@@ -151,6 +151,16 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   useEffect(() => {
     setPendingProgramaId(null);
   }, [taskData?.id]);
+
+  // Al pausar una tarea se le quita la fecha límite (si no, se marca "vencida"
+  // mientras está detenida a propósito) -- por eso, al reanudarla, hay que
+  // exigir una fecha nueva antes de dejar que el cambio de estado se complete.
+  const [pendingResumeStatusId, setPendingResumeStatusId] = useState<string | null>(null);
+  const [resumeDueDate, setResumeDueDate] = useState('');
+  useEffect(() => {
+    setPendingResumeStatusId(null);
+    setResumeDueDate('');
+  }, [taskData?.id]);
   const effectiveProgramaId = pendingProgramaId ?? taskData?.programa?.id ?? '';
   const selectedPrograma = (programas as any[]).find((p) => p.id === effectiveProgramaId);
   const materiaOptions: any[] = selectedPrograma?.asignaturas ?? [];
@@ -190,7 +200,26 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   };
 
   const handleStatusChange = (statusId: string) => {
+    const newStatus = statuses.find((s) => s.id === statusId);
+    const isLeavingPause = taskData.status?.name === 'En pausa' && newStatus?.name !== 'En pausa';
+    if (isLeavingPause && !taskData.due_date) {
+      setPendingResumeStatusId(statusId);
+      return;
+    }
     updateTaskStatus.mutate({ taskId: taskData.id, statusId, projectId: taskData.project_id });
+  };
+
+  const confirmResumeWithDueDate = () => {
+    if (!pendingResumeStatusId || !resumeDueDate) return;
+    updateTaskStatus.mutate(
+      { taskId: taskData.id, statusId: pendingResumeStatusId, projectId: taskData.project_id, dueDate: resumeDueDate },
+      { onSuccess: () => { setPendingResumeStatusId(null); setResumeDueDate(''); } }
+    );
+  };
+
+  const cancelResume = () => {
+    setPendingResumeStatusId(null);
+    setResumeDueDate('');
   };
 
   const handleAssigneeChange = (assigneeId: string) => {
@@ -507,6 +536,29 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 <p className="text-xs text-muted-foreground">
                   Transiciones limitadas desde "{taskData.status?.name}"
                 </p>
+              )}
+              {pendingResumeStatusId && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 space-y-2">
+                  <p className="text-xs text-amber-800">
+                    Esta tarea quedó sin fecha límite al pausarse. Define una nueva fecha para reanudarla.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={resumeDueDate}
+                      autoFocus
+                      disabled={updateTaskStatus.isPending}
+                      onChange={(e) => setResumeDueDate(e.target.value)}
+                      className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground"
+                    />
+                    <Button size="sm" onClick={confirmResumeWithDueDate} disabled={!resumeDueDate || updateTaskStatus.isPending}>
+                      Confirmar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={cancelResume} disabled={updateTaskStatus.isPending}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
 
