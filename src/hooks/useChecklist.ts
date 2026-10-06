@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type EstadoRevision = 'sin_iniciar' | 'en_proceso' | 'finalizado';
 
@@ -77,6 +78,35 @@ export function calcEstadoFinal(row: ChecklistRow): 'Sin iniciar' | 'En proceso'
 
 // ─── Hooks ─────────────────────────────────────────────────────────────────────
 
+const STATUS_KEYS = new Set<string>(['listo_para_revisar', 'qa_status']);
+const BOOL_CHECK_KEYS = new Set<string>([
+  ...([1, 2, 3, 4, 5] as const).flatMap((g) => GROUP_KEYS.map((k) => `g${g}_${k}`)),
+  'carga_completa',
+  'actividades_moodle',
+]);
+
+/** Mirrors the backend's role-aware upsert logic (checklistController.ts) so the
+ * optimistic update lands in the same place the server will put it: admin bool
+ * checks go to the column (green), non-admin bool checks go to user_checks (blue). */
+function applyOptimisticUpdate(row: ChecklistRow, data: ChecklistUpdate, isAdmin: boolean): ChecklistRow {
+  const next: ChecklistRow = { ...row };
+  const userChecks = { ...row.user_checks };
+  for (const [k, v] of Object.entries(data)) {
+    if (STATUS_KEYS.has(k)) {
+      (next as unknown as Record<string, unknown>)[k] = v;
+    } else if (BOOL_CHECK_KEYS.has(k)) {
+      if (isAdmin) {
+        (next as unknown as Record<string, unknown>)[k] = v;
+        delete userChecks[k];
+      } else {
+        userChecks[k] = v as boolean;
+      }
+    }
+  }
+  next.user_checks = userChecks;
+  return next;
+}
+
 export function useChecklist(projectId: string | undefined) {
   return useQuery({
     queryKey: ['checklist', projectId],
@@ -87,14 +117,24 @@ export function useChecklist(projectId: string | undefined) {
 
 export function useUpdateChecklist(projectId: string | undefined) {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
   return useMutation({
     mutationFn: ({ asignaturaId, data }: { asignaturaId: string; data: ChecklistUpdate }) =>
       api.patch(`/api/checklist/${asignaturaId}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checklist', projectId] });
+    onMutate: async ({ asignaturaId, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['checklist', projectId] });
+      const previous = queryClient.getQueryData<ChecklistRow[]>(['checklist', projectId]);
+      queryClient.setQueryData<ChecklistRow[]>(['checklist', projectId], (old) =>
+        old?.map((row) => (row.asignatura_id === asignaturaId ? applyOptimisticUpdate(row, data, isAdmin) : row))
+      );
+      return { previous };
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['checklist', projectId], context.previous);
       toast.error('Error al guardar el checklist');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklist', projectId] });
     },
   });
 }

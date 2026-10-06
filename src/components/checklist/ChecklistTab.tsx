@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Loader2, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -149,7 +149,7 @@ function StatusSelect({
 
 // ─── Row ───────────────────────────────────────────────────────────────────────
 
-function ChecklistRowComponent({
+const ChecklistRowComponent = memo(function ChecklistRowComponent({
   row,
   isAdmin,
   onUpdate,
@@ -289,7 +289,7 @@ function ChecklistRowComponent({
       </td>
     </tr>
   );
-}
+});
 
 // ─── Legend ────────────────────────────────────────────────────────────────────
 
@@ -322,11 +322,18 @@ function CheckboxLegend({ isAdmin }: { isAdmin: boolean }) {
 export function ChecklistTab({ projectId }: { projectId: string }) {
   const { isAdmin, isProjectLeader } = useAuth();
   const { data: rows = [], isLoading } = useChecklist(projectId);
-  const { mutate: updateChecklist, isPending: updatingChecklist } = useUpdateChecklist(projectId);
-  const { mutate: assignMaestro, isPending: assigningMaestro } = useAssignMaestro(projectId);
+  const { mutate: updateChecklist, isPending: updatingChecklist, variables: updateVars } = useUpdateChecklist(projectId);
+  const { mutate: assignMaestro, isPending: assigningMaestro, variables: assignVars } = useAssignMaestro(projectId);
   const { data: users = [] } = useAdminUsers(isAdmin || isProjectLeader);
 
-  const isPending = updatingChecklist || assigningMaestro;
+  // Solo la fila que realmente está guardando se bloquea -- antes "isPending"
+  // era global y cualquier clic dejaba las 171 filas sin poder interactuar
+  // hasta que la petición (y el refetch completo) terminara.
+  const pendingRowId = updatingChecklist
+    ? updateVars?.asignaturaId
+    : assigningMaestro
+    ? assignVars?.asignaturaId
+    : undefined;
 
   const [selectedPrograma, setSelectedPrograma] = useState('all');
   const programaOptions = useMemo(
@@ -464,7 +471,7 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
                 onUpdate={handleUpdate}
                 onAssign={handleAssign}
                 users={users}
-                isPending={isPending}
+                isPending={row.asignatura_id === pendingRowId}
               />
             ))}
           </tbody>
