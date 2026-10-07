@@ -43,13 +43,9 @@ import {
   type UserMiniReport,
   useReportProjectsTimeline,
   useReportTeamByCargo,
-  useReportTasksDetail,
-  type TaskDetail,
   useReportPersonMetrics,
   useReportCapacityForecast,
   useReportThroughput,
-  useReportContentOverview,
-  useReportUserLocations,
   type ReportScopeFilters,
   type PersonMetric,
 } from '@/hooks/useReports';
@@ -61,10 +57,12 @@ import {
 } from '@/components/reports/ReportCharts';
 import { axisTick, gridColor, chartColors } from '@/components/charts/chartTheme';
 import { PlanDeTrabajoTab } from '@/components/plan-trabajo/PlanDeTrabajoTab';
+import { CapacidadFabricaTab } from '@/components/reports/CapacidadFabricaTab';
+import { CoberturaFabricaTab } from '@/components/reports/CoberturaFabricaTab';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
-import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState, SectionHeader } from '@/components/shared/StoryUI';
+import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState } from '@/components/shared/StoryUI';
 
 // Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
@@ -1915,237 +1913,6 @@ function CapacidadResumen({ report }: { report: UserMiniReport }) {
   );
 }
 
-// ---------- Tab: Eficiencia — helpers ----------
-
-function EficSectionHeader({ tag, title }: { tag: string; title: string }) {
-  return <SectionHeader tag={tag} title={title} />;
-}
-
-
-// ---------- Tab: Eficiencia ----------
-function TabEficiencia() {
-  const { data: overview } = useReportOverview();
-  const { data: tasks = [], isLoading: loadingTasks } = useReportTasksDetail();
-  const { data: contentOverview } = useReportContentOverview();
-  const { data: userLocations = [], isLoading: loadingUserLocations } = useReportUserLocations();
-  const [taskSearch, setTaskSearch] = useState('');
-  const [sortCol, setSortCol] = useState<keyof TaskDetail>('created_at');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-
-
-  // ── ⑥ Tabla de tareas ─────────────────────────────────────────────────
-  const toggleSort = (col: keyof TaskDetail) => {
-    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else { setSortCol(col); setSortDir('desc'); }
-  };
-  const filteredTasks = tasks
-    .filter((t) => {
-      if (!taskSearch) return true;
-      const q = taskSearch.toLowerCase();
-      return t.title.toLowerCase().includes(q) || t.assignee_name.toLowerCase().includes(q) || t.project_name.toLowerCase().includes(q);
-    });
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const av = a[sortCol] as string | number | boolean | null;
-    const bv = b[sortCol] as string | number | boolean | null;
-    if (av == null && bv == null) return 0;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv) : Number(av) - Number(bv);
-    return sortDir === 'asc' ? cmp : -cmp;
-  });
-
-
-  // ── ⑧ Ubicación de usuarios ────────────────────────────────────────────
-  const userLocationGroups = (() => {
-    const map = new Map<string, {
-      profile_id: string; full_name: string; avatar_url: string | null; cargo: string | null;
-      projects: { project_id: string; project_name: string; task_count: number }[];
-      total_tasks: number;
-    }>();
-    for (const r of userLocations) {
-      let entry = map.get(r.profile_id);
-      if (!entry) {
-        entry = { profile_id: r.profile_id, full_name: r.full_name, avatar_url: r.avatar_url, cargo: r.cargo, projects: [], total_tasks: 0 };
-        map.set(r.profile_id, entry);
-      }
-      entry.projects.push({ project_id: r.project_id, project_name: r.project_name, task_count: r.task_count });
-      entry.total_tasks += r.task_count;
-    }
-    return Array.from(map.values()).sort((a, b) => b.total_tasks - a.total_tasks);
-  })();
-
-  return (
-    <div className="space-y-12">
-
-      {/* ① CONTENIDO (Proceso) */}
-      <section>
-        <EficSectionHeader tag="① Contenido" title="Proceso: programas, materias, gránulos y materiales" />
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatTile label="Programas" value={contentOverview?.programas.total ?? 0} sub="en total" />
-          <StatTile
-            label="Materias"
-            value={overview?.asignaturas?.total ?? 0}
-            sub={`${overview?.asignaturas?.completed ?? 0} completadas (${(overview?.asignaturas?.completion_rate ?? 0).toFixed(2)}%)`}
-          />
-          <StatTile
-            label="Gránulos"
-            value={contentOverview?.temas.total ?? 0}
-            sub={`${contentOverview?.temas.completed ?? 0} completados (${(contentOverview?.temas.completion_rate ?? 0).toFixed(2)}%)`}
-          />
-          <StatTile
-            label="Materiales"
-            value={overview?.materials?.total ?? 0}
-            sub={`${overview?.materials?.completed ?? 0} completados (${(overview?.materials?.completion_rate ?? 0).toFixed(2)}%)`}
-          />
-        </div>
-      </section>
-
-      {/* ② TABLA DETALLADA DE TAREAS */}
-      <section>
-        <EficSectionHeader tag="② Tareas" title="Registro completo con tiempos por fase" />
-
-        {/* Barra de búsqueda */}
-        <div className="flex items-center gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Buscar por título, colaborador o proyecto…"
-            value={taskSearch}
-            onChange={(e) => setTaskSearch(e.target.value)}
-            className="flex-1 h-8 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
-          />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">{sortedTasks.length} tareas</span>
-        </div>
-
-        {loadingTasks ? (
-          <div className="h-[200px] rounded-2xl bg-muted/40 animate-pulse" />
-        ) : sortedTasks.length > 0 ? (
-          <Card className={CARD_CLASS}>
-            <CardContent className="p-0">
-              <div className="overflow-auto max-h-[480px]">
-                <table className="w-full text-[11px]" style={{ minWidth: 900 }}>
-                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-                    <tr>
-                      {([
-                        { col: 'title',         label: 'Título',       align: 'left'  },
-                        { col: 'assignee_name', label: 'Colaborador',  align: 'left'  },
-                        { col: 'status_name',   label: 'Estado',       align: 'left'  },
-                        { col: 'project_key',   label: 'Proyecto',     align: 'left'  },
-                        { col: 'created_at',    label: 'Creado',       align: 'right' },
-                        { col: 'h_espera',      label: '⏳ Espera',    align: 'right' },
-                        { col: 'h_proceso',     label: '⚡ Proceso',   align: 'right' },
-                        { col: 'h_revision',    label: '🔍 Revisión',  align: 'right' },
-                        { col: 'h_ajustes',     label: '⚙ Ajustes',   align: 'right' },
-                        { col: 'h_total',       label: '📐 Total',     align: 'right' },
-                        { col: 'devoluciones',  label: 'Dev.',         align: 'right' },
-                      ] as { col: keyof TaskDetail; label: string; align: string }[]).map(({ col, label, align }) => (
-                        <th
-                          key={col}
-                          onClick={() => toggleSort(col)}
-                          className={`py-2 px-2 font-semibold text-muted-foreground border-b cursor-pointer select-none whitespace-nowrap hover:text-foreground transition-colors text-${align}`}
-                        >
-                          {label} {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedTasks.map((t) => (
-                      <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors">
-                        <td className="py-1.5 px-2 font-medium max-w-[200px] truncate" title={t.title}>{t.title}</td>
-                        <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[120px]">{t.assignee_name}</td>
-                        <td className="py-1.5 px-2">
-                          <span className="px-1.5 py-0.5 rounded text-white text-[10px] font-semibold" style={{ backgroundColor: t.status_color }}>
-                            {t.status_name}
-                          </span>
-                        </td>
-                        <td className="py-1.5 px-2 text-muted-foreground font-mono">{t.project_key}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">
-                          {new Date(t.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
-                        </td>
-                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_espera   > 0 ? `${t.h_espera}h`   : '—'}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_proceso  > 0 ? `${t.h_proceso}h`  : '—'}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_revision > 0 ? `${t.h_revision}h` : '—'}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums">{t.h_ajustes  > 0 ? `${t.h_ajustes}h`  : '—'}</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums font-bold">{t.h_total > 0 ? `${t.h_total}h` : '—'}</td>
-                        <td className="py-1.5 px-2 text-right">
-                          {t.devoluciones > 0 ? (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">{t.devoluciones}</span>
-                          ) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ) : <EmptyState message="Sin tareas para mostrar" />}
-      </section>
-
-      {/* ③ DÓNDE TRABAJAN LOS USUARIOS */}
-      <section>
-        <EficSectionHeader tag="③ Ubicación" title="Dónde están trabajando los usuarios ahora mismo" />
-
-        {loadingUserLocations ? (
-          <div className="h-[200px] rounded-2xl bg-muted/40 animate-pulse" />
-        ) : userLocationGroups.length > 0 ? (
-          <Card className={CARD_CLASS}>
-            <CardContent className="p-0">
-              <div className="overflow-auto max-h-[520px]">
-                <table className="w-full text-[11px]">
-                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-                    <tr>
-                      <th className="py-2 px-3 font-semibold text-muted-foreground border-b text-left">Usuario</th>
-                      <th className="py-2 px-3 font-semibold text-muted-foreground border-b text-left">Proyectos con tareas activas</th>
-                      <th className="py-2 px-3 font-semibold text-muted-foreground border-b text-right">Total tareas activas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userLocationGroups.map((u) => (
-                      <tr key={u.profile_id} className="border-b hover:bg-muted/30 transition-colors align-top">
-                        <td className="py-2 px-3">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={u.avatar_url ?? undefined} />
-                              <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                                {u.full_name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium leading-tight">{u.full_name}</p>
-                              {u.cargo && <p className="text-[10px] text-muted-foreground">{u.cargo}</p>}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="flex flex-wrap gap-1">
-                            {u.projects.map((p) => (
-                              <span
-                                key={p.project_id}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-medium"
-                                title={p.project_name}
-                              >
-                                {p.project_name} <span className="text-muted-foreground">({p.task_count})</span>
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 text-right tabular-nums font-bold">{u.total_tasks}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ) : <EmptyState message="Nadie tiene tareas activas asignadas ahora mismo" />}
-      </section>
-
-    </div>
-  );
-}
-
 // ---------- Tab: Rendimiento individual ----------
 function IndividualPerformanceTab() {
   const [selectedProject, setSelectedProject] = useState<string>('all');
@@ -2422,17 +2189,22 @@ export default function ReportsPage() {
         </div>
 
         <Tabs defaultValue="resumen" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-6 max-w-[820px]">
+          <TabsList className="flex h-auto max-w-5xl flex-wrap justify-start gap-1 rounded-3xl py-1.5">
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="cobertura">Cobertura</TabsTrigger>
             <TabsTrigger value="proyectos">Proyectos</TabsTrigger>
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="rendimiento">Rendimiento</TabsTrigger>
-            <TabsTrigger value="eficiencia">Detalle analítico</TabsTrigger>
+            <TabsTrigger value="capacidad">Capacidad</TabsTrigger>
             <TabsTrigger value="plan-trabajo">Plan de Trabajo</TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumen">
             <TabResumen />
+          </TabsContent>
+
+          <TabsContent value="cobertura">
+            <CoberturaFabricaTab />
           </TabsContent>
 
           <TabsContent value="proyectos">
@@ -2447,8 +2219,8 @@ export default function ReportsPage() {
             <IndividualPerformanceTab />
           </TabsContent>
 
-          <TabsContent value="eficiencia">
-            <TabEficiencia />
+          <TabsContent value="capacidad">
+            <CapacidadFabricaTab />
           </TabsContent>
 
           <TabsContent value="plan-trabajo">

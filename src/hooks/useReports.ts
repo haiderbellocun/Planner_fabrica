@@ -675,3 +675,155 @@ export function useReportUserLocations() {
   });
 }
 
+// --- Capacidad de fábrica: utilización por proyecto + producción directa ---
+
+export type RiskLevel = 'available' | 'ok' | 'warning' | 'over' | 'unknown';
+
+export interface ProjectUtilization {
+  id: string;
+  name: string;
+  key: string;
+  status: string;
+  horas_pendientes: number;
+  horas_totales: number;
+  tareas_pendientes: number;
+  capacidad_semanal: number;
+  n_personas: number;
+  utilization_pct: number | null;
+  risk_level: RiskLevel;
+  risk_label: string;
+  risk_color: 'sky' | 'emerald' | 'amber' | 'red' | 'slate';
+}
+
+export interface ProjectUtilizationResponse {
+  projects: ProjectUtilization[];
+  summary: {
+    horas_pendientes_fabrica: number;
+    personas_con_pendientes: number;
+    n_personas_fabrica: number;
+    capacidad_semanal_ocupada: number;
+    capacidad_semanal_fabrica: number;
+    utilizacion_pct_equipo_ocupado: number;
+    utilizacion_pct_fabrica: number;
+  };
+}
+
+export function useReportProjectUtilization() {
+  return useQuery({
+    queryKey: ['report-project-utilization'],
+    queryFn: () => api.get<ProjectUtilizationResponse>('/api/reports/project-utilization'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface ProjectUtilizationTeamMember {
+  id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  weekly_hours_capacity: number;
+  tareas_pendientes: number;
+  horas_pendientes: number;
+  horas_completadas: number;
+  utilization_pct: number | null;
+  risk_level: RiskLevel;
+  risk_color: 'sky' | 'emerald' | 'amber' | 'red' | 'slate';
+}
+
+export interface ProjectUtilizationTask {
+  id: string;
+  title: string;
+  priority: string | null;
+  due_date: string | null;
+  status_name: string;
+  horas_estimadas: number | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  assignee_avatar: string | null;
+}
+
+export interface ProjectUtilizationDetail {
+  project: { id: string; name: string; key: string; status: string; start_date: string | null; end_date: string | null };
+  summary: {
+    n_personas: number;
+    horas_pendientes: number;
+    capacidad_semanal: number;
+    utilization_pct: number | null;
+    risk_level: RiskLevel;
+    risk_label: string;
+    risk_color: 'sky' | 'emerald' | 'amber' | 'red' | 'slate';
+  };
+  team: ProjectUtilizationTeamMember[];
+  tasks: ProjectUtilizationTask[];
+}
+
+export function useReportProjectUtilizationDetail(projectId: string | null) {
+  return useQuery({
+    queryKey: ['report-project-utilization-detail', projectId],
+    queryFn: () => api.get<ProjectUtilizationDetail>(`/api/reports/project-utilization/${projectId}`),
+    enabled: !!projectId,
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface ProductionCapacityByCargo {
+  cargo: string;
+  n_personas: number;
+  capacidad_semanal: number;
+}
+
+export interface ProductionCapacityBucket {
+  n_personas: number;
+  capacidad_semanal: number;
+  pct_of_total: number;
+  by_cargo: ProductionCapacityByCargo[];
+}
+
+export interface ProductionCapacityResponse {
+  direct: ProductionCapacityBucket;
+  indirect: ProductionCapacityBucket;
+  total: { n_personas: number; capacidad_semanal: number };
+}
+
+export function useReportProductionCapacity() {
+  return useQuery({
+    queryKey: ['report-production-capacity'],
+    queryFn: () => api.get<ProductionCapacityResponse>('/api/reports/production-capacity'),
+    staleTime: STALE_TIME,
+  });
+}
+
+export interface PersonWorkloadProject {
+  project_id: string;
+  project_name: string;
+  project_key: string;
+  tareas_pendientes: number;
+  horas_pendientes: number;
+}
+
+export interface PersonWorkload {
+  id: string;
+  full_name: string;
+  cargo: string | null;
+  avatar_url: string | null;
+  weekly_hours_capacity: number;
+  projects: PersonWorkloadProject[];
+  horas_pendientes_total: number;
+  utilization_pct: number;
+  risk_level: RiskLevel;
+  risk_label: string;
+  risk_color: 'sky' | 'emerald' | 'amber' | 'red' | 'slate';
+}
+
+export interface PeopleWorkloadResponse {
+  people: PersonWorkload[];
+}
+
+export function useReportPeopleWorkload() {
+  return useQuery({
+    queryKey: ['report-people-workload'],
+    queryFn: () => api.get<PeopleWorkloadResponse>('/api/reports/people-workload'),
+    staleTime: STALE_TIME,
+  });
+}
+

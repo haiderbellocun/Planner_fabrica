@@ -28,6 +28,10 @@ import {
   getProductionByPerson,
   getContentOverview,
   getUserLocations,
+  getProjectUtilization,
+  getProjectUtilizationDetail,
+  getProductionCapacity,
+  getPeopleWorkload,
 } from '../controllers/reportsController.js';
 
 const router = Router();
@@ -62,5 +66,9 @@ router.get('/throughput', getThroughput);
 router.get('/production-by-person', getProductionByPerson);
 router.get('/content-overview', getContentOverview);
 router.get('/user-locations', getUserLocations);
+router.get('/project-utilization', getProjectUtilization);
+router.get('/project-utilization/:projectId', getProjectUtilizationDetail);
+router.get('/production-capacity', getProductionCapacity);
+router.get('/people-workload', getPeopleWorkload);
 
 export default router;
