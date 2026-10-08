@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
   const members = capacity?.members ?? [];
   const defaultCapacityFor = (member: CapacityMember) =>
-    String(member.weekly_hours_capacity ?? capacity?.schedule.weekly_hours ?? 40.25);
+    String(member.weekly_hours_capacity ?? capacity?.schedule.weekly_hours ?? 38);
   const filteredMembers = members.filter((m) => {
     const q = capacitySearch.trim().toLowerCase();
     if (!q) return true;

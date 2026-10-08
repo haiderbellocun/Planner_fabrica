@@ -1,6 +1,7 @@
 import { query } from '../config/database.js';
 import { env } from '../config/env.js';
 import { generateChatAnswer } from './llmService.js';
+import { WORK_SCHEDULE } from '../controllers/reportsMetrics.js';
 
 export interface ChatUserContext {
   id: string;
@@ -96,7 +97,7 @@ async function getUserWorkload(profileId: string) {
      SELECT
        p.full_name,
        p.cargo,
-       COALESCE(p.weekly_hours_capacity, 40.25) AS weekly_capacity,
+       COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_capacity,
        COALESCE(SUM(tma.horas_estimadas) FILTER (WHERE NOT ts.is_completed), 0) AS horas_pendientes,
        COALESCE(SUM(tma.horas_estimadas) FILTER (WHERE ts.is_completed), 0)     AS horas_completadas,
        COUNT(DISTINCT mi.task_id) FILTER (WHERE NOT ts.is_completed)            AS tareas_pendientes,
@@ -300,7 +301,7 @@ async function getPeopleWithoutTasks() {
       p.full_name,
       p.cargo,
       p.email,
-      COALESCE(p.weekly_hours_capacity, 40.25) AS weekly_capacity
+      COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_capacity
     FROM public.profiles p
     WHERE p.role != 'admin'
       AND NOT EXISTS (
@@ -331,7 +332,7 @@ async function getPeopleWithoutTasks() {
 async function getPersonWorkloadByName(name: string) {
   const profileResult = await query(
     `SELECT id, full_name, cargo, email,
-            COALESCE(weekly_hours_capacity, 40.25) AS weekly_capacity
+            COALESCE(weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_capacity
      FROM public.profiles
      WHERE full_name ILIKE $1
      LIMIT 1`,
@@ -692,7 +693,7 @@ async function getLeaderTeamHours(profileId: string) {
   const result = await query(
     `SELECT
        p.id, p.full_name, p.cargo,
-       COALESCE(p.weekly_hours_capacity, 40.25) AS weekly_capacity,
+       COALESCE(p.weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_capacity,
        COUNT(DISTINCT t.id) FILTER (WHERE NOT ts.is_completed) AS tareas_pendientes,
        COUNT(DISTINCT t.id) FILTER (WHERE ts.is_completed) AS tareas_completadas,
        COALESCE(SUM(tma.horas_estimadas) FILTER (WHERE NOT ts.is_completed), 0) AS horas_pendientes,

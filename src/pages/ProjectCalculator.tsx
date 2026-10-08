@@ -13,11 +13,11 @@ import { Loader2, Calculator, CalendarDays, Users, Clock, BookOpen, Package, Inf
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { chartColors } from '@/components/charts/chartTheme';
 
-// Work schedule constants (same as backend)
-const MON_THU_HOURS = 8.25;
-const FRIDAY_HOURS = 7.25;
-const WEEKLY_HOURS = MON_THU_HOURS * 4 + FRIDAY_HOURS; // 40.25
-const AVG_DAILY_HOURS = WEEKLY_HOURS / 5; // 8.05
+// Work schedule constants (same as backend) — 38h/week, split evenly across the 5 work days
+const MON_THU_HOURS = 7.6;
+const FRIDAY_HOURS = 7.6;
+const WEEKLY_HOURS = MON_THU_HOURS * 4 + FRIDAY_HOURS; // 38
+const AVG_DAILY_HOURS = WEEKLY_HOURS / 5; // 7.6
 
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card';
 

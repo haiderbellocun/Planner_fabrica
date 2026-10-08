@@ -12,11 +12,14 @@
 
 export const REPORT_TZ = 'America/Bogota';
 
+// Standard changed from 40.25h/week (8.25 Mon-Thu + 7.25 Fri) to 38h/week, split evenly
+// across the 5 work days — no asymmetric Mon-Thu/Fri breakdown was specified for the
+// new total, so this assumes a uniform day rather than inventing one.
 export const WORK_SCHEDULE = {
-  MON_THU_HOURS: 8.25,
-  FRIDAY_HOURS: 7.25,
-  WEEKLY_HOURS: 8.25 * 4 + 7.25, // 40.25
-  AVG_DAILY_HOURS: (8.25 * 4 + 7.25) / 5, // 8.05
+  MON_THU_HOURS: 7.6,
+  FRIDAY_HOURS: 7.6,
+  WEEKLY_HOURS: 7.6 * 4 + 7.6, // 38
+  AVG_DAILY_HOURS: (7.6 * 4 + 7.6) / 5, // 7.6
 };
 
 export const RISK_BANDS = {

@@ -570,7 +570,7 @@ export const getWorkflowTransitions = async (req: AuthRequest, res: Response) =>
 /**
  * GET /api/reports/team-capacity
  * Per-person capacity analysis: pending hours vs daily capacity, estimated work days
- * Schedule: Mon-Thu 8:00-18:00 (1h lunch + 45min break = 8.25h), Fri 8:00-17:00 (7.25h)
+ * Schedule: 38h/week, split evenly across the 5 work days (see WORK_SCHEDULE in reportsMetrics.ts)
  */
 export const getTeamCapacity = async (req: AuthRequest, res: Response) => {
   try {
@@ -700,7 +700,7 @@ export const getUserMiniReport = async (req: AuthRequest, res: Response) => {
           cargo,
           avatar_url,
           email,
-          COALESCE(weekly_hours_capacity, 40.25) AS weekly_hours_capacity
+          COALESCE(weekly_hours_capacity, ${WORK_SCHEDULE.WEEKLY_HOURS}) AS weekly_hours_capacity
         FROM public.profiles
         WHERE id = $1
       `,
@@ -1786,6 +1786,12 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
     const projectId = validUuidOrNull(req.query.project_id);
     const cargo = typeof req.query.cargo === 'string' && req.query.cargo ? req.query.cargo : null;
 
+    // "Today" must be the report timezone's wall-clock date, not the DB session's
+    // (commonly UTC) — otherwise date_trunc('week', ...) can roll over to the wrong
+    // Monday for several hours around midnight Bogotá time, right when it matters
+    // most (Sunday night / Monday morning).
+    const today = `(NOW() AT TIME ZONE '${REPORT_TZ}')::date`;
+
     const result = await query(`
       WITH ${ASSIGNED_WORK_CTE},
       scoped_work AS (
@@ -1806,12 +1812,12 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         SELECT
           profile_id,
           COALESCE(SUM(horas_estimadas) FILTER (
-            WHERE NOT is_completed AND due_date < date_trunc('week', CURRENT_DATE)
+            WHERE NOT is_completed AND due_date < date_trunc('week', ${today})
           ), 0) as horas_vencidas,
           COALESCE(SUM(horas_estimadas) FILTER (
             WHERE NOT is_completed
-              AND due_date >= date_trunc('week', CURRENT_DATE)
-              AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+              AND due_date >= date_trunc('week', ${today})
+              AND due_date < date_trunc('week', ${today}) + INTERVAL '7 days'
           ), 0) as horas_semana_actual,
           COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed), 0) as horas_backlog_total,
           COALESCE(SUM(horas_estimadas) FILTER (WHERE NOT is_completed AND due_date IS NULL), 0) as horas_sin_fecha,
@@ -1822,19 +1828,21 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
           -- utilización" headline misleading when it's really "sin datos".
           COUNT(DISTINCT task_id) FILTER (
             WHERE NOT is_completed AND horas_estimadas IS NULL
-              AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+              AND due_date < date_trunc('week', ${today}) + INTERVAL '7 days'
           ) as unidades_semana_actual_sin_estimacion,
           -- Same "current commitment" window as horas_vencidas + horas_semana_actual
           -- combined, but substituting avg_estimate.avg_horas for any task missing
           -- an hour value, so tasks with no estimate still count for SOMETHING.
           COALESCE(SUM(COALESCE(horas_estimadas, (SELECT avg_horas FROM avg_estimate))) FILTER (
-            WHERE NOT is_completed AND due_date < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+            WHERE NOT is_completed AND due_date < date_trunc('week', ${today}) + INTERVAL '7 days'
           ), 0) as carga_semana_actual_aprox
         FROM scoped_work
         GROUP BY profile_id
       ),
+      -- Offset 0 is THIS week (Monday of the current week, per date_trunc — never
+      -- "next Monday"), so the forecast always starts on the week in progress.
       week_series AS (
-        SELECT gs AS week_offset FROM generate_series(1, $2::int) AS gs
+        SELECT gs AS week_offset FROM generate_series(0, $2::int - 1) AS gs
       ),
       relevant_profiles AS (
         SELECT p.id AS profile_id
@@ -1842,19 +1850,36 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         JOIN public.users u ON u.id = p.user_id AND u.is_active = true
         WHERE p.cargo IS NOT NULL AND ($3::text IS NULL OR p.cargo = $3)
       ),
+      -- Spread each task's hours evenly across every week from now until its due
+      -- date -- not dumped entirely into the due week. A task due in 3 weeks needs
+      -- work starting now, not all at once right before the deadline (that's what
+      -- made the heatmap look like 0% / 0% / 395%: due-date clustering, not real
+      -- workload). Overdue tasks can't spread into the past, so they land fully in
+      -- week 0, same urgency as before. Tasks due beyond the requested horizon are
+      -- clamped to the last visible week so they still contribute a (smaller) share
+      -- to every visible week instead of vanishing from the forecast entirely.
+      task_spread AS (
+        SELECT
+          sw.profile_id,
+          sw.horas_estimadas,
+          GREATEST(
+            LEAST(FLOOR((sw.due_date - date_trunc('week', ${today})::date) / 7.0)::int, $2::int - 1),
+            0
+          ) AS last_week_offset
+        FROM scoped_work sw
+        WHERE NOT sw.is_completed AND sw.due_date IS NOT NULL AND sw.profile_id IS NOT NULL
+      ),
       forward AS (
         SELECT
           rp.profile_id,
           wk.week_offset,
-          (date_trunc('week', CURRENT_DATE) + (wk.week_offset * 7) * INTERVAL '1 day')::date AS week_start,
-          COALESCE(SUM(sw.horas_estimadas) FILTER (
-            WHERE NOT sw.is_completed
-              AND sw.due_date >= date_trunc('week', CURRENT_DATE) + (wk.week_offset * 7) * INTERVAL '1 day'
-              AND sw.due_date <  date_trunc('week', CURRENT_DATE) + ((wk.week_offset + 1) * 7) * INTERVAL '1 day'
+          (date_trunc('week', ${today}) + (wk.week_offset * 7) * INTERVAL '1 day')::date AS week_start,
+          COALESCE(SUM(ts.horas_estimadas / (ts.last_week_offset + 1)) FILTER (
+            WHERE wk.week_offset <= ts.last_week_offset
           ), 0) AS horas
         FROM relevant_profiles rp
         CROSS JOIN week_series wk
-        LEFT JOIN scoped_work sw ON sw.profile_id = rp.profile_id
+        LEFT JOIN task_spread ts ON ts.profile_id = rp.profile_id
         GROUP BY rp.profile_id, wk.week_offset
       )
       SELECT
@@ -1868,7 +1893,9 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
         COALESCE(cw.unidades_semana_actual_sin_estimacion, 0) as unidades_semana_actual_sin_estimacion,
         COALESCE(cw.carga_semana_actual_aprox, 0) as carga_semana_actual_aprox,
         COALESCE(
-          (SELECT json_agg(json_build_object('week_start', f.week_start, 'horas', f.horas) ORDER BY f.week_offset)
+          (SELECT json_agg(json_build_object(
+              'week_start', f.week_start, 'horas', f.horas, 'es_semana_actual', f.week_offset = 0
+            ) ORDER BY f.week_offset)
            FROM forward f WHERE f.profile_id = p.id),
           '[]'::json
         ) as weeks
@@ -1911,12 +1938,13 @@ export const getCapacityForecast = async (req: AuthRequest, res: Response) => {
       const cargaSemanaActualAprox = parseFloat(r.carga_semana_actual_aprox);
       const aproxUtilizationPct = weeklyCapacity > 0 ? Math.round((cargaSemanaActualAprox / weeklyCapacity) * 100) : 0;
 
-      const weeksData = (r.weeks as Array<{ week_start: string; horas: string | number }>).map((w) => {
+      const weeksData = (r.weeks as Array<{ week_start: string; horas: string | number; es_semana_actual: boolean }>).map((w) => {
         const horas = typeof w.horas === 'string' ? parseFloat(w.horas) : w.horas;
         const utilizationPct = weeklyCapacity > 0 ? Math.round((horas / weeklyCapacity) * 100) : 0;
         const band = riskBand(utilizationPct, true);
         return {
           week_start: w.week_start,
+          es_semana_actual: w.es_semana_actual,
           horas: Math.round(horas * 100) / 100,
           utilizacion_pct: utilizationPct,
           holgura_horas: Math.round((weeklyCapacity - horas) * 100) / 100,

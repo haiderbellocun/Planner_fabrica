@@ -557,6 +557,7 @@ export function useReportPersonMetrics(filters: ReportScopeFilters = {}) {
 
 export interface CapacityForecastWeek {
   week_start: string;
+  es_semana_actual: boolean;
   horas: number;
   utilizacion_pct: number;
   holgura_horas: number;

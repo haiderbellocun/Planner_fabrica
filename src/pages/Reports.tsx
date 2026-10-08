@@ -58,6 +58,7 @@ import {
 import { axisTick, gridColor, chartColors } from '@/components/charts/chartTheme';
 import { PlanDeTrabajoTab } from '@/components/plan-trabajo/PlanDeTrabajoTab';
 import { CapacidadFabricaTab } from '@/components/reports/CapacidadFabricaTab';
+import { CapacidadOperativaTab } from '@/components/reports/CapacidadOperativaTab';
 import { CoberturaFabricaTab } from '@/components/reports/CoberturaFabricaTab';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
@@ -2196,6 +2197,7 @@ export default function ReportsPage() {
             <TabsTrigger value="equipo">Equipo</TabsTrigger>
             <TabsTrigger value="rendimiento">Rendimiento</TabsTrigger>
             <TabsTrigger value="capacidad">Capacidad</TabsTrigger>
+            <TabsTrigger value="capacidad-operativa">Capacidad Operativa</TabsTrigger>
             <TabsTrigger value="plan-trabajo">Plan de Trabajo</TabsTrigger>
           </TabsList>
 
@@ -2221,6 +2223,10 @@ export default function ReportsPage() {
 
           <TabsContent value="capacidad">
             <CapacidadFabricaTab />
+          </TabsContent>
+
+          <TabsContent value="capacidad-operativa">
+            <CapacidadOperativaTab />
           </TabsContent>
 
           <TabsContent value="plan-trabajo">

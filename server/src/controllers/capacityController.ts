@@ -9,7 +9,7 @@ import { ASSIGNED_WORK_CTE } from './reportsMetrics.js';
  * getTeamCapacity() (server/src/controllers/reportsController.ts, solo admin/líder),
  * este endpoint es para cualquier usuario autenticado y NUNCA sustituye una
  * capacidad semanal sin configurar por un valor por defecto: si
- * profiles.weekly_hours_capacity es NULL, se responde `null`, no 40.25.
+ * profiles.weekly_hours_capacity es NULL, se responde `null`, no el estándar de 38h.
  */
 export const getMyCapacity = async (req: AuthRequest, res: Response) => {
   try {
