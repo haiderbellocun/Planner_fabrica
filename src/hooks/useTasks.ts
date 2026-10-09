@@ -65,13 +65,40 @@ export function useTask(taskId: string | undefined) {
   });
 }
 
+/** Fila de GET /api/tasks/:id/history (ver tasksController.getTaskHistory). */
+export interface TaskHistoryEntry {
+  id: string;
+  task_id: string;
+  from_status_id: string | null;
+  to_status_id: string;
+  changed_by: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  created_at: string;
+  from_status: { name: string; color: string } | null;
+  to_status: { name: string; color: string };
+  changed_by_profile: { id: string; full_name: string | null; avatar_url: string | null } | null;
+}
+
+/** Fila de GET /api/tasks/:id/activity (ver tasksController.getTaskActivity). */
+export interface TaskActivityEntry {
+  id: string;
+  task_id: string;
+  action: string;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+  performed_by_profile: { id?: string; full_name: string | null; avatar_url: string | null } | null;
+}
+
 export function useTaskHistory(taskId: string | undefined) {
   return useQuery({
     queryKey: ['task-history', taskId],
-    queryFn: async () => {
+    queryFn: async (): Promise<TaskHistoryEntry[]> => {
       if (!taskId) return [];
-      const history = await api.get(`/api/tasks/${taskId}/history`);
-      return history;
+      return await api.get<TaskHistoryEntry[]>(`/api/tasks/${taskId}/history`);
     },
     enabled: !!taskId,
   });
@@ -80,10 +107,9 @@ export function useTaskHistory(taskId: string | undefined) {
 export function useTaskActivityLog(taskId: string | undefined) {
   return useQuery({
     queryKey: ['task-activity', taskId],
-    queryFn: async () => {
+    queryFn: async (): Promise<TaskActivityEntry[]> => {
       if (!taskId) return [];
-      const activity = await api.get(`/api/tasks/${taskId}/activity`);
-      return activity;
+      return await api.get<TaskActivityEntry[]>(`/api/tasks/${taskId}/activity`);
     },
     enabled: !!taskId,
   });

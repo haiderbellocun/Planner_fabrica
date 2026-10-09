@@ -1,5 +1,5 @@
 import type { ChartConfig } from '@/components/ui/chart';
-import { chartColors, gridColor, axisTick, CHART_GRID_STYLE, CHART_AXIS_STYLE, BAR_RADIUS } from '@/components/charts/chartTheme';
+import { BAR_RADIUS, CHART_AXIS_STYLE, CHART_GRID_STYLE, axisTick, chartColors, chartSoft, chartSurface, gridColor } from '@/components/charts/chartTheme';
 
 export { BAR_RADIUS };
 
@@ -11,14 +11,14 @@ export const CHART_COLORS = {
   rust: chartColors.rust,
   slate: chartColors.slate,
   yellow: chartColors.yellow,
-  yellowLight: '#F0BE5C',
+  yellowLight: chartSoft.yellowLight,
   green: chartColors.green,
   magenta: chartColors.magenta,
   muted: chartColors.soft,
   mutedLight: chartColors.muted,
-  bgPrimary: '#EAF6F8',
-  bgCard: '#FFFFFF',
-  bgBorder: '#E2ECEB',
+  bgPrimary: chartSoft.page,
+  bgCard: chartSurface.card,
+  bgBorder: chartSoft.border,
   grid: gridColor,
 } as const;
 

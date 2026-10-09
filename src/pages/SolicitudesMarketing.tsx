@@ -275,7 +275,7 @@ function SolicitudForm({
             <TabsContent value="solicitante" className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Área solicitante <span className="text-red-500">*</span></Label>
+                  <Label>Área solicitante <span className="text-destructive-strong">*</span></Label>
                   <Input
                     value={form.area_solicitante}
                     onChange={(e) => set('area_solicitante', e.target.value)}
@@ -284,7 +284,7 @@ function SolicitudForm({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Director / solicitante <span className="text-red-500">*</span></Label>
+                  <Label>Director / solicitante <span className="text-destructive-strong">*</span></Label>
                   <Input
                     value={form.solicitante}
                     onChange={(e) => set('solicitante', e.target.value)}
@@ -314,7 +314,7 @@ function SolicitudForm({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Fecha límite <span className="text-red-500">*</span></Label>
+                <Label>Fecha límite <span className="text-destructive-strong">*</span></Label>
                 <Input
                   type="date"
                   value={form.fecha_limite}
@@ -327,7 +327,7 @@ function SolicitudForm({
             {/* ── Brief ── */}
             <TabsContent value="brief" className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Campaña / proyecto <span className="text-red-500">*</span></Label>
+                <Label>Campaña / proyecto <span className="text-destructive-strong">*</span></Label>
                 <Input
                   value={form.campana}
                   onChange={(e) => set('campana', e.target.value)}
@@ -787,7 +787,7 @@ export default function SolicitudesMarketing() {
 
       {/* Table view */}
       {view === 'table' && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+        <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
           {isLoading ? (
             <LoadingState label="Cargando solicitudes…" className="py-20 min-h-0" />
           ) : filtered.length === 0 ? (
@@ -815,27 +815,27 @@ export default function SolicitudesMarketing() {
                   const canales = parseCanales(s.canal);
                   return (
                     <tr key={s.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">
+                      <td className="px-3 py-3 whitespace-nowrap text-muted-foreground font-mono text-xs">
                         {folioLabel(s.folio)}
                       </td>
                       <td className="px-4 py-3 font-medium max-w-[200px]">
                         <p className="truncate" title={s.campana}>{s.campana}</p>
-                        <p className="text-xs text-slate-400 truncate">{s.solicitante}</p>
+                        <p className="text-xs text-muted-foreground truncate">{s.solicitante}</p>
                       </td>
                       <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{s.area_solicitante}</td>
                       <td className="px-3 py-3 max-w-[180px]">
                         {canales.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {canales.slice(0, 2).map((c, i) => (
-                              <span key={i} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded capitalize">{c}</span>
+                              <span key={i} className="text-xs bg-info/10 text-info-strong px-1.5 py-0.5 rounded capitalize">{c}</span>
                             ))}
                             {canales.length > 2 && (
-                              <span className="text-xs text-slate-400">+{canales.length - 2}</span>
+                              <span className="text-xs text-muted-foreground">+{canales.length - 2}</span>
                             )}
                           </div>
-                        ) : <span className="text-slate-300">—</span>}
+                        ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-700 font-medium">
+                      <td className="px-3 py-3 whitespace-nowrap text-foreground font-medium">
                         {formatDate(s.fecha_limite)}
                       </td>
                       <td className="px-3 py-3 text-center whitespace-nowrap">
@@ -854,7 +854,7 @@ export default function SolicitudesMarketing() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-500 hover:text-primary"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
                               onClick={() => openEdit(s)}
                               aria-label={`Editar solicitud ${folioLabel(s.folio)}`}
                             >
@@ -863,7 +863,7 @@ export default function SolicitudesMarketing() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-500 hover:text-destructive"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
                               onClick={() => setDeleting(s)}
                               aria-label={`Eliminar solicitud ${folioLabel(s.folio)}`}
                             >
@@ -889,7 +889,7 @@ export default function SolicitudesMarketing() {
             return (
               <div key={estado} className="flex-1 min-w-[240px] space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-muted-foreground ">
                     {ESTADO_PRODUCCION_LABELS[estado]}
                   </p>
                   <span className="text-xs text-muted-foreground/70">{items.length}</span>
@@ -900,21 +900,21 @@ export default function SolicitudesMarketing() {
                       key={s.id}
                       type="button"
                       onClick={() => canWrite && openEdit(s)}
-                      className="w-full text-left rounded-lg border bg-card p-3 shadow-sm hover:shadow-md transition-shadow"
+                      className="w-full text-left rounded-lg border bg-card p-3 shadow-card hover:shadow-floating transition-shadow"
                     >
-                      <p className="text-xs text-slate-400 font-mono">{folioLabel(s.folio)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{folioLabel(s.folio)}</p>
                       <p className="text-sm font-medium truncate mt-0.5" title={s.campana}>{s.campana}</p>
-                      <p className="text-xs text-slate-500 truncate">{s.area_solicitante}</p>
+                      <p className="text-xs text-muted-foreground truncate">{s.area_solicitante}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <Badge className={cn('text-[10px] font-medium border-0', PRIORIDAD_COLORS[s.prioridad])}>
+                        <Badge className={cn('text-2xs font-medium border-0', PRIORIDAD_COLORS[s.prioridad])}>
                           {PRIORIDAD_LABELS[s.prioridad]}
                         </Badge>
-                        <span className="text-[10px] text-slate-400">{formatDate(s.fecha_limite)}</span>
+                        <span className="text-2xs text-muted-foreground">{formatDate(s.fecha_limite)}</span>
                       </div>
                     </button>
                   ))}
                   {items.length === 0 && (
-                    <p className="text-xs text-slate-300 text-center py-4">Sin solicitudes</p>
+                    <p className="text-xs text-muted-foreground text-center py-4">Sin solicitudes</p>
                   )}
                 </div>
               </div>

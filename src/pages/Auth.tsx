@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiBaseUrl } from '@/lib/api';
+import { ACCOUNT_DISABLED_MESSAGE, consumeAccountDisabledNotice, peekAccountDisabledNotice } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +23,9 @@ export default function AuthPage() {
   const googleError = searchParams.get('google_error');
   const { signIn, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    () => (peekAccountDisabledNotice() ? ACCOUNT_DISABLED_MESSAGE : null),
+  );
 
   const apiOrigin =
     (apiBaseUrl || '').replace(/\/$/, '') || (import.meta.env.DEV ? 'http://localhost:3001' : '');
@@ -30,6 +33,9 @@ export default function AuthPage() {
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+
+  // El aviso se muestra una vez: se borra tras el primer render.
+  useEffect(() => { consumeAccountDisabledNotice(); }, []);
 
   // Redirect if already logged in
   if (user) {
@@ -70,16 +76,16 @@ export default function AuthPage() {
   return (
     <div
       className="min-h-screen w-full relative flex flex-col items-center justify-center p-4"
-      style={{ backgroundImage: 'url(./bg_login.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      style={{ backgroundImage: 'url(./bg_login.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
       <div className="absolute inset-0 bg-black/30" />
       <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-md">
       <div className="mb-8 text-center">
-        <img src={logo} alt="Fábrica de Contenido" className="h-[52px] md:h-16 w-auto object-contain mx-auto drop-shadow-lg" />
+        <img src={logo} alt="Fábrica de Contenido" className="h-[52px] md:h-16 w-auto object-contain mx-auto drop-shadow-floating" />
         <p className="text-white/80 mt-2 text-sm font-medium drop-shadow">Planner Fabrica - Gestión de contenido</p>
       </div>
 
-      <Card className="w-full max-w-md backdrop-blur-sm bg-white/95 shadow-2xl border-white/20">
+      <Card className="w-full max-w-md backdrop-blur-sm bg-white/95 shadow-floating border-white/20">
         <form onSubmit={handleLogin}>
           <CardHeader>
             <CardTitle>Bienvenido de vuelta</CardTitle>
@@ -134,7 +140,7 @@ export default function AuthPage() {
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
+              <div className="relative flex justify-center text-xs ">
                 <span className="bg-background px-2 text-muted-foreground">o</span>
               </div>
             </div>

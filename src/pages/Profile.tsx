@@ -212,7 +212,7 @@ export default function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm border-t pt-4">
             <div className="space-y-1">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase">
+              <p className="text-2xs font-medium text-muted-foreground ">
                 Correo institucional
               </p>
               <p>{email || '—'}</p>

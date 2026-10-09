@@ -1,3 +1,4 @@
+import { chartSurface } from '@/components/charts/chartTheme';
 import { useMemo, useState } from 'react';
 
 interface PolarAreaDataItem {
@@ -151,7 +152,7 @@ export default function PolarAreaChart({ data, height = 320, logScale = false }:
                 d={describeArc(cx, cy, r * scale, s.startAngle, s.endAngle)}
                 fill={s.color}
                 fillOpacity={isHovered ? 0.85 : 0.7}
-                stroke="white"
+                stroke={chartSurface.card}
                 strokeWidth={1.5}
                 style={{ transition: 'fill-opacity 0.2s, d 0.2s' }}
               />
@@ -164,7 +165,7 @@ export default function PolarAreaChart({ data, height = 320, logScale = false }:
           const lp = polarToCartesian(cx, cy, labelRadius, s.midAngle);
           const isRight = lp.x >= cx;
           const isBottom = lp.y >= cy;
-          let textAnchor: string = 'middle';
+          let textAnchor: 'start' | 'middle' | 'end' = 'middle';
           if (Math.abs(lp.x - cx) > 10) {
             textAnchor = isRight ? 'start' : 'end';
           }

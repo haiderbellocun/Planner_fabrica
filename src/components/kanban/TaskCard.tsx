@@ -76,13 +76,13 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
       {task.tags && task.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {task.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+            <Badge key={tag} variant="secondary" className="text-2xs px-1.5 py-0">
               <Tag className="h-2.5 w-2.5 mr-1" />
               {tag}
             </Badge>
           ))}
           {task.tags.length > 3 && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            <Badge variant="secondary" className="text-2xs px-1.5 py-0">
               +{task.tags.length - 3}
             </Badge>
           )}
@@ -100,7 +100,7 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
           {task.due_date && (
             <div className={cn(
               'flex items-center gap-1 text-xs',
-              dueBucket === 'overdue' ? 'text-red-600 font-medium' : dueBucket === 'due_today' ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+              dueBucket === 'overdue' ? 'text-destructive-strong font-medium' : dueBucket === 'due_today' ? 'text-warning-strong font-medium' : 'text-muted-foreground',
             )}>
               <Calendar className="h-3 w-3" />
               <span>
@@ -117,7 +117,7 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
           <div className="flex items-center gap-2 max-w-[55%] justify-end">
             <Avatar className="h-6 w-6 flex-shrink-0">
               <AvatarImage src={task.assignee.avatar_url || undefined} />
-              <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+              <AvatarFallback className="text-2xs bg-primary text-primary-foreground">
                 {getInitials(task.assignee.full_name)}
               </AvatarFallback>
             </Avatar>

@@ -14,10 +14,10 @@ export function VirtualizacionToggle({ project }: { project: { id: string; es_vi
   const value = project.es_virtualizacion;
 
   const config = value === true
-    ? { label: 'Virtualización', icon: MonitorPlay, className: 'bg-teal-100 text-teal-700 border-teal-200' }
+    ? { label: 'Virtualización', icon: MonitorPlay, className: 'bg-secondary text-primary-deep border-primary/40' }
     : value === false
-    ? { label: 'No es virtualización', icon: X, className: 'bg-slate-100 text-slate-500 border-slate-200' }
-    : { label: 'Sin clasificar', icon: HelpCircle, className: 'bg-gray-50 text-gray-400 border-dashed border-gray-300' };
+    ? { label: 'No es virtualización', icon: X, className: 'bg-muted text-muted-foreground border-border' }
+    : { label: 'Sin clasificar', icon: HelpCircle, className: 'bg-muted/50 text-muted-foreground border-dashed border-border' };
 
   const Icon = config.icon;
 
@@ -31,7 +31,7 @@ export function VirtualizacionToggle({ project }: { project: { id: string; es_vi
         updateProject.mutate({ id: project.id, es_virtualizacion: nextVirtualizacion(value) });
       }}
       className={cn(
-        'flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors',
+        'flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full border transition-colors',
         config.className
       )}
     >

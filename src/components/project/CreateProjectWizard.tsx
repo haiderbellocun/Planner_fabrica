@@ -414,8 +414,8 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card
-                className={`cursor-pointer transition shadow-sm ${
-                  category === 'academico' ? 'border-primary shadow-md' : ''
+                className={`cursor-pointer transition shadow-card ${
+                  category === 'academico' ? 'border-primary shadow-floating' : ''
                 }`}
                 onClick={() => {
                   setCategory('academico');
@@ -431,8 +431,8 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
               </Card>
 
               <Card
-                className={`cursor-pointer transition shadow-sm ${
-                  category === 'marketing' ? 'border-primary shadow-md' : ''
+                className={`cursor-pointer transition shadow-card ${
+                  category === 'marketing' ? 'border-primary shadow-floating' : ''
                 }`}
                 onClick={() => {
                   setCategory('marketing');
@@ -448,8 +448,8 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
               </Card>
 
               <Card
-                className={`cursor-pointer transition shadow-sm ${
-                  category === 'desarrollo' ? 'border-primary shadow-md' : ''
+                className={`cursor-pointer transition shadow-card ${
+                  category === 'desarrollo' ? 'border-primary shadow-floating' : ''
                 }`}
                 onClick={() => {
                   setCategory('desarrollo');
@@ -465,8 +465,8 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
               </Card>
 
               <Card
-                className={`cursor-pointer transition shadow-sm ${
-                  category === 'otros' ? 'border-primary shadow-md' : ''
+                className={`cursor-pointer transition shadow-card ${
+                  category === 'otros' ? 'border-primary shadow-floating' : ''
                 }`}
                 onClick={() => {
                   setCategory('otros');
@@ -1161,7 +1161,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
                         <li>📖 {totalTemas} Temas</li>
                       </ul>
                       {programas.length === 0 && (
-                        <p className="text-sm text-amber-600 mt-2">
+                        <p className="text-sm text-warning-strong mt-2">
                           ⚠️ No has agregado ningún programa aún.
                         </p>
                       )}

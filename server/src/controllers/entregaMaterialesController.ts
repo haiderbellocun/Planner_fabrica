@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 /**
  * GET /api/entregas/:id/materiales
@@ -48,27 +48,21 @@ export const setEntregaMateriales = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Entrega no encontrada' });
     }
 
-    await query('BEGIN');
-
-    try {
-      await query('DELETE FROM public.entrega_materiales WHERE entrega_id = $1', [id]);
+    await withTransaction(async (client) => {
+      await client.query('DELETE FROM public.entrega_materiales WHERE entrega_id = $1', [id]);
 
       for (const item of items) {
         const cantidad = parseInt(item?.cantidad_entregada, 10) || 0;
         if (!item?.asignatura_id || !item?.material_type_id || cantidad <= 0) continue;
 
-        await query(
+        await client.query(
           `INSERT INTO public.entrega_materiales (entrega_id, asignatura_id, material_type_id, cantidad_entregada)
            VALUES ($1, $2, $3, $4)`,
           [id, item.asignatura_id, item.material_type_id, cantidad]
         );
       }
 
-      await query('COMMIT');
-    } catch (error) {
-      await query('ROLLBACK');
-      throw error;
-    }
+    });
 
     const result = await query(
       `SELECT em.*,

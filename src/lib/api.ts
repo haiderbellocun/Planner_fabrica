@@ -2,7 +2,7 @@
 // Base URL must be set via VITE_API_URL (e.g. in .env.production or .env)
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '';
-const TOKEN_KEY = 'taskflow_token';
+import { TOKEN_KEY, handleAccountDisabled, isAccountDisabledResponse } from '@/lib/session';
 
 interface ApiError {
   error: string;
@@ -23,6 +23,7 @@ class ApiClient {
       const error: ApiError = await response.json().catch(() => ({
         error: `HTTP ${response.status}: ${response.statusText}`,
       }));
+      if (isAccountDisabledResponse(response.status, error)) handleAccountDisabled();
       throw new Error(error.error || 'Request failed');
     }
 

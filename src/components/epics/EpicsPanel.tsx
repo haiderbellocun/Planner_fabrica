@@ -26,10 +26,10 @@ interface EpicsPanelProps {
 }
 
 const STATUS_META: Record<Epic['status'], { label: string; className: string }> = {
-  open: { label: 'Abierta', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  in_progress: { label: 'En progreso', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  completed: { label: 'Completada', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  cancelled: { label: 'Cancelada', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  open: { label: 'Abierta', className: 'bg-info/10 text-info-strong border-info/30' },
+  in_progress: { label: 'En progreso', className: 'bg-warning/10 text-warning-strong border-warning/30' },
+  completed: { label: 'Completada', className: 'bg-success/10 text-success-strong border-success/30' },
+  cancelled: { label: 'Cancelada', className: 'bg-muted text-foreground border-border' },
 };
 
 export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: EpicsPanelProps) {
@@ -127,7 +127,7 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
                           </span>
                           {epic.equipo_name && (
                             <span
-                              className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate max-w-[140px]"
+                              className="inline-flex items-center gap-1 text-2xs font-medium px-1.5 py-0.5 rounded-full truncate max-w-[140px]"
                               style={{
                                 backgroundColor: `${epic.equipo_color}20`,
                                 color: epic.equipo_color ?? undefined,

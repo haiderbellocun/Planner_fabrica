@@ -80,11 +80,6 @@ function formatDate(date: Date): string {
 export default function ProjectCalculator() {
   const { isAdmin, isProjectLeader } = useAuth();
 
-  // Role guard: only admin and project_leader
-  if (!isAdmin && !isProjectLeader) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const { data: materialTypes = [], isLoading: loadingMT } = useMaterialTypes();
   const { data: tiempos = [], isLoading: loadingTiempos } = useTiemposEstimados();
 
@@ -153,6 +148,11 @@ export default function ProjectCalculator() {
     };
   }, [materialTypes, quantities, numSubjects, teamSize, hoursMap, overrideHours]);
 
+  // Role guard (después de todos los hooks, para no alterar su orden): solo admin y project_leader
+  if (!isAdmin && !isProjectLeader) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   if (loadingMT || loadingTiempos) {
     return (
       <div className="page-container">
@@ -200,7 +200,7 @@ export default function ProjectCalculator() {
           <Card className={CARD_CLASS}>
             <CardContent className="pt-5 space-y-2">
               <Label htmlFor="team" className="flex items-center gap-2 text-sm font-medium">
-                <Users className="h-4 w-4 text-teal-500" />
+                <Users className="h-4 w-4 text-primary-deep" />
                 Equipo Disponible
               </Label>
               <Input
@@ -216,13 +216,13 @@ export default function ProjectCalculator() {
             </CardContent>
           </Card>
 
-          <Card className={`${CARD_CLASS} border-teal-200 bg-teal-50/50`}>
+          <Card className={`${CARD_CLASS} border-primary/40 bg-accent/50`}>
             <CardContent className="pt-5 space-y-1.5">
-              <p className="text-xs font-medium text-teal-900 flex items-center gap-1.5">
+              <p className="text-xs font-medium text-primary-deep flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
                 Jornada Laboral
               </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-teal-700">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-primary-deep">
                 <span>Lun-Jue:</span><span className="font-medium">{MON_THU_HOURS}h/día</span>
                 <span>Viernes:</span><span className="font-medium">{FRIDAY_HOURS}h/día</span>
                 <span>Semanal:</span><span className="font-semibold">{WEEKLY_HOURS}h</span>
@@ -306,7 +306,7 @@ export default function ProjectCalculator() {
                               [row.id]: isNaN(val) ? null : val,
                             }));
                           }}
-                          className={`h-8 w-20 text-center mx-auto ${!row.hasEstimation ? 'border-amber-300' : ''}`}
+                          className={`h-8 w-20 text-center mx-auto ${!row.hasEstimation ? 'border-warning/30' : ''}`}
                         />
                       </td>
                       <td className="py-2.5 px-2 text-center">
@@ -320,13 +320,13 @@ export default function ProjectCalculator() {
                         {row.cargos.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {row.cargos.map(c => (
-                              <Badge key={c.cargo} variant="secondary" className="text-[10px] py-0 px-1.5">
+                              <Badge key={c.cargo} variant="secondary" className="text-2xs py-0 px-1.5">
                                 {c.cargo}: {c.horas}h
                               </Badge>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-xs text-amber-500">Sin datos</span>
+                          <span className="text-xs text-warning-strong">Sin datos</span>
                         )}
                       </td>
                     </tr>
@@ -417,9 +417,9 @@ export default function ProjectCalculator() {
 
             {/* Warnings */}
             {results.materialsWithoutEstimation > 0 && (
-              <Card className={`${CARD_CLASS} border-amber-200 bg-amber-50/50`}>
-                <CardContent className="py-3 text-xs text-amber-800 flex items-center gap-2">
-                  <Info className="h-4 w-4 text-amber-500 flex-shrink-0" />
+              <Card className={`${CARD_CLASS} border-warning/30 bg-warning/10`}>
+                <CardContent className="py-3 text-xs text-warning-strong flex items-center gap-2">
+                  <Info className="h-4 w-4 text-warning-strong flex-shrink-0" />
                   <span>
                     <strong>{results.materialsWithoutEstimation}</strong> tipo(s) de material no tienen tiempos estimados en el sistema.
                     Puedes editar la columna "Hrs/Unid." manualmente para incluirlos en el cálculo.
@@ -454,9 +454,9 @@ function ResultCard({ label, value, sublabel, color }: {
   return (
     <Card className={CARD_CLASS}>
       <CardContent className="pt-4 pb-3 text-center">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">{label}</p>
+        <p className="text-2xs text-muted-foreground font-medium mb-1">{label}</p>
         <p className="text-xl font-bold" style={{ color }}>{value}</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{sublabel}</p>
+        <p className="text-2xs text-muted-foreground mt-0.5">{sublabel}</p>
       </CardContent>
     </Card>
   );

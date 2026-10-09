@@ -20,23 +20,10 @@ import {
 } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Pencil, Trash2, Plus, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { Asignatura as ApiAsignatura, Programa } from '@/hooks/useProgramas';
 
-interface Asignatura {
-  id: string;
-  name: string;
-  code: string | null;
-  description: string | null;
-  temas_count?: number;
-  completado?: boolean;
-}
-
-interface Programa {
-  id: string;
-  name: string;
-  code: string | null;
-  description: string | null;
-  asignaturas?: Asignatura[];
-}
+// Mismos tipos que devuelve la API (hooks/useProgramas); la asignatura añade campos calculados.
+type Asignatura = ApiAsignatura & { temas_count?: number; completado?: boolean };
 
 interface ProgramaCardProps {
   programa: Programa;

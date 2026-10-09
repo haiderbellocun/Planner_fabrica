@@ -236,14 +236,14 @@ function AsignaturaMaterialesRow({
     <div className="rounded-lg border p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{asignaturaName}</p>
-        <button type="button" onClick={onRemove} className="text-slate-400 hover:text-destructive transition-colors">
+        <button type="button" onClick={onRemove} className="text-muted-foreground hover:text-destructive transition-colors">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
       {isLoading ? (
-        <p className="text-xs text-slate-400">Cargando materiales requeridos…</p>
+        <p className="text-xs text-muted-foreground">Cargando materiales requeridos…</p>
       ) : materiales.length === 0 ? (
-        <p className="text-xs text-slate-400">Esta materia no tiene materiales requeridos configurados.</p>
+        <p className="text-xs text-muted-foreground">Esta materia no tiene materiales requeridos configurados.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {materiales.map((m) => (
@@ -262,7 +262,7 @@ function AsignaturaMaterialesRow({
                 }}
                 className="h-7 w-14 px-1.5 text-xs"
               />
-              <span className="text-slate-400 whitespace-nowrap">/ {m.cantidad}</span>
+              <span className="text-muted-foreground whitespace-nowrap">/ {m.cantidad}</span>
             </div>
           ))}
         </div>
@@ -421,7 +421,7 @@ function EntregaForm({
 
           {/* Nombre proyecto */}
           <div className="space-y-1.5">
-            <Label>Nombre del proyecto <span className="text-red-500">*</span></Label>
+            <Label>Nombre del proyecto <span className="text-destructive-strong">*</span></Label>
             <Input
               value={form.nombre_proyecto}
               onChange={(e) => set('nombre_proyecto', e.target.value)}
@@ -475,7 +475,7 @@ function EntregaForm({
 
             {/* Fecha entrega */}
             <div className="space-y-1.5">
-              <Label>Fecha de entrega <span className="text-red-500">*</span></Label>
+              <Label>Fecha de entrega <span className="text-destructive-strong">*</span></Label>
               <Input
                 type="date"
                 value={form.fecha_entrega}
@@ -667,9 +667,9 @@ export default function Entregas() {
   const closeForm = () => { setFormOpen(false); setEditing(null); };
 
   const ESTADO_CAL_COLORS: Record<EstadoEntrega, string> = {
-    aceptado:          'bg-green-500',
-    con_observaciones: 'bg-amber-400',
-    rechazado:         'bg-red-500',
+    aceptado:          'bg-success',
+    con_observaciones: 'bg-warning',
+    rechazado:         'bg-destructive',
     pendiente:         'bg-slate-400',
   };
 
@@ -766,12 +766,12 @@ export default function Entregas() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total registros',       value: stats.total,             color: 'text-foreground'  },
-          { label: 'Aceptados',             value: stats.aceptado,          color: 'text-green-600'   },
-          { label: 'Con observaciones',     value: stats.con_observaciones, color: 'text-amber-600'   },
-          { label: 'Pendientes/Rechazados', value: stats.pendiente + stats.rechazado, color: 'text-slate-500' },
+          { label: 'Aceptados',             value: stats.aceptado,          color: 'text-success-strong'   },
+          { label: 'Con observaciones',     value: stats.con_observaciones, color: 'text-warning-strong'   },
+          { label: 'Pendientes/Rechazados', value: stats.pendiente + stats.rechazado, color: 'text-muted-foreground' },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border bg-card p-3 shadow-sm">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</p>
+          <div key={s.label} className="rounded-xl border bg-card p-3 shadow-card">
+            <p className="text-2xs text-muted-foreground ">{s.label}</p>
             <p className={cn('text-2xl font-semibold mt-0.5', s.color)}>{s.value}</p>
           </div>
         ))}
@@ -860,13 +860,13 @@ export default function Entregas() {
       {/* Calendar view */}
       {view === 'calendar' && (
         <div className="space-y-3">
-          <div className="flex gap-4 flex-wrap text-xs text-slate-500">
+          <div className="flex gap-4 flex-wrap text-xs text-muted-foreground">
             {(Object.entries(ESTADO_LABELS) as [EstadoEntrega, string][]).map(([k, l]) => (
               <span key={k} className="flex items-center gap-1.5">
                 <span className={cn('h-2.5 w-2.5 rounded-full', {
-                  'bg-green-500': k === 'aceptado',
-                  'bg-amber-400': k === 'con_observaciones',
-                  'bg-red-500':   k === 'rechazado',
+                  'bg-success': k === 'aceptado',
+                  'bg-warning': k === 'con_observaciones',
+                  'bg-destructive':   k === 'rechazado',
                   'bg-slate-400': k === 'pendiente',
                 })} />
                 {l}
@@ -884,7 +884,7 @@ export default function Entregas() {
 
       {/* Table */}
       {view === 'table' && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+        <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
           {isLoading ? (
             <LoadingState label="Cargando entregas…" className="py-20 min-h-0" />
           ) : filtered.length === 0 ? (
@@ -921,31 +921,31 @@ export default function Entregas() {
                       <td className="px-4 py-3 font-medium max-w-[180px]">
                         <p className="truncate" title={e.nombre_proyecto}>{e.nombre_proyecto}</p>
                         {e.entregado_a && (
-                          <p className="text-xs text-slate-400 truncate">→ {e.entregado_a}</p>
+                          <p className="text-xs text-muted-foreground truncate">→ {e.entregado_a}</p>
                         )}
                       </td>
                       <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
-                        {e.escuela ?? <span className="text-slate-300">—</span>}
+                        {e.escuela ?? <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         {e.nivel_programa
                           ? <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{NIVEL_LABELS[e.nivel_programa]}</span>
-                          : <span className="text-slate-300">—</span>}
+                          : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-3 py-3 text-center text-slate-700 font-medium">
-                        {e.cantidad_semestres ?? <span className="text-slate-300">—</span>}
+                      <td className="px-3 py-3 text-center text-foreground font-medium">
+                        {e.cantidad_semestres ?? <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-3 py-3 max-w-[180px]">
                         {materiasTags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {materiasTags.slice(0, 2).map((m, i) => (
-                              <span key={i} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{m}</span>
+                              <span key={i} className="text-xs bg-info/10 text-info-strong px-1.5 py-0.5 rounded">{m}</span>
                             ))}
                             {materiasTags.length > 2 && (
-                              <span className="text-xs text-slate-400">+{materiasTags.length - 2}</span>
+                              <span className="text-xs text-muted-foreground">+{materiasTags.length - 2}</span>
                             )}
                           </div>
-                        ) : <span className="text-slate-300">—</span>}
+                        ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-3 py-3 max-w-[180px]">
                         {materialesTags.length > 0 ? (
@@ -954,12 +954,12 @@ export default function Entregas() {
                               <span key={i} className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">{m}</span>
                             ))}
                             {materialesTags.length > 2 && (
-                              <span className="text-xs text-slate-400">+{materialesTags.length - 2}</span>
+                              <span className="text-xs text-muted-foreground">+{materialesTags.length - 2}</span>
                             )}
                           </div>
-                        ) : <span className="text-slate-300">—</span>}
+                        ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-700 font-medium">
+                      <td className="px-3 py-3 whitespace-nowrap text-foreground font-medium">
                         {formatDate(e.fecha_entrega)}
                       </td>
                       <td className="px-3 py-3 text-center whitespace-nowrap">
@@ -978,7 +978,7 @@ export default function Entregas() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-500 hover:text-primary"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
                               onClick={() => openEdit(e)}
                               aria-label={`Editar entrega ${e.nombre_proyecto}`}
                             >
@@ -987,7 +987,7 @@ export default function Entregas() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-500 hover:text-destructive"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
                               onClick={() => setDeleting(e)}
                               aria-label={`Eliminar entrega ${e.nombre_proyecto}`}
                             >

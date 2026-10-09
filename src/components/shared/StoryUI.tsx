@@ -103,18 +103,18 @@ interface HeroBannerProps {
 export function HeroBanner({ eyebrow, story, stats, className }: HeroBannerProps) {
   return (
     <section className={cn('hero-banner', className)}>
-      <p className="relative text-[11.5px] uppercase tracking-wider font-semibold text-primary-foreground/70 mb-2.5">
+      <p className="relative text-xs font-medium text-white/90 mb-2.5">
         {eyebrow}
       </p>
-      <p className="relative text-[19px] leading-relaxed max-w-2xl mb-0" style={{ textWrap: 'balance' }}>
+      <p className="relative text-xl leading-relaxed max-w-2xl mb-0" style={{ textWrap: 'balance' }}>
         {story}
       </p>
       {stats && stats.length > 0 && (
         <div className="relative flex flex-wrap gap-9 items-end mt-6">
           {stats.map((s, i) => (
             <div key={i}>
-              <div className="figure text-[36px] font-semibold leading-none">{s.value}</div>
-              <div className="text-[12.5px] text-primary-foreground/75 mt-1.5">
+              <div className="figure text-4xl font-semibold leading-none">{s.value}</div>
+              <div className="text-xs text-white/90 mt-1.5">
                 {s.label}
                 {s.delta && (
                   <span className={cn('ml-2 font-semibold', s.delta.direction === 'up' ? 'text-[hsl(152,70%,72%)]' : 'text-[hsl(12,100%,80%)]')}>
@@ -146,12 +146,12 @@ interface SpotlightCardProps {
 export function SpotlightCard({ tag, avatar, name, role, metricValue, metricUnit, note, className }: SpotlightCardProps) {
   return (
     <div className={cn('spotlight-card', className)}>
-      <span className="text-[11px] font-bold uppercase tracking-wide text-primary-deep">{tag}</span>
+      <span className="text-xs font-semibold text-primary-deep">{tag}</span>
       <div className="flex items-center gap-2.5">
         {avatar}
         <div className="min-w-0">
           <div className="text-sm font-semibold truncate">{name}</div>
-          {role && <div className="text-[11.5px] text-muted-foreground truncate">{role}</div>}
+          {role && <div className="text-2xs text-muted-foreground truncate">{role}</div>}
         </div>
       </div>
       <div className="flex items-baseline gap-1.5">
@@ -180,8 +180,8 @@ export function AttentionItem({ severity, title, description, cta, onClick }: At
     <div className="attn-item">
       <div className={cn('attn-stripe', `attn-stripe-${severity}`)} />
       <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-semibold">{title}</div>
-        <div className="text-[12.5px] text-muted-foreground mt-0.5">{description}</div>
+        <div className="text-sm font-semibold">{title}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{description}</div>
       </div>
       {cta && (
         <button
@@ -203,10 +203,10 @@ export function AttentionItem({ severity, title, description, cta, onClick }: At
 export function SectionHeader({ tag, title, className }: { tag: string; title: string; className?: string }) {
   return (
     <div className={cn('flex items-baseline gap-3 mb-5', className)}>
-      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">
+      <span className="text-2xs font-semibold text-primary-deep bg-primary/10 px-2.5 py-1 rounded-md whitespace-nowrap">
         {tag}
       </span>
-      <h2 className="text-[15px] font-black tracking-tight text-foreground">{title}</h2>
+      <h2 className="text-section">{title}</h2>
     </div>
   );
 }
@@ -219,7 +219,7 @@ export function SectionHeader({ tag, title, className }: { tag: string; title: s
 export function FormSection({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
     <div className={cn('space-y-3', className)}>
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+      <h4 className="text-xs font-semibold text-muted-foreground">{title}</h4>
       <div className="space-y-4">{children}</div>
     </div>
   );

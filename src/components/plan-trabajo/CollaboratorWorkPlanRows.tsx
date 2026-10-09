@@ -40,10 +40,10 @@ export function CollaboratorWorkPlanRows({
 
           <div className="min-w-0 w-[180px] shrink-0">
             <p className="text-sm font-semibold truncate">{c.full_name}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{c.cargo ?? '—'}</p>
+            <p className="text-2xs text-muted-foreground truncate">{c.cargo ?? '—'}</p>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground shrink-0 w-[220px]">
+          <div className="flex items-center gap-3 text-2xs text-muted-foreground shrink-0 w-[220px]">
             <span>{c.total_tasks} tareas</span>
             <span>{c.programas_count} programas</span>
             <span>{c.materias_count} materias</span>
@@ -57,12 +57,12 @@ export function CollaboratorWorkPlanRows({
           <span className="text-xs font-semibold tabular-nums w-10 text-right shrink-0">{Math.round(c.progress_pct)}%</span>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {c.en_proceso > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">{c.en_proceso} proceso</span>}
-            {c.en_revision > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{c.en_revision} revisión</span>}
-            {c.vencidas > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{c.vencidas} vencidas</span>}
+            {c.en_proceso > 0 && <span className="text-2xs px-1.5 py-0.5 rounded-full bg-info/15 text-info-strong">{c.en_proceso} proceso</span>}
+            {c.en_revision > 0 && <span className="text-2xs px-1.5 py-0.5 rounded-full bg-warning/15 text-warning-strong">{c.en_revision} revisión</span>}
+            {c.vencidas > 0 && <span className="text-2xs px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive-strong">{c.vencidas} vencidas</span>}
           </div>
 
-          <div className="text-[11px] text-muted-foreground w-[110px] shrink-0 hidden lg:block">
+          <div className="text-2xs text-muted-foreground w-[110px] shrink-0 hidden lg:block">
             {formatRelativeDate(c.last_activity)}
           </div>
 

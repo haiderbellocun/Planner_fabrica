@@ -1,3 +1,4 @@
+import { chartInk, chartSurface } from '@/components/charts/chartTheme';
 import { ResponsivePie } from '@nivo/pie';
 import type { PieCustomLayerProps } from '@nivo/pie';
 import type { WorkPlanStatus } from '@/types/workPlan.types';
@@ -11,10 +12,10 @@ function CenteredMetric({ dataWithArc, centerX, centerY }: PieCustomLayerProps<S
   const total = dataWithArc.reduce((sum, d) => sum + d.value, 0);
   return (
     <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="central">
-      <tspan x={centerX} dy="-0.3em" style={{ fontSize: 20, fontWeight: 700, fill: '#1f2937' }}>
+      <tspan x={centerX} dy="-0.3em" style={{ fontSize: 20, fontWeight: 700, fill: chartInk.strong }}>
         {formatNumber(total)}
       </tspan>
-      <tspan x={centerX} dy="1.4em" style={{ fontSize: 10, fill: '#6B7F7C' }}>
+      <tspan x={centerX} dy="1.4em" style={{ fontSize: 10, fill: chartInk.muted }}>
         TOTAL
       </tspan>
     </text>
@@ -45,7 +46,7 @@ export function WorkStatusChart({ data, loading }: { data: WorkPlanStatus | unde
           theme={nivoTheme}
           enableArcLinkLabels={false}
           arcLabelsSkipAngle={18}
-          arcLabelsTextColor="#ffffff"
+          arcLabelsTextColor={chartSurface.card}
           legends={[{
             anchor: 'bottom',
             direction: 'row',
@@ -54,11 +55,11 @@ export function WorkStatusChart({ data, loading }: { data: WorkPlanStatus | unde
             itemHeight: 14,
             symbolSize: 8,
             symbolShape: 'circle',
-            itemTextColor: '#6B7F7C',
+            itemTextColor: chartInk.muted,
           }]}
           layers={['arcs', 'arcLabels', 'legends', CenteredMetric]}
           tooltip={({ datum }) => (
-            <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs min-w-[140px]">
+            <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs min-w-[140px]">
               <div className="flex items-center gap-2 mb-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: datum.color }} />
                 <span className="font-semibold">{datum.label}</span>

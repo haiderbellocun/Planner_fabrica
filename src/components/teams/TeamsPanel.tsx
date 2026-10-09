@@ -111,13 +111,13 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
                             {team.members.slice(0, 6).map((m) => (
                               <Avatar key={m.id} className="h-6 w-6 ring-2 ring-white" title={m.full_name ?? ''}>
                                 <AvatarImage src={m.avatar_url || undefined} />
-                                <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                                <AvatarFallback className="text-2xs font-semibold bg-primary/20 text-primary">
                                   {m.full_name?.charAt(0) ?? '?'}
                                 </AvatarFallback>
                               </Avatar>
                             ))}
                             {team.members.length > 6 && (
-                              <div className="h-6 w-6 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                              <div className="h-6 w-6 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-2xs font-semibold text-muted-foreground">
                                 +{team.members.length - 6}
                               </div>
                             )}

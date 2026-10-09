@@ -113,7 +113,7 @@ export default function EquipoPlanPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-semibold truncate">{section.full_name ?? 'Sin nombre'}</p>
                             {!section.is_current_member && (
-                              <p className="text-[11px] text-muted-foreground">Ya no está en este equipo</p>
+                              <p className="text-2xs text-muted-foreground">Ya no está en este equipo</p>
                             )}
                           </div>
                         </div>
@@ -137,18 +137,18 @@ export default function EquipoPlanPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm truncate">{item.task.title}</span>
-                                    <span className="text-[10px] text-muted-foreground shrink-0">{item.task.project.key}</span>
+                                    <span className="text-2xs text-muted-foreground shrink-0">{item.task.project.key}</span>
                                   </div>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <StatusPill tone={item.task.status.is_completed ? 'good' : 'info'}>
                                       {item.task.status.name}
                                     </StatusPill>
                                     {dueDate && (
-                                      <span className="text-[11px] text-muted-foreground">
+                                      <span className="text-2xs text-muted-foreground">
                                         {format(dueDate, 'd MMM', { locale: es })}
                                       </span>
                                     )}
-                                    <span className="text-[11px] text-muted-foreground/70">
+                                    <span className="text-2xs text-muted-foreground/70">
                                       {item.added_by_name ? `Agregado por ${item.added_by_name}` : 'Agregado automático'}
                                     </span>
                                   </div>

@@ -42,9 +42,14 @@ export type GroupField = typeof GROUP_KEYS[number];
 
 export type CheckState = 'unchecked' | 'blue' | 'green';
 
+/** Lee una columna de la fila por nombre dinámico (g1_inf, carga_completa…). */
+function rowField(row: ChecklistRow, field: string): unknown {
+  return (row as unknown as Record<string, unknown>)[field];
+}
+
 /** Returns the visual state of a boolean check field, considering both green (admin) and blue (user) checks. */
 export function getCheckState(row: ChecklistRow, field: string): CheckState {
-  if ((row as Record<string, unknown>)[field] === true) return 'green';
+  if (rowField(row, field) === true) return 'green';
   if (row.user_checks?.[field] === true) return 'blue';
   return 'unchecked';
 }
@@ -64,7 +69,7 @@ export function calcEstadoFinal(row: ChecklistRow): 'Sin iniciar' | 'En proceso'
 
   // "En proceso" counts blue checks too
   const isAnyChecked = (field: string) =>
-    !!(row as Record<string, unknown>)[field] || !!row.user_checks?.[field];
+    !!rowField(row, field) || !!row.user_checks?.[field];
 
   const anyChecked =
     ([1, 2, 3, 4, 5] as const).some((g) => GROUP_KEYS.some((k) => isAnyChecked(`g${g}_${k}`))) ||

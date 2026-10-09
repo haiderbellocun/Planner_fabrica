@@ -47,7 +47,7 @@ export function WorkEvolutionChart({ data, loading }: { data: NivoLineSeries[] |
             const diff = planificadas - completadas;
             const pct = planificadas > 0 ? Math.round((completadas / planificadas) * 1000) / 10 : 0;
             return (
-              <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs min-w-[170px] space-y-0.5">
+              <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs min-w-[170px] space-y-0.5">
                 <p className="font-semibold mb-1">{String(point.data.x)}</p>
                 <div className="flex justify-between gap-4"><span>Planificadas</span><b>{planificadas}</b></div>
                 <div className="flex justify-between gap-4"><span>Completadas</span><b>{completadas}</b></div>

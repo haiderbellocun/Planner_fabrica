@@ -130,7 +130,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 overflow-auto">
-          <header className="h-14 flex items-center gap-4 border-b border-border bg-card px-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <header className="h-14 flex items-center gap-4 border-b border-border bg-card px-4 shadow-card">
             <SidebarTrigger className="-ml-1 rounded-lg" />
             <div className="flex-1 flex items-center justify-center max-w-md mx-4" ref={searchRef}>
               <div className="relative w-full">
@@ -147,7 +147,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   aria-autocomplete="list"
                   aria-activedescendant={activeIndex >= 0 ? `global-search-option-${activeIndex}` : undefined}
                   placeholder="Buscar proyectos, tareas..."
-                  className="pl-9 h-9 rounded-lg bg-muted/50 border-border shadow-sm text-sm"
+                  className="pl-9 h-9 rounded-lg bg-muted/50 border-border shadow-card text-sm"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -161,14 +161,14 @@ export function AppLayout({ children }: AppLayoutProps) {
                     id="global-search-listbox"
                     role="listbox"
                     aria-label="Resultados de búsqueda"
-                    className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+                    className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-floating overflow-hidden"
                   >
                     {!hasResults && !isFetching && (
                       <p className="px-4 py-3 text-sm text-muted-foreground">Sin resultados para "{debouncedQuery}"</p>
                     )}
                     {(searchResults?.projects?.length ?? 0) > 0 && (
                       <div>
-                        <p className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted/40">
+                        <p className="px-3 py-1.5 text-2xs font-semibold text-muted-foreground bg-muted/40">
                           Proyectos
                         </p>
                         {searchResults!.projects.map((p, i) => (
@@ -184,7 +184,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                             <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <span className="truncate">{p.name}</span>
                             {p.is_completed && (
-                              <span className="ml-auto text-[10px] text-muted-foreground shrink-0">Completado</span>
+                              <span className="ml-auto text-2xs text-muted-foreground shrink-0">Completado</span>
                             )}
                           </button>
                         ))}
@@ -192,7 +192,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     )}
                     {(searchResults?.tasks?.length ?? 0) > 0 && (
                       <div>
-                        <p className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide bg-muted/40">
+                        <p className="px-3 py-1.5 text-2xs font-semibold text-muted-foreground bg-muted/40">
                           Tareas
                         </p>
                         {searchResults!.tasks.map((t, ti) => {
@@ -208,7 +208,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                               onMouseDown={() => selectResult({ kind: 'task', id: t.id, projectId: t.project_id, label: t.title })}
                             >
                               <span className="truncate">{t.title}</span>
-                              <span className="text-[11px] text-muted-foreground">{t.project_name} · {t.status_name}</span>
+                              <span className="text-2xs text-muted-foreground">{t.project_name} · {t.status_name}</span>
                             </button>
                           );
                         })}
@@ -243,7 +243,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-floating">
                   <DropdownMenuLabel className="font-normal">
                     <p className="font-medium">{user.full_name}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -267,9 +267,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           <main
             className="flex-1 relative bg-background"
             style={{
-              backgroundImage: 'linear-gradient(180deg, hsl(var(--background) / 0.94), hsl(var(--background) / 0.94)), url(./bg_app.png)',
+              backgroundImage: 'linear-gradient(180deg, hsl(var(--background) / 0.94), hsl(var(--background) / 0.94)), url(./bg_app.webp)',
               backgroundSize: 'auto, cover',
-              backgroundAttachment: 'scroll, fixed',
+              backgroundAttachment: 'scroll, scroll',
               backgroundPosition: 'center, center',
             }}
           >

@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 export const listTeams = async (req: AuthRequest, res: Response) => {
   try {
@@ -101,24 +101,19 @@ export const setTeamMembers = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    await query('BEGIN');
-    try {
-      await query('DELETE FROM public.team_members WHERE team_id = $1', [teamId]);
+    await withTransaction(async (client) => {
+      await client.query('DELETE FROM public.team_members WHERE team_id = $1', [teamId]);
 
       for (const profileId of profileIds) {
         if (!profileId) continue;
-        await query(
+        await client.query(
           `INSERT INTO public.team_members (team_id, profile_id) VALUES ($1, $2)
            ON CONFLICT (team_id, profile_id) DO NOTHING`,
           [teamId, profileId]
         );
       }
 
-      await query('COMMIT');
-    } catch (error) {
-      await query('ROLLBACK');
-      throw error;
-    }
+    });
 
     const result = await query(
       `SELECT tm.id, tm.profile_id, p.full_name, p.avatar_url

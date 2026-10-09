@@ -1,3 +1,4 @@
+import { chartInk, chartSoft, chartSurface } from '@/components/charts/chartTheme';
 import { useState } from 'react';
 import { ResponsiveHeatMap } from '@nivo/heatmap';
 import type { ComputedCell } from '@nivo/heatmap';
@@ -35,19 +36,19 @@ export function ProjectHeatMap({ filters }: ProjectHeatMapProps) {
       minHeight={Math.max(320, visibleRows.length * 32)}
       actions={
         <div className="flex items-center gap-2">
-          <div className="flex gap-1 text-[11px]">
+          <div className="flex gap-1 text-2xs">
             {(['project', 'materia'] as Dimension[]).map((d) => (
               <button
                 key={d}
                 onClick={() => setDimension(d)}
-                className={`px-2 py-1 rounded-full border transition-colors ${dimension === d ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border'}`}
+                className={`px-2 py-1 rounded-full border transition-colors ${dimension === d ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
               >
                 {d === 'project' ? 'Por proyecto' : 'Por materia'}
               </button>
             ))}
           </div>
           {rows.length > 12 && (
-            <button onClick={() => setExpanded((v) => !v)} className="text-[11px] text-primary hover:underline">
+            <button onClick={() => setExpanded((v) => !v)} className="text-2xs text-primary hover:underline">
               {expanded ? 'Ver menos' : 'Ver matriz completa'}
             </button>
           )}
@@ -60,16 +61,16 @@ export function ProjectHeatMap({ filters }: ProjectHeatMapProps) {
           margin={{ top: 60, right: 20, bottom: 20, left: 130 }}
           valueFormat=">-.0f"
           colors={{ type: 'sequential', colors: [NIVO_TEAL_SCALE[0], NIVO_TEAL_SCALE[NIVO_TEAL_SCALE.length - 1]], minValue: 0, maxValue: maxVal }}
-          emptyColor="#F4FAF9"
+          emptyColor={chartSoft.empty}
           theme={nivoTheme}
           axisTop={{ tickSize: 0, tickPadding: 8, tickRotation: -35 }}
           axisLeft={{ tickSize: 0, tickPadding: 8 }}
           borderRadius={3}
           borderWidth={2}
-          borderColor="#ffffff"
-          labelTextColor={(cell: MatrixCell) => (cell.value && cell.value > maxVal * 0.55 ? '#ffffff' : '#1f2937')}
+          borderColor={chartSurface.card}
+          labelTextColor={(cell: MatrixCell) => (cell.value && cell.value > maxVal * 0.55 ? chartSurface.card : chartInk.strong)}
           tooltip={({ cell }: { cell: MatrixCell }) => (
-            <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs min-w-[170px] space-y-0.5">
+            <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs min-w-[170px] space-y-0.5">
               <p className="font-semibold">{String(cell.serieId)}</p>
               <p className="text-muted-foreground mb-1">{String(cell.data.x)}</p>
               <div className="flex justify-between gap-4"><span>Tareas activas</span><b>{cell.data.y}</b></div>

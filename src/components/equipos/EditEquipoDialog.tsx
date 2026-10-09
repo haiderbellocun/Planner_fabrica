@@ -105,7 +105,7 @@ export function EditEquipoDialog({ equipo, open, onOpenChange }: EditEquipoDialo
                     key={preset}
                     type="button"
                     onClick={() => setColor(preset)}
-                    className="h-7 w-7 rounded-full border-2 transition-all"
+                    className="h-7 w-7 rounded-full border-2 transition-ui"
                     style={{
                       backgroundColor: preset,
                       borderColor: color === preset ? '#111827' : 'transparent',
@@ -142,7 +142,7 @@ export function EditEquipoDialog({ equipo, open, onOpenChange }: EditEquipoDialo
                         />
                         <Avatar className="h-6 w-6 flex-shrink-0">
                           <AvatarImage src={p.avatar_url || undefined} />
-                          <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                          <AvatarFallback className="text-2xs font-semibold bg-primary/20 text-primary">
                             {p.full_name?.charAt(0) ?? '?'}
                           </AvatarFallback>
                         </Avatar>

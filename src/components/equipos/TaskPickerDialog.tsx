@@ -98,7 +98,7 @@ export function TaskPickerDialog({ open, onOpenChange, defaultAssigneeId, onSele
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium truncate">{task.title}</span>
-                      <Badge variant="secondary" className="text-[10px] shrink-0">{task.project.key}</Badge>
+                      <Badge variant="secondary" className="text-2xs shrink-0">{task.project.key}</Badge>
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                       <StatusPill tone={task.status.is_completed ? 'good' : 'info'}>{task.status.name}</StatusPill>

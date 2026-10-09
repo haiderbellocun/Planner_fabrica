@@ -1,3 +1,4 @@
+import { parseDateOnly } from '@/lib/dates';
 import { useState, useMemo } from 'react';
 import { useProjects, usePinProject, useUnpinProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,10 +20,10 @@ const TIPO_LABELS: Record<string, string> = {
 };
 
 const TIPO_COLORS: Record<string, string> = {
-  profesional: 'bg-blue-100 text-blue-700 border-blue-200',
-  diplomado:   'bg-amber-100 text-amber-700 border-amber-200',
-  maestria:    'bg-orange-100 text-orange-700 border-orange-200',
-  doctorado:   'bg-emerald-100 text-emerald-700 border-emerald-200',
+  profesional: 'bg-info/15 text-info-strong border-info/30',
+  diplomado:   'bg-warning/15 text-warning-strong border-warning/30',
+  maestria:    'bg-coral/15 text-warning-strong border-coral/30',
+  doctorado:   'bg-success/15 text-success-strong border-success/30',
 };
 
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -32,8 +33,8 @@ function formatEndDate(dateStr: string | null | undefined): string | null {
   // end_date can arrive as a plain "YYYY-MM-DD" or a full ISO timestamp — slice to
   // the date part first, otherwise appending T00:00:00 to a timestamp that already
   // has a time component produces an invalid date (renders as "NaN undefined NaN").
-  const d = new Date(dateStr.slice(0, 10) + 'T00:00:00');
-  if (Number.isNaN(d.getTime())) return null;
+  const d = parseDateOnly(dateStr);
+  if (!d || Number.isNaN(d.getTime())) return null;
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -76,7 +77,8 @@ export default function ProjectsPage() {
   const availableMonths = useMemo(() => {
     const months = new Set<number>();
     baseProjects.forEach((p) => {
-      if (p.end_date) months.add(new Date(p.end_date).getMonth());
+      const end = parseDateOnly(p.end_date);
+      if (end) months.add(end.getMonth());
     });
     return [...months].sort((a, b) => a - b);
   }, [baseProjects]);
@@ -86,7 +88,7 @@ export default function ProjectsPage() {
     baseProjects.filter((p) => {
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (filterTipo !== 'all' && p.tipo_programa !== filterTipo) return false;
-      if (filterMonth !== -1 && p.end_date && new Date(p.end_date).getMonth() !== filterMonth) return false;
+      if (filterMonth !== -1 && p.end_date && parseDateOnly(p.end_date)?.getMonth() !== filterMonth) return false;
       if (filterVirt === 'yes' && p.es_virtualizacion !== true) return false;
       if (filterVirt === 'no' && p.es_virtualizacion !== false) return false;
       if (filterVirt === 'unset' && p.es_virtualizacion !== null) return false;
@@ -135,7 +137,7 @@ export default function ProjectsPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterStatus === s
-                ? 'bg-primary text-white border-primary'
+                ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-white text-muted-foreground border-border hover:border-primary/40'
             )}
           >
@@ -153,8 +155,8 @@ export default function ProjectsPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterTipo === t
-                ? 'bg-teal-500 text-white border-teal-500'
-                : 'bg-white text-muted-foreground border-border hover:border-teal-400'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-white text-muted-foreground border-border hover:border-primary/40'
             )}
           >
             {TIPO_LABELS[t] ?? t}
@@ -175,8 +177,8 @@ export default function ProjectsPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterVirt === v
-                ? 'bg-teal-600 text-white border-teal-600'
-                : 'bg-white text-muted-foreground border-border hover:border-teal-400'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-white text-muted-foreground border-border hover:border-primary/40'
             )}
           >
             {label}
@@ -193,8 +195,8 @@ export default function ProjectsPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1',
               filterMonth === m
-                ? 'bg-amber-400 text-white border-amber-400'
-                : 'bg-white text-muted-foreground border-border hover:border-amber-300'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-white text-muted-foreground border-border hover:border-warning/30'
             )}
           >
             {MONTH_NAMES[m]}
@@ -240,7 +242,7 @@ export default function ProjectsPage() {
 
             return (
               <Link key={project.id} to={`/projects/${project.id}`}>
-                <Card className="h-full hover:shadow-md hover:border-primary/20 transition-all cursor-pointer overflow-hidden">
+                <Card className="h-full hover:shadow-floating hover:border-primary/20 transition-[width] cursor-pointer overflow-hidden">
                   <CardContent className="p-5 flex flex-col gap-3 h-full">
 
                     {/* Row 1: badges */}
@@ -249,7 +251,7 @@ export default function ProjectsPage() {
                         type="button"
                         className={cn(
                           'p-0.5 rounded hover:bg-muted transition-colors',
-                          project.is_pinned ? 'text-amber-500' : 'text-muted-foreground/50'
+                          project.is_pinned ? 'text-warning-strong' : 'text-muted-foreground/50'
                         )}
                         title={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
                         onClick={(e) => {
@@ -262,7 +264,7 @@ export default function ProjectsPage() {
                       </button>
                       <Badge variant="secondary" className="font-mono text-xs">{project.key}</Badge>
                       {project.tipo_programa && (
-                        <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border', TIPO_COLORS[project.tipo_programa] ?? 'bg-gray-100 text-gray-600 border-gray-200')}>
+                        <span className={cn('text-2xs font-medium px-2 py-0.5 rounded-full border', TIPO_COLORS[project.tipo_programa] ?? 'bg-muted text-muted-foreground border-border')}>
                           {TIPO_LABELS[project.tipo_programa] ?? project.tipo_programa}
                         </span>
                       )}
@@ -272,7 +274,7 @@ export default function ProjectsPage() {
                         if (!statusBadge) return null;
                         const StatusIcon = statusBadge.icon;
                         return (
-                          <span className={cn('ml-auto flex items-center gap-1 text-[11px] font-medium', statusBadge.textClassName)}>
+                          <span className={cn('ml-auto flex items-center gap-1 text-2xs font-medium', statusBadge.textClassName)}>
                             <StatusIcon className="h-3.5 w-3.5" /> {statusBadge.label}
                           </span>
                         );
@@ -302,7 +304,7 @@ export default function ProjectsPage() {
                       </div>
                       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                         <div
-                          className={cn('h-full rounded-full transition-all', isCompleted ? 'bg-emerald-500' : 'bg-primary')}
+                          className={cn('h-full rounded-full transition-[width]', isCompleted ? 'bg-success' : 'bg-primary')}
                           style={{ width: `${pct}%` }}
                         />
                       </div>

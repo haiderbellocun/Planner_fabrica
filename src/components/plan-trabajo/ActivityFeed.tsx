@@ -33,7 +33,7 @@ export function ActivityFeed() {
             axisLeft={{ tickSize: 0, tickPadding: 4, tickValues: 3 }}
             axisBottom={{ tickSize: 0, tickPadding: 4, tickValues: 7 }}
             tooltip={({ point }) => (
-              <div className="rounded-lg bg-white border shadow-md px-2.5 py-1.5 text-[11px]">
+              <div className="rounded-lg bg-white border shadow-floating px-2.5 py-1.5 text-2xs">
                 {String(point.data.x)}: <b>{String(point.data.y)}</b> cambios
               </div>
             )}
@@ -49,7 +49,7 @@ export function ActivityFeed() {
                   <b>{item.full_name}</b> cambió <span className="text-muted-foreground truncate">"{item.title}"</span>{' '}
                   {item.from_status ? `de ${item.from_status} a` : 'a'} <b>{item.to_status}</b>
                 </p>
-                <p className="text-[10px] text-muted-foreground">{formatRelativeDate(item.started_at)}</p>
+                <p className="text-2xs text-muted-foreground">{formatRelativeDate(item.started_at)}</p>
               </div>
             </div>
           ))}

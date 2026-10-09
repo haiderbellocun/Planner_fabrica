@@ -84,7 +84,7 @@ function SaveStatus({ state }: { state: SaveState }) {
     );
   }
   if (state === 'saved') {
-    return <span className="text-xs text-emerald-600">Guardado</span>;
+    return <span className="text-xs text-success-strong">Guardado</span>;
   }
   if (state === 'error') {
     return <span className="text-xs text-destructive">Error al guardar — tu cambio no se perdió</span>;
@@ -359,7 +359,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   };
 
   // Calculate total time in each status
-  const timeByStatus = history.reduce((acc: Record<string, number>, entry: any) => {
+  const timeByStatus = history.reduce((acc: Record<string, number>, entry) => {
     if (entry.duration_seconds && entry.from_status) {
       const statusName = entry.from_status.name;
       acc[statusName] = (acc[statusName] || 0) + entry.duration_seconds;
@@ -368,7 +368,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   }, {});
 
   // Calculate current status time
-  const currentStatusEntry = history.find((h: any) => !h.ended_at);
+  const currentStatusEntry = history.find((h) => !h.ended_at);
   const currentStatusTime = currentStatusEntry
     ? Math.floor((Date.now() - new Date(currentStatusEntry.started_at).getTime()) / 1000)
     : 0;
@@ -383,7 +383,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'p-0 overflow-hidden shadow-2xl',
+          'p-0 overflow-hidden shadow-floating',
           isMobile ? 'w-screen h-[100dvh] max-w-none rounded-none' : 'max-w-3xl w-full rounded-2xl',
         )}
         style={!isMobile ? { maxHeight: '88vh' } : undefined}
@@ -403,7 +403,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 </button>
               )}
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
                   {projectKey}-{taskData.task_number}
                 </span>
                 <Badge className={cn('text-xs', priorityInfo.className)}>{priorityInfo.label}</Badge>
@@ -453,7 +453,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                         }
                         setTitleSaveState('pending');
                         updateTask.mutate(
-                          { id: taskData.id, projectId: taskData.project_id, title: newTitle },
+                          { id: taskData.id, project_id: taskData.project_id, title: newTitle },
                           {
                             onSuccess: () => { setTitleSaveState('saved'); setEditingTitle(false); },
                             // Se queda en modo edición para no perder lo escrito si falla el guardado.
@@ -538,8 +538,8 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 </p>
               )}
               {pendingResumeStatusId && (
-                <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 space-y-2">
-                  <p className="text-xs text-amber-800">
+                <div className="rounded-md border border-warning/30 bg-warning/10 p-2.5 space-y-2">
+                  <p className="text-xs text-warning-strong">
                     Esta tarea quedó sin fecha límite al pausarse. Define una nueva fecha para reanudarla.
                   </p>
                   <div className="flex items-center gap-2">
@@ -710,7 +710,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                       }
                       setDueDateSaveState('pending');
                       updateTask.mutate(
-                        { id: taskData.id, projectId: taskData.project_id, due_date: e.target.value },
+                        { id: taskData.id, project_id: taskData.project_id, due_date: e.target.value },
                         {
                           onSuccess: () => { setDueDateSaveState('saved'); setEditingDueDate(false); },
                           onError: () => setDueDateSaveState('error'),
@@ -786,7 +786,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
           {/* Current Status Time */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               Estado Actual
             </h4>
@@ -816,7 +816,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
             <>
               <Separator />
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                   <ListChecks className="h-3.5 w-3.5" />
                   Subtareas
                   {(taskData.subtasks?.length || 0) > 0 && (
@@ -859,7 +859,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                         {subtask.assignee_id && (
                           <Avatar className="h-5 w-5 flex-shrink-0">
                             <AvatarImage src={subtask.assignee_avatar_url || undefined} />
-                            <AvatarFallback className="text-[10px]">{getInitials(subtask.assignee_name)}</AvatarFallback>
+                            <AvatarFallback className="text-2xs">{getInitials(subtask.assignee_name)}</AvatarFallback>
                           </Avatar>
                         )}
                         {!isAdminOrLeader && (
@@ -958,22 +958,22 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
           {/* ── RIGHT PANEL — activity + comments (pestaña "Actividad" en celular) ── */}
           <div className={cn(
-            'flex flex-col bg-slate-50/60 min-h-0',
+            'flex flex-col bg-muted/50 min-h-0',
             isMobile ? cn('flex-1', mobileTab !== 'actividad' && 'hidden') : 'w-72 flex-shrink-0',
           )}>
             {/* Activity feed */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Actividad</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">Actividad</p>
 
               {activity.length === 0 && comments.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-6">Sin actividad</p>
               ) : null}
 
-              {activity.map((entry: any) => (
+              {activity.map((entry) => (
                 <div key={entry.id} className="flex items-start gap-2.5">
                   <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
                     <AvatarImage src={entry.performed_by_profile?.avatar_url} />
-                    <AvatarFallback className="text-[10px] bg-primary/80 text-white">
+                    <AvatarFallback className="text-2xs bg-primary/80 text-white">
                       {getInitials(entry.performed_by_profile?.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -996,12 +996,12 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
               {comments.length > 0 && (
                 <>
                   <Separator className="my-2" />
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Comentarios</p>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Comentarios</p>
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex items-start gap-2.5">
                       <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
                         <AvatarImage src={comment.user?.avatar_url} />
-                        <AvatarFallback className="text-[10px] bg-primary/80 text-white">
+                        <AvatarFallback className="text-2xs bg-primary/80 text-white">
                           {getInitials(comment.user?.full_name)}
                         </AvatarFallback>
                       </Avatar>
@@ -1032,23 +1032,23 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 placeholder="Escribe un comentario... (@ para mencionar)"
                 value={newComment}
                 onChange={handleCommentChange}
-                className="min-h-[72px] resize-none text-sm bg-slate-50 border-slate-200"
+                className="min-h-[72px] resize-none text-sm bg-muted/50 border-border"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddComment(); }
                 }}
               />
               {mentionMatches.length > 0 && (
-                <div className="mt-1 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="mt-1 rounded-lg border border-border bg-white shadow-card overflow-hidden">
                   {mentionMatches.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-muted/50 text-left"
                       onClick={() => handleSelectMention(p)}
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={p.avatar_url || undefined} />
-                        <AvatarFallback className="text-[9px]">{getInitials(p.full_name)}</AvatarFallback>
+                        <AvatarFallback className="text-2xs">{getInitials(p.full_name)}</AvatarFallback>
                       </Avatar>
                       {p.full_name || 'Usuario'}
                     </button>

@@ -104,11 +104,11 @@ function ThreeStateCheckbox({
       }
       className={cn(
         'h-5 w-5 rounded border-2 flex items-center justify-center transition-colors shrink-0',
-        state === 'green'     && 'bg-teal-500 border-teal-500 text-white',
-        state === 'blue'      && 'bg-blue-500 border-blue-500 text-white',
-        state === 'unchecked' && 'border-slate-300 bg-white hover:border-teal-400',
+        state === 'green'     && 'bg-primary-deep border-primary-deep text-white',
+        state === 'blue'      && 'bg-info-strong border-info-strong text-white',
+        state === 'unchecked' && 'border-border bg-white hover:border-primary/40',
         (disabled || isReadOnly) && 'opacity-60 cursor-not-allowed',
-        state === 'blue' && isAdmin && !disabled && 'ring-2 ring-blue-300 ring-offset-1 hover:bg-teal-500 hover:border-teal-500',
+        state === 'blue' && isAdmin && !disabled && 'ring-2 ring-info ring-offset-1 hover:bg-primary hover:border-primary',
       )}
     >
       {state !== 'unchecked' && (
@@ -177,22 +177,22 @@ const ChecklistRowComponent = memo(function ChecklistRowComponent({
   );
 
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       {/* Programa */}
-      <td className="px-3 py-2 text-xs text-slate-500 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-100">
+      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap sticky left-0 bg-white z-10 border-r border-border">
         {row.programa_name ?? '—'}
       </td>
 
       {/* Asignatura */}
-      <td className="px-3 py-2 min-w-[180px] sticky left-[110px] bg-white z-10 border-r border-slate-200">
+      <td className="px-3 py-2 min-w-[180px] sticky left-[110px] bg-white z-10 border-r border-border">
         <p className="text-sm font-medium leading-tight">{row.asignatura_name}</p>
         {row.asignatura_code && (
-          <p className="text-[10px] text-slate-400">{row.asignatura_code}</p>
+          <p className="text-2xs text-muted-foreground">{row.asignatura_code}</p>
         )}
       </td>
 
       {/* Semestre */}
-      <td className="px-2 py-2 text-center text-xs text-slate-500">
+      <td className="px-2 py-2 text-center text-xs text-muted-foreground">
         {row.semestre ?? '—'}
       </td>
 
@@ -204,7 +204,7 @@ const ChecklistRowComponent = memo(function ChecklistRowComponent({
             : ''}
           onChange={(e) => onAssign(row.asignatura_id, e.target.value || null)}
           disabled={isPending}
-          className="text-xs rounded-md border border-slate-200 px-1.5 py-0.5 bg-white text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary w-full min-w-[110px] max-w-[150px]"
+          className="text-xs rounded-md border border-border px-1.5 py-0.5 bg-white text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary w-full min-w-[110px] max-w-[150px]"
         >
           <option value="">Sin asignar</option>
           {users.map((u) => (
@@ -295,21 +295,21 @@ const ChecklistRowComponent = memo(function ChecklistRowComponent({
 
 function CheckboxLegend({ isAdmin }: { isAdmin: boolean }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <span className="flex items-center gap-1.5">
-        <span className="h-4 w-4 rounded border-2 border-slate-300 bg-white inline-block" />
+        <span className="h-4 w-4 rounded border-2 border-border bg-white inline-block" />
         Sin marcar
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="h-4 w-4 rounded border-2 border-blue-500 bg-blue-500 inline-block" />
+        <span className="h-4 w-4 rounded border-2 border-info bg-info inline-block" />
         Marcado (pendiente aprobación)
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="h-4 w-4 rounded border-2 border-teal-500 bg-teal-500 inline-block" />
+        <span className="h-4 w-4 rounded border-2 border-primary bg-primary inline-block" />
         {isAdmin ? 'Aprobado (admin)' : 'Aprobado por admin'}
       </span>
       {isAdmin && (
-        <span className="text-slate-400 italic">
+        <span className="text-muted-foreground italic">
           Haz clic en un chulo azul para aprobarlo (verde)
         </span>
       )}
@@ -385,12 +385,12 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total asignaturas', value: total,      color: 'text-foreground' },
-          { label: 'Materia Completa',  value: completas,  color: 'text-green-600'  },
-          { label: 'En proceso',        value: enProceso,  color: 'text-amber-600'  },
-          { label: 'Sin iniciar',       value: sinIniciar, color: 'text-slate-500'  },
+          { label: 'Materia Completa',  value: completas,  color: 'text-success-strong'  },
+          { label: 'En proceso',        value: enProceso,  color: 'text-warning-strong'  },
+          { label: 'Sin iniciar',       value: sinIniciar, color: 'text-muted-foreground'  },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border bg-card p-3 shadow-sm">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</p>
+          <div key={s.label} className="rounded-xl border bg-card p-3 shadow-card">
+            <p className="text-2xs text-muted-foreground ">{s.label}</p>
             <p className={cn('text-2xl font-semibold mt-0.5', s.color)}>{s.value}</p>
           </div>
         ))}
@@ -398,11 +398,11 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
 
       {/* Filtro por programa */}
       <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-slate-600">Programa</label>
+        <label className="text-xs font-medium text-muted-foreground">Programa</label>
         <select
           value={selectedPrograma}
           onChange={(e) => setSelectedPrograma(e.target.value)}
-          className="text-xs rounded-md border border-slate-200 px-2 py-1 bg-white text-slate-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary min-w-[200px]"
+          className="text-xs rounded-md border border-border px-2 py-1 bg-white text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary min-w-[200px]"
         >
           <option value="all">Todos los programas ({rows.length})</option>
           {programaOptions.map((p) => (
@@ -415,46 +415,46 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
       <CheckboxLegend isAdmin={!!isAdmin} />
 
       {/* Table */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+      <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 whitespace-nowrap sticky left-0 bg-slate-50 z-20 border-r border-slate-200 min-w-[110px]">
+            <tr className="bg-muted/50 border-b border-border">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap sticky left-0 bg-muted/50 z-20 border-r border-border min-w-[110px]">
                 Programa
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 sticky left-[110px] bg-slate-50 z-20 border-r border-slate-200 min-w-[180px]">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground sticky left-[110px] bg-muted/50 z-20 border-r border-border min-w-[180px]">
                 Asignatura
               </th>
-              <th className="px-2 py-2.5 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">Sem.</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 whitespace-nowrap">Asignado a</th>
-              <th className="px-2 py-2.5 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">Listo</th>
-              <th className="px-2 py-2.5 text-center text-xs font-semibold text-slate-600">QA</th>
+              <th className="px-2 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">Sem.</th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Asignado a</th>
+              <th className="px-2 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">Listo</th>
+              <th className="px-2 py-2.5 text-center text-xs font-semibold text-muted-foreground">QA</th>
 
               {GROUPS.map((g) => (
                 <th
                   key={`g${g}`}
                   colSpan={6}
-                  className="px-1 py-2.5 text-center text-xs font-semibold text-slate-600 border-l border-slate-200 whitespace-nowrap"
+                  className="px-1 py-2.5 text-center text-xs font-semibold text-muted-foreground border-l border-border whitespace-nowrap"
                 >
                   G{g}
                 </th>
               ))}
 
-              <th className="px-1 py-2.5 text-center text-xs font-semibold text-slate-600 border-l border-slate-200 whitespace-nowrap">
+              <th className="px-1 py-2.5 text-center text-xs font-semibold text-muted-foreground border-l border-border whitespace-nowrap">
                 Carga<br />Completa
               </th>
-              <th className="px-1 py-2.5 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">
+              <th className="px-1 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">
                 Moodle
               </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">
+              <th className="px-3 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">
                 Estado Final
               </th>
             </tr>
-            <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] text-slate-500">
-              <th colSpan={6} className="sticky left-0 bg-slate-50/80 z-20" />
+            <tr className="bg-muted/50 border-b border-border text-2xs text-muted-foreground">
+              <th colSpan={6} className="sticky left-0 bg-muted/50 z-20" />
               {GROUPS.map((g) =>
                 GROUP_FIELDS.map(({ key, label }) => (
-                  <th key={`sub_g${g}_${key}`} className="px-1 py-1 text-center font-medium border-l border-slate-100 first:border-slate-200">
+                  <th key={`sub_g${g}_${key}`} className="px-1 py-1 text-center font-medium border-l border-border first:border-border">
                     {label}
                   </th>
                 ))

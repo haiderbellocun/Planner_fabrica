@@ -1,7 +1,8 @@
+import { toLocalISODate } from '@/lib/dates';
 import { useEffect, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import luminaGif from '@/assets/lumina.gif';
+import luminaGif from '@/assets/lumina.webp';
 
 type ChatMessage = {
   id: string;
@@ -95,7 +96,7 @@ export function LuminaWidget() {
   useEffect(() => {
     if (!isOpen || briefLoaded) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalISODate(new Date());
     const lastBriefDate = localStorage.getItem('lumina_last_brief_date');
 
     if (lastBriefDate === today) {
@@ -135,7 +136,7 @@ export function LuminaWidget() {
         <button
           type="button"
           onClick={toggle}
-          className="h-12 w-12 rounded-full bg-[#00C6B5] shadow-lg flex items-center justify-center hover:bg-[#00B0A1] transition-colors overflow-hidden p-0.5"
+          className="h-12 w-12 rounded-full bg-[#00C6B5] shadow-floating flex items-center justify-center hover:bg-[#00B0A1] transition-colors overflow-hidden p-0.5"
           aria-label="Abrir asistente Lumina"
         >
           <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden shadow-inner">
@@ -150,17 +151,17 @@ export function LuminaWidget() {
 
       {/* Panel de chat */}
       {isOpen && (
-        <div className="w-80 sm:w-96 h-[32rem] max-h-[85vh] rounded-3xl shadow-xl flex flex-col overflow-hidden border border-black/5 relative">
+        <div className="w-80 sm:w-96 h-[32rem] max-h-[85vh] rounded-3xl shadow-floating flex flex-col overflow-hidden border border-black/5 relative">
           {/* Fondo: imagen + overlay suave para legibilidad */}
           <div
             className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat rounded-3xl"
-            style={{ backgroundImage: 'url(./chat-bg.png)' }}
+            style={{ backgroundImage: 'url(./chat-bg.webp)' }}
             aria-hidden
           />
           <div className="absolute inset-0 z-0 rounded-3xl bg-white/35" aria-hidden />
           <header className="relative z-10 flex items-center justify-between px-4 py-3 bg-[#00C6B5] text-white">
             <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-card">
               <img
                 src={luminaGif}
                 alt="Lumina"
@@ -169,7 +170,7 @@ export function LuminaWidget() {
             </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">Lumina</span>
-                <span className="text-[11px] text-white/80">Asistente en línea</span>
+                <span className="text-2xs text-white/80">Asistente en línea</span>
               </div>
             </div>
             <button
@@ -189,16 +190,16 @@ export function LuminaWidget() {
                 className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-card ${
                     m.from === 'user'
                       ? 'bg-[#00C6B5] text-white rounded-br-sm'
-                      : 'bg-white text-slate-900 rounded-bl-sm'
+                      : 'bg-white text-foreground rounded-bl-sm'
                   }`}
                 >
                   <p className="whitespace-pre-line">{m.text}</p>
                   <p
-                    className={`mt-1 text-[10px] ${
-                      m.from === 'user' ? 'text-white/70' : 'text-slate-400'
+                    className={`mt-1 text-2xs ${
+                      m.from === 'user' ? 'text-white/70' : 'text-muted-foreground'
                     }`}
                   >
                     {m.time}
@@ -207,13 +208,13 @@ export function LuminaWidget() {
               </div>
             ))}
             {messages.length === 0 && (
-              <p className="text-xs text-slate-400 text-center mt-4">
+              <p className="text-xs text-muted-foreground text-center mt-4">
                 Aún no hay mensajes. Escribe algo para comenzar.
               </p>
             )}
             {isBriefLoading && (
               <div className="flex justify-start">
-                <div className="bg-white text-slate-900 rounded-2xl rounded-bl-sm px-3 py-2 text-sm shadow-sm">
+                <div className="bg-white text-foreground rounded-2xl rounded-bl-sm px-3 py-2 text-sm shadow-card">
                   <div className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
@@ -224,7 +225,7 @@ export function LuminaWidget() {
             )}
           </div>
 
-          <footer className="relative z-10 border-t border-slate-200/80 px-3 py-2 bg-white/90 backdrop-blur-sm">
+          <footer className="relative z-10 border-t border-border px-3 py-2 bg-white/90 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -232,7 +233,7 @@ export function LuminaWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Escribe tu mensaje..."
-                className="flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C6B5]/40 focus:border-[#00C6B5]"
+                className="flex-1 rounded-full border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00C6B5]/40 focus:border-[#00C6B5]"
               />
               <button
                 type="button"

@@ -47,7 +47,7 @@ import { Input } from '@/components/ui/input';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, LayoutGrid, List, Loader2, Users, Settings, Trash2, Link2, Pencil, Check, X, CalendarCheck2, Pin, ChevronDown } from 'lucide-react';
+import { Plus, LayoutGrid, List, Loader2, Trash2, Link2, Pencil, Check, X, CalendarCheck2, Pin, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -384,7 +384,7 @@ export default function ProjectDetailPage() {
                         className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium">
                         <Plus className="h-3 w-3" /> Agregar enlace
                       </button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600"
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-success-strong"
                         onClick={() => {
                           const valid = editLinks.filter(l => l.url.trim());
                           const serialized = valid.length === 0 ? null : JSON.stringify(valid);
@@ -445,19 +445,15 @@ export default function ProjectDetailPage() {
             <Button
               variant="outline"
               size="icon"
-              className={project.is_pinned ? 'text-amber-500 border-amber-200' : undefined}
+              className={project.is_pinned ? 'text-warning-strong border-warning/30' : undefined}
               title={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
+              aria-label={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
+              aria-pressed={!!project.is_pinned}
               onClick={() => (project.is_pinned ? unpinProject : pinProject).mutate(projectId)}
             >
               <Pin className={cn('h-4 w-4', project.is_pinned && 'fill-current')} />
             </Button>
           )}
-          <Button variant="outline" size="icon">
-            <Users className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Settings className="h-4 w-4" />
-          </Button>
           {user?.role === 'admin' && projectId && (
             <Button
               variant="outline"
@@ -672,7 +668,7 @@ export default function ProjectDetailPage() {
                     <button
                       type="button"
                       onClick={() => handleCreatePrograma()}
-                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-card transition-ui"
                     >
                       <p className="font-medium text-sm">Programas</p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -682,7 +678,7 @@ export default function ProjectDetailPage() {
                     <button
                       type="button"
                       onClick={handleStartSoloVideos}
-                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-card transition-ui"
                     >
                       <p className="font-medium text-sm">Solo Videos</p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -692,7 +688,7 @@ export default function ProjectDetailPage() {
                     <button
                       type="button"
                       onClick={() => handleCreatePrograma('Materia')}
-                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-sm transition-all"
+                      className="rounded-lg border p-4 text-left hover:border-primary hover:shadow-card transition-ui"
                     >
                       <p className="font-medium text-sm">Materia</p>
                       <p className="text-xs text-muted-foreground mt-1">

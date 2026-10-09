@@ -65,10 +65,10 @@ export default function DashboardPage() {
   return (
     <div className="page-container relative">
       {/* Ocean decorations */}
-      <img src="./deco_medusa.png" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
-      <img src="./deco_manta.png" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
-      <img src="./deco_cangrejo.png" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
-      <img src="./deco_estrella.png" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="./deco_medusa.webp" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
+      <img src="./deco_manta.webp" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
+      <img src="./deco_cangrejo.webp" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="./deco_estrella.webp" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
 
       <HeroBanner
         eyebrow={greeting()}
@@ -96,21 +96,21 @@ export default function DashboardPage() {
           label="Proyectos"
           value={totalProjects}
           sub={`${activeProjectsCount} activos`}
-          decorationImage="./deco_foca.png"
+          decorationImage="./deco_foca.webp"
           accentImage="./deco_alga2.png"
         />
         <StatTile
           label="Tareas totales"
           value={totalTasks}
           sub={`${pendingTasksCount} activas`}
-          decorationImage="./deco_cangrejo.png"
+          decorationImage="./deco_cangrejo.webp"
         />
         <StatTile
           label="Notificaciones"
           value={unreadNotifications.length}
           sub="Sin leer"
           pill={unreadNotifications.length > 0 ? { tone: 'info', label: 'Nuevo' } : undefined}
-          decorationImage="./deco_medusa.png"
+          decorationImage="./deco_medusa.webp"
         />
       </div>
 
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate text-foreground">{project.name}</p>
-                          <Badge variant="secondary" className="text-[10px] font-medium rounded-md">
+                          <Badge variant="secondary" className="text-2xs font-medium rounded-md">
                             {project.key}
                           </Badge>
                         </div>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
                         {project.members.slice(0, 3).map((member) => (
                           <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
                             <AvatarImage src={member.profile?.avatar_url || undefined} />
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            <AvatarFallback className="text-2xs bg-primary/10 text-primary">
                               {getInitials(member.profile?.full_name)}
                             </AvatarFallback>
                           </Avatar>
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {notification.message}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-2">
+                      <p className="text-2xs text-muted-foreground mt-2">
                         {formatDistanceToNow(new Date(notification.created_at), {
                           addSuffix: true,
                           locale: es,

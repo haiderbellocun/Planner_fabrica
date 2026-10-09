@@ -17,13 +17,13 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
-import { chartColors, axisTick, BAR_RADIUS } from '@/components/charts/chartTheme';
+import { BAR_RADIUS, axisTick, chartColors, chartInk } from '@/components/charts/chartTheme';
 import { AXIS_STYLE, GRID_STYLE } from '@/components/reports/ReportCharts';
 import { EmptyState as SharedEmptyState } from '@/components/shared/StoryUI';
 import { parseTags, type Entrega } from '@/hooks/useEntregas';
 import type { EntregaMaterialResumenRow } from '@/hooks/useEntregaMateriales';
 
-const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card transition-all duration-200';
+const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card transition-[box-shadow] duration-ui';
 
 // Regla del negocio: cada materia entregada implica 5 materiales (uno de cada tipo requerido).
 // Se usa como estimado mientras la entrega no tiene el detalle real registrado en entrega_materiales.
@@ -69,10 +69,10 @@ function TruncatedYAxisTick({ x, y, payload }: { x?: number; y?: number; payload
 function SectionHeader({ tag, title }: { tag: string; title: string }) {
   return (
     <div className="flex items-baseline gap-3 mb-4">
-      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">
+      <span className="text-2xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md whitespace-nowrap">
         {tag}
       </span>
-      <h2 className="text-[15px] font-black tracking-tight text-foreground">{title}</h2>
+      <h2 className="text-base font-black tracking-tight text-foreground">{title}</h2>
     </div>
   );
 }
@@ -188,23 +188,23 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
         <SectionHeader tag="① Resumen" title="Estado de las entregas" />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.rust}` }}>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total</p>
+          <div className="rounded-xl bg-card border border-border shadow-card p-4" style={{ borderTop: `3px solid ${chartColors.rust}` }}>
+            <p className="text-2xs font-bold text-muted-foreground mb-1">Total</p>
             <p className="text-2xl font-black leading-none" style={{ color: chartColors.rust }}>{entregas.length}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">entregas registradas</p>
+            <p className="text-2xs text-muted-foreground mt-1">entregas registradas</p>
           </div>
-          <div className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${chartColors.tealDeep}` }}>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Materiales</p>
+          <div className="rounded-xl bg-card border border-border shadow-card p-4" style={{ borderTop: `3px solid ${chartColors.tealDeep}` }}>
+            <p className="text-2xs font-bold text-muted-foreground mb-1">Materiales</p>
             <p className="text-2xl font-black leading-none" style={{ color: chartColors.tealDeep }}>{totalMaterialesEntregados}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">entregados (5 por materia)</p>
+            <p className="text-2xs text-muted-foreground mt-1">entregados (5 por materia)</p>
           </div>
           {(Object.keys(ESTADO_META) as (keyof typeof ESTADO_META)[]).map((k) => {
             const meta = ESTADO_META[k];
             return (
-              <div key={k} className="rounded-xl bg-card border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4" style={{ borderTop: `3px solid ${meta.color}` }}>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{meta.label}</p>
+              <div key={k} className="rounded-xl bg-card border border-border shadow-card p-4" style={{ borderTop: `3px solid ${meta.color}` }}>
+                <p className="text-2xs font-bold text-muted-foreground mb-1">{meta.label}</p>
                 <p className="text-2xl font-black leading-none" style={{ color: meta.color }}>{estadoCounts[k] ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   {entregas.length > 0 ? Math.round(((estadoCounts[k] ?? 0) / entregas.length) * 100) : 0}% del total
                 </p>
               </div>
@@ -303,7 +303,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="value" name="Entregas" fill={chartColors.teal} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={16}>
-                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F1A1A' }} />
+                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: chartInk.strong }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -335,7 +335,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="value" name="Entregas" fill={chartColors.rust} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} barSize={22}>
-                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: '#0F1A1A' }} />
+                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 600, fill: chartInk.strong }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -373,7 +373,7 @@ export function EntregasDashboard({ entregas, materialesResumen }: EntregasDashb
                             {row.niveles.map((n) => (
                               <span
                                 key={n.label}
-                                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground whitespace-nowrap"
+                                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-2xs text-muted-foreground whitespace-nowrap"
                               >
                                 {n.label} · <span className="font-semibold text-foreground">{n.count}</span>
                               </span>

@@ -77,7 +77,7 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 gap-1.5">
-              Estado {statusIds.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{statusIds.length}</Badge>}
+              Estado {statusIds.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-2xs">{statusIds.length}</Badge>}
               <ChevronDown className="h-3.5 w-3.5 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
@@ -105,7 +105,7 @@ export function TaskFilterBar({ projectId, filters, onChange, isDesarrollo }: Ta
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 gap-1.5">
-              Prioridad {priorities.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{priorities.length}</Badge>}
+              Prioridad {priorities.length > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-2xs">{priorities.length}</Badge>}
               <ChevronDown className="h-3.5 w-3.5 opacity-60" />
             </Button>
           </DropdownMenuTrigger>

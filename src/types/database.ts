@@ -49,6 +49,7 @@ export interface Project {
   es_virtualizacion: boolean | null;
   link: string | null;
   link_label: string | null;
+  category?: 'academico' | 'marketing' | 'otros' | null;
   created_at: string;
   updated_at: string;
   completed_at?: string | null;

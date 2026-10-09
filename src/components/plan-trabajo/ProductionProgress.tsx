@@ -13,12 +13,12 @@ function MetricBar({ label, metric }: { label: string; metric: ProductionMetricP
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold text-foreground">{label}</span>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-2xs text-muted-foreground">
           {formatNumber(metric.completed)} de {formatNumber(metric.total)} · {formatPercent(metric.progress_pct)}
         </span>
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, metric.progress_pct)}%` }} />
+        <div className="h-full bg-primary rounded-full transition-[width]" style={{ width: `${Math.min(100, metric.progress_pct)}%` }} />
       </div>
     </div>
   );
@@ -63,7 +63,7 @@ export function ProductionProgress({ data, loading }: { data: ProductionProgress
               itemWidth: 90, itemHeight: 12, symbolSize: 8, symbolShape: 'circle',
             }]}
             tooltip={({ id, value, indexValue }) => (
-              <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs">
+              <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs">
                 <p className="font-semibold mb-1">{String(indexValue)}</p>
                 <div className="flex justify-between gap-4"><span>{String(id)}</span><b>{value}</b></div>
               </div>

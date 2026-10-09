@@ -1,3 +1,10 @@
+/* SISTEMA DE DISEÑO (resumen; cada escala vive en tailwind.config.ts o en :root de este archivo)
+   Color    : tokens semánticos hsl(var(--*)); variantes "-strong" solo para texto (AA). Gráficos: --chart-* (espejo de charts/chartTheme.ts).
+   Tipo     : 2xs 11 · xs 12 · sm 14 · base 16 · lg 18 · xl 20 · 2xl 24 · 4xl 36; clases .text-section/.text-card-title/.text-field-label/.text-caption.
+   Espacio  : rejilla de 4px; p-card 20 · gap/mb-section 32 · p-page 40.
+   Radios   : controles rounded-md 10 · superficies rounded-xl 12 · paneles/hero rounded-2xl 16 · pills rounded-full.
+   Sombras  : shadow-card (reposo) y shadow-floating (hover, menús, popovers, diálogos).
+   Movimiento: --ease-out / --ease-in-out / --ease-drawer; duraciones press 150 · ui 200 · panel 250 ms; nunca la transición genérica de todas las propiedades. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -27,7 +34,8 @@
 
     /* Primary — brand teal #0DD9D0 (buttons, sidebar, active states) */
     --primary: 177 88% 45%;
-    --primary-foreground: 0 0% 100%;
+    /* Dark text on bright teal: white fails WCAG AA (≈1.8:1) */
+    --primary-foreground: 180 25% 8%;
     /* Deep teal — for TEXT on white (headlines, hero figures, links):
        the bright primary fails contrast as text, this is its readable twin */
     --primary-deep: 177 90% 25%;
@@ -38,7 +46,7 @@
 
     /* Muted — teal-biased gray, never neutral slate */
     --muted: 180 16% 94%;
-    --muted-foreground: 180 10% 40%;
+    --muted-foreground: 180 10% 38%;
 
     /* Accent — teal highlight */
     --accent: 177 50% 92%;
@@ -56,19 +64,38 @@
     /* Form elements — ring teal (no blue) */
     --border: 180 14% 89%;
     --input: 180 16% 93%;
-    --ring: 177 88% 45%;
+    --ring: 177 90% 25%;
 
-    --radius: 1rem;
+    /* Escala de radios: controles = rounded-md (10px), superficies = rounded-xl (12px),
+       paneles/hero = rounded-2xl (16px). rounded-lg == rounded-xl (12px). */
+    --radius: 0.75rem;
 
     /* Sidebar — solid brand teal */
-    --sidebar-background: 177 88% 45%;
+    --sidebar-background: 177 90% 22%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 177 88% 45%;
-    --sidebar-accent: 177 89% 38%;
+    --sidebar-primary-foreground: 177 90% 22%;
+    --sidebar-accent: 177 85% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 177 88% 38%;
+    --sidebar-border: 177 88% 20%;
     --sidebar-ring: 0 0% 100%;
+
+    /* Variantes "strong" de los colores semánticos: SOLO para texto (>=4.5:1 sobre blanco y
+       sobre su propio tinte al 10-15 %). Los colores base se reservan para fondos, bordes y marcas. */
+    --destructive-strong: 3 72% 44%;
+    --warning-strong: 32 80% 33%;
+    --info-strong: 205 90% 34%;
+    --success-strong: 152 70% 28%;
+    --coral-strong: 12 80% 42%;
+
+    /* Movimiento: ease-out fuerte para entradas/feedback, ease-in-out para movimiento en pantalla,
+       curva de drawer para paneles. Duraciones: press 150 / ui 200 / panel 250 (ms). */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-press: 150ms;
+    --dur-ui: 200ms;
+    --dur-panel: 250ms;
 
     /* Legacy accents (unused — kept only so old class references don't break) */
     --sage: 133 14% 58%;
@@ -106,6 +133,22 @@
     --chart-green: #0CA35A;
     --chart-magenta: #E0619A;
     --chart-grid: #E6FAFA;
+    --chart-slate: #7A9391;
+    --chart-info: #0EA5E9;
+    --chart-ink-strong: #1F2A2A;
+    --chart-ink-muted: #5F7371;
+    --chart-ink-green: #067647;
+    --chart-ink-teal: #067A76;
+    --chart-ink-amber: #92600A;
+    --chart-ink-coral: #C2412D;
+    --chart-soft-green: #E7F6EE;
+    --chart-soft-coral: #FFF1ED;
+    --chart-soft-neutral: #D5E3E1;
+    --chart-soft-track: #E7EEED;
+    --chart-soft-empty: #F4FAF9;
+    --chart-soft-teal: #BFEFF0;
+    --chart-yellow-light: #F0BE5C;
+    --chart-surface: #FFFFFF;
   }
 
   .dark {
@@ -175,6 +218,12 @@
     --warning-foreground: 180 25% 8%;
     --info: 205 80% 62%;
     --info-foreground: 180 25% 8%;
+
+    --destructive-strong: 3 80% 72%;
+    --warning-strong: 40 85% 65%;
+    --info-strong: 205 80% 70%;
+    --success-strong: 152 55% 55%;
+    --coral-strong: 14 100% 75%;
   }
 }
 
@@ -231,7 +280,7 @@
 @layer components {
   /* Kanban column styling - Snapshot style */
   .kanban-column {
-    @apply bg-muted/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-card;
+    @apply bg-muted/40 backdrop-blur-sm rounded-xl p-4 min-h-[500px] border border-border shadow-card;
   }
 
   .kanban-column-header {
@@ -240,58 +289,55 @@
 
   /* Task card - subtle shadow, rounded */
   .task-card {
-    @apply bg-card rounded-xl p-4 shadow-card border border-border hover:shadow-card-hover hover:border-primary/20 transition-all cursor-pointer;
+    @apply bg-card rounded-xl p-4 shadow-card border border-border hover:shadow-floating hover:border-primary/20 transition-ui cursor-pointer;
   }
 
   .task-card-dragging {
-    @apply shadow-xl ring-2 ring-primary/30 rotate-1;
+    @apply shadow-floating ring-2 ring-primary/30 rotate-1;
   }
 
   /* Status badge variations - More refined */
   .status-badge {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
   }
 
   .status-pending {
-    @apply bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700;
+    @apply bg-muted text-muted-foreground border border-border;
   }
 
   .status-in-progress {
-    @apply bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:border-primary/30;
+    @apply bg-primary/10 text-primary-deep border border-primary/20;
   }
 
   .status-in-review {
-    @apply bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800;
+    @apply bg-warning/15 text-warning-strong border border-warning/30;
   }
 
   .status-completed {
-    @apply bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800;
+    @apply bg-success/10 text-success-strong border border-success/25;
   }
 
-  /* Priority badge variations */
-  .priority-low {
-    @apply text-gray-500;
-  }
+  /* Priority: solo texto, con las variantes "strong" para contraste AA */
+  .priority-low { @apply text-muted-foreground; }
+  .priority-medium { @apply text-warning-strong; }
+  .priority-high { @apply text-coral-strong; }
+  .priority-urgent { @apply text-destructive-strong; }
 
-  .priority-medium {
-    @apply text-amber-500;
-  }
-
-  .priority-high {
-    @apply text-orange-500;
-  }
-
-  .priority-urgent {
-    @apply text-red-500;
-  }
+  /* ---- Primitivas tipograficas y de superficie (una sola fuente de verdad) ---- */
+  .text-section { @apply text-base font-semibold tracking-tight text-foreground; }
+  .text-card-title { @apply text-sm font-semibold text-foreground; }
+  .text-field-label { @apply text-xs font-medium text-foreground; }
+  .text-caption { @apply text-xs text-muted-foreground; }
+  .surface { @apply rounded-xl border border-border bg-card shadow-card; }
+  .surface-raised { @apply rounded-xl border border-border bg-card shadow-floating; }
 
   /* Page layout — Ice-Blue Dashboard: generous spacing, max 1400px */
   .page-container {
-    @apply flex-1 p-6 md:p-10 overflow-auto max-w-[1400px] mx-auto w-full;
+    @apply flex-1 p-6 md:p-page overflow-auto max-w-[1400px] mx-auto w-full;
   }
 
   .page-header {
-    @apply mb-8 md:mb-10;
+    @apply mb-8 md:mb-page;
   }
 
   .page-title {
@@ -314,16 +360,16 @@
 
   /* Focus ring teal (no blue) */
   .focus-ring-teal:focus-visible {
-    @apply outline-none ring-2 ring-primary/30 border-primary/40;
+    @apply outline-none ring-2 ring-ring border-primary/40;
   }
 
   /* Widget card base — big radius, soft shadow */
   .widget-card {
-    @apply rounded-2xl border border-border bg-card shadow-card transition-all duration-200;
+    @apply rounded-2xl border border-border bg-card shadow-card transition-[box-shadow] duration-ui;
   }
 
   .widget-card:hover {
-    @apply shadow-card-hover;
+    @apply shadow-floating;
   }
 
   /* ---- Storytelling primitives (shared across the whole app) ---- */
@@ -331,13 +377,13 @@
   /* Stat tile — label, monospace figure, optional sparkline + status pill.
      Replaces the old KpiCard's decorative-illustration recipe. */
   .stat-tile {
-    @apply relative overflow-hidden rounded-2xl border border-border bg-card shadow-floating p-5 transition-shadow duration-200;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card shadow-card p-card transition-[box-shadow] duration-ui;
   }
   .stat-tile-label {
-    @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply text-xs font-medium text-muted-foreground;
   }
   .stat-tile-value {
-    @apply figure text-[26px] font-bold text-foreground leading-none;
+    @apply figure text-2xl font-bold text-foreground leading-none;
   }
   /* Promoted KPI — a left accent + larger figure, never more than one or two per row */
   .stat-tile-primary {
@@ -346,7 +392,7 @@
 
   /* Hero banner — the narrative "so what" strip at the top of a story page */
   .hero-banner {
-    @apply rounded-[20px] p-8 text-primary-foreground relative overflow-hidden;
+    @apply rounded-2xl p-8 text-white relative overflow-hidden;
     background: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(180, 60%, 16%) 130%);
   }
   .hero-banner::after {
@@ -359,12 +405,12 @@
 
   /* Spotlight card — an individual/team callout, not a table row */
   .spotlight-card {
-    @apply rounded-2xl border border-border bg-card shadow-floating p-5 flex flex-col gap-3;
+    @apply rounded-2xl border border-border bg-card shadow-card p-card flex flex-col gap-3;
   }
 
   /* Attention item — an actionable callout, severity carried by the stripe */
   .attn-item {
-    @apply flex items-center gap-3.5 rounded-2xl border border-border bg-card shadow-floating px-4 py-3.5;
+    @apply flex items-center gap-3.5 rounded-2xl border border-border bg-card shadow-card px-4 py-3.5;
   }
   .attn-stripe {
     @apply w-1 self-stretch rounded-full flex-shrink-0;
@@ -375,18 +421,18 @@
 
   /* Status pill — state as form + label, never color alone */
   .status-pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-semibold;
   }
   .status-pill::before {
     content: "";
     @apply h-1.5 w-1.5 rounded-full flex-shrink-0;
     background: currentColor;
   }
-  .status-pill-good { @apply bg-success/10 text-success; }
-  .status-pill-warning { @apply bg-warning/15 text-[hsl(32,75%,38%)]; }
-  .status-pill-critical { @apply bg-destructive/10 text-destructive; }
-  .status-pill-info { @apply bg-info/10 text-info; }
-  .status-pill-available { @apply bg-[hsl(205,85%,48%)]/10 text-[hsl(205,85%,38%)]; }
+  .status-pill-good { @apply bg-success/10 text-success-strong; }
+  .status-pill-warning { @apply bg-warning/15 text-warning-strong; }
+  .status-pill-critical { @apply bg-destructive/10 text-destructive-strong; }
+  .status-pill-info { @apply bg-info/10 text-info-strong; }
+  .status-pill-available { @apply bg-info/10 text-info-strong; }
 }
 
 @layer utilities {
@@ -423,10 +469,10 @@
   
   /* Hover lift effect */
   .hover-lift {
-    @apply transition-all duration-200;
+    @apply transition-[transform,box-shadow] duration-ui;
   }
   
   .hover-lift:hover {
-    @apply -translate-y-0.5 shadow-md;
+    @apply -translate-y-0.5 shadow-floating;
   }
 }

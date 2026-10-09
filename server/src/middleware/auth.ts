@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env.js';
+import { query } from '../config/database.js';
+import { resolveSessionUser, SESSION_USER_SQL, type SessionRow } from './sessionUser.js';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -51,12 +53,23 @@ export const authMiddleware = async (
         });
       }
 
-      req.user = {
-        id: decoded.id,
-        profileId,
-        email: decoded.email,
-        role: decoded.role,
-      };
+      // Estado y rol vigentes desde la BD (cuenta deshabilitada o rol cambiado tras emitir el token).
+      let row: SessionRow | undefined;
+      try {
+        row = (await query(SESSION_USER_SQL, [decoded.id])).rows[0];
+      } catch (dbError) {
+        console.error('Auth session lookup error:', dbError);
+        return res.status(500).json({ error: 'Authentication error' });
+      }
+      const session = resolveSessionUser(
+        { id: decoded.id, profileId, email: decoded.email, role: decoded.role },
+        row,
+      );
+      if ('error' in session) {
+        return res.status(session.status).json({ error: session.error });
+      }
+
+      req.user = session.user;
       next();
     } catch (error) {
       if (env.NODE_ENV !== 'production') {

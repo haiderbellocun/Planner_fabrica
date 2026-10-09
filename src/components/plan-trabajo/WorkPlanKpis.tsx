@@ -7,11 +7,11 @@ function KpiTile({ label, value, context, comparison }: { label: string; value: 
   const delta = comparison ? comparison.current - comparison.previous : null;
   return (
     <div className="rounded-xl border bg-card px-4 py-3 flex flex-col gap-0.5 min-w-0">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">{label}</span>
+      <span className="text-2xs font-semibold text-muted-foreground truncate">{label}</span>
       <span className="text-2xl font-bold tabular-nums leading-tight">{value}</span>
-      {context && <span className="text-[11px] text-muted-foreground">{context}</span>}
+      {context && <span className="text-2xs text-muted-foreground">{context}</span>}
       {delta !== null && delta !== 0 && (
-        <span className={cn('text-[11px] font-medium flex items-center gap-0.5', delta > 0 ? 'text-emerald-600' : 'text-red-600')}>
+        <span className={cn('text-2xs font-medium flex items-center gap-0.5', delta > 0 ? 'text-success-strong' : 'text-destructive-strong')}>
           {delta > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
           {Math.abs(delta)} respecto al periodo anterior
         </span>

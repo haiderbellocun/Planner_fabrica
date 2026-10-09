@@ -206,8 +206,8 @@ export default function CalendarPage() {
         {/* Sidebar filters */}
         <aside className="lg:w-60 shrink-0 space-y-4">
           {/* Event types */}
-          <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-2">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Mostrar</p>
+          <div className="rounded-xl border border-black/5 shadow-card bg-card p-3 space-y-2">
+            <p className="text-2xs text-muted-foreground font-medium">Mostrar</p>
             <button
               type="button"
               onClick={() => setShowProjects(v => !v)}
@@ -236,14 +236,14 @@ export default function CalendarPage() {
 
           {/* Cargo filter */}
           {showTasks && cargos.length > 0 && (
-            <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-2">
+            <div className="rounded-xl border border-black/5 shadow-card bg-card p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Cargo</p>
+                <p className="text-2xs text-muted-foreground font-medium">Cargo</p>
                 {selectedCargos.size > 0 && (
                   <button
                     type="button"
                     onClick={() => setSelectedCargos(new Set())}
-                    className="text-[10px] text-muted-foreground hover:text-foreground"
+                    className="text-2xs text-muted-foreground hover:text-foreground"
                   >
                     Limpiar
                   </button>
@@ -276,14 +276,14 @@ export default function CalendarPage() {
 
           {/* Collaborator filter */}
           {showTasks && assignees.length > 0 && (
-            <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-2">
+            <div className="rounded-xl border border-black/5 shadow-card bg-card p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Colaborador</p>
+                <p className="text-2xs text-muted-foreground font-medium">Colaborador</p>
                 {selectedAssignees.size > 0 && (
                   <button
                     type="button"
                     onClick={() => setSelectedAssignees(new Set())}
-                    className="text-[10px] text-muted-foreground hover:text-foreground"
+                    className="text-2xs text-muted-foreground hover:text-foreground"
                   >
                     Limpiar
                   </button>
@@ -326,8 +326,8 @@ export default function CalendarPage() {
           )}
 
           {/* Legend */}
-          <div className="rounded-xl border border-black/5 shadow-sm bg-card p-3 space-y-1.5">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Leyenda</p>
+          <div className="rounded-xl border border-black/5 shadow-card bg-card p-3 space-y-1.5">
+            <p className="text-2xs text-muted-foreground font-medium">Leyenda</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="h-2.5 w-5 rounded-sm bg-primary" />
               Fin de proyecto
@@ -344,7 +344,7 @@ export default function CalendarPage() {
         </aside>
 
         {/* Calendar main */}
-        <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-black/5 shadow-sm bg-card overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-black/5 shadow-card bg-card overflow-hidden">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
@@ -367,7 +367,7 @@ export default function CalendarPage() {
                   onClick={() => setView(v)}
                   className={cn(
                     'px-2.5 py-1 text-xs font-medium rounded-md transition-colors',
-                    view === v ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'
+                    view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Agenda'}
@@ -442,7 +442,7 @@ function MonthView({
       {/* Day headers */}
       <div className="grid grid-cols-7 border-b">
         {WEEK_DAYS.map(d => (
-          <div key={d} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div key={d} className="py-2 text-center text-2xs font-semibold text-muted-foreground">
             {d}
           </div>
         ))}
@@ -467,7 +467,7 @@ function MonthView({
             >
               <div className={cn(
                 'text-xs font-semibold mb-1 h-6 w-6 flex items-center justify-center rounded-full',
-                isTodayDay && 'bg-primary text-white',
+                isTodayDay && 'bg-primary text-primary-foreground',
                 !isTodayDay && isCurrentMonth && 'text-foreground',
                 !isTodayDay && !isCurrentMonth && 'text-muted-foreground',
               )}>
@@ -479,7 +479,7 @@ function MonthView({
                   <div
                     key={p.id}
                     title={`${p.name} — ${p.completion_rate}% completado`}
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate bg-primary/20 text-primary-deep cursor-default"
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium truncate bg-primary/20 text-primary-deep cursor-default"
                   >
                     <FolderKanban className="h-2.5 w-2.5 shrink-0" />
                     <span className="truncate">{p.key}</span>
@@ -495,13 +495,13 @@ function MonthView({
                       onClick={() => onTaskClick(t.id, t.project_key)}
                       title={`${t.title} · ${t.assignee_name ?? 'Sin asignado'}`}
                       className={cn(
-                        'w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate text-left transition-opacity hover:opacity-80',
+                        'w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium truncate text-left transition-opacity hover:opacity-80',
                         t.is_completed && 'opacity-50'
                       )}
                       style={{ backgroundColor: `${color}20`, color }}
                     >
                       <span
-                        className={cn('h-1.5 w-1.5 rounded-full shrink-0', isPast && !t.is_completed && 'bg-red-500')}
+                        className={cn('h-1.5 w-1.5 rounded-full shrink-0', isPast && !t.is_completed && 'bg-destructive')}
                         style={!isPast || t.is_completed ? { backgroundColor: color } : undefined}
                       />
                       <span className="truncate">{t.title}</span>
@@ -509,7 +509,7 @@ function MonthView({
                   );
                 })}
                 {totalEvents > MAX_SHOW && (
-                  <div className="text-[10px] text-muted-foreground px-1.5">
+                  <div className="text-2xs text-muted-foreground px-1.5">
                     +{totalEvents - MAX_SHOW} más
                   </div>
                 )}
@@ -550,12 +550,12 @@ function WeekView({
             <div key={dateStr} className="border-r last:border-r-0 p-2 min-h-[400px]">
               {/* Day header */}
               <div className="text-center mb-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                <div className="text-2xs text-muted-foreground font-medium">
                   {format(day, 'EEE', { locale: es })}
                 </div>
                 <div className={cn(
                   'text-xl font-semibold mx-auto h-9 w-9 flex items-center justify-center rounded-full',
-                  isTodayDay && 'bg-primary text-white',
+                  isTodayDay && 'bg-primary text-primary-foreground',
                 )}>
                   {format(day, 'd')}
                 </div>
@@ -568,12 +568,12 @@ function WeekView({
                     key={p.id}
                     className="p-1.5 rounded-lg bg-primary/15 border border-primary/30"
                   >
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-primary-deep">
+                    <div className="flex items-center gap-1 text-2xs font-semibold text-primary-deep">
                       <FolderKanban className="h-3 w-3 shrink-0" />
                       <span className="truncate">{p.key}</span>
                     </div>
-                    <p className="text-[10px] text-primary-deep/80 truncate mt-0.5">{p.name}</p>
-                    <p className="text-[10px] text-primary-deep/60 mt-0.5">{p.completion_rate}% completado</p>
+                    <p className="text-2xs text-primary-deep/80 truncate mt-0.5">{p.name}</p>
+                    <p className="text-2xs text-primary-deep/60 mt-0.5">{p.completion_rate}% completado</p>
                   </div>
                 ))}
                 {tsk.map(t => {
@@ -590,27 +590,27 @@ function WeekView({
                       )}
                       style={{ backgroundColor: `${color}15`, borderColor: `${color}30` }}
                     >
-                      <p className="text-[11px] font-medium truncate" style={{ color }}>
+                      <p className="text-2xs font-medium truncate" style={{ color }}>
                         {t.title}
                       </p>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[10px]" style={{ color: `${color}99` }}>
+                        <span className="text-2xs" style={{ color: `${color}99` }}>
                           {t.project_key}
                         </span>
                         {t.assignee_name && (
-                          <span className="text-[10px] text-muted-foreground truncate">
+                          <span className="text-2xs text-muted-foreground truncate">
                             · {t.assignee_name.split(' ')[0]}
                           </span>
                         )}
                         {isPast && (
-                          <span className="text-[10px] text-red-500 font-medium ml-auto">Vencida</span>
+                          <span className="text-2xs text-destructive-strong font-medium ml-auto">Vencida</span>
                         )}
                       </div>
                     </button>
                   );
                 })}
                 {proj.length === 0 && tsk.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground/40 text-center pt-4">—</p>
+                  <p className="text-2xs text-muted-foreground/40 text-center pt-4">—</p>
                 )}
               </div>
             </div>
@@ -690,10 +690,10 @@ function AgendaView({
               )}>
                 {format(day, 'd')}
               </div>
-              <div className="text-[11px] text-muted-foreground capitalize">
+              <div className="text-2xs text-muted-foreground capitalize">
                 {format(day, 'EEE', { locale: es })}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-2xs text-muted-foreground">
                 {format(day, 'MMM', { locale: es })}
               </div>
             </div>
@@ -707,7 +707,7 @@ function AgendaView({
                     <p className="text-sm font-semibold text-primary-deep truncate">{p.name}</p>
                     <p className="text-xs text-primary-deep/70">{p.key} · {p.completion_rate}% completado · {p.status}</p>
                   </div>
-                  <Badge variant="outline" className="ml-auto shrink-0 text-[10px] border-primary/40 text-primary-deep">
+                  <Badge variant="outline" className="ml-auto shrink-0 text-2xs border-primary/40 text-primary-deep">
                     Proyecto
                   </Badge>
                 </div>
@@ -721,7 +721,7 @@ function AgendaView({
                     type="button"
                     onClick={() => onTaskClick(t.id, t.project_key)}
                     className={cn(
-                      'w-full flex items-start gap-3 p-2.5 rounded-xl border text-left transition-all hover:shadow-sm',
+                      'w-full flex items-start gap-3 p-2.5 rounded-xl border text-left transition-ui hover:shadow-card',
                       t.is_completed && 'opacity-50'
                     )}
                     style={{ backgroundColor: `${color}10`, borderColor: `${color}25` }}
@@ -741,13 +741,13 @@ function AgendaView({
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span
-                        className="text-[10px] px-1.5 py-0.5 rounded-md"
+                        className="text-2xs px-1.5 py-0.5 rounded-md"
                         style={{ backgroundColor: `${t.status_color}20`, color: t.status_color }}
                       >
                         {t.status_name}
                       </span>
                       {isPastTask && (
-                        <span className="text-[10px] text-red-500 font-medium">Vencida</span>
+                        <span className="text-2xs text-destructive-strong font-medium">Vencida</span>
                       )}
                     </div>
                   </button>

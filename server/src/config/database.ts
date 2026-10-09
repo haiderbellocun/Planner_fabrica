@@ -1,3 +1,4 @@
+import { runInTransaction, type TxClient, type TxPool } from '../utils/transaction.js';
 import pg from 'pg';
 import { env } from './env.js';
 
@@ -49,5 +50,8 @@ export const query = async (text: string, params?: any[]) => {
     throw error;
   }
 };
+
+export const withTransaction = <T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> =>
+  runInTransaction(pool as unknown as TxPool, fn as (client: TxClient) => Promise<T>);
 
 export default pool;

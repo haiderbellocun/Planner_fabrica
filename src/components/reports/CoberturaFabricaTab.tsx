@@ -1,3 +1,4 @@
+import { chartColors, chartInk, chartSoft, chartSurface } from '@/components/charts/chartTheme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import informeJson from '@/data/informeFabrica2026.json';
@@ -63,7 +64,7 @@ interface Informe {
 
 const informe = informeJson as Informe;
 
-const CARD = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+const CARD = 'rounded-2xl border border-border bg-card shadow-card';
 
 const FRENTES: { id: FrenteId; label: string }[] = [
   { id: 'gif', label: 'GIF' },
@@ -92,16 +93,16 @@ const LINEA_CORTA: Record<string, string> = {
 type EstadoPrograma = 'entregado' | 'sin_iniciar';
 
 const ESTADOS: { id: EstadoPrograma; label: string; hint: string; fill: string; soft: string; ink: string }[] = [
-  { id: 'entregado', label: 'Entregado', hint: 'Todos los frentes que aplican están terminados', fill: '#0CA35A', soft: '#E7F6EE', ink: '#067647' },
-  { id: 'sin_iniciar', label: 'Pausa', hint: 'Ningún frente está terminado del todo. Si otra área ya cerró, el programa sigue en pausa', fill: '#FF6B4A', soft: '#FFF1ED', ink: '#C2412D' },
+  { id: 'entregado', label: 'Entregado', hint: 'Todos los frentes que aplican están terminados', fill: chartColors.green, soft: chartSoft.green, ink: chartInk.green },
+  { id: 'sin_iniciar', label: 'Pausa', hint: 'Ningún frente está terminado del todo. Si otra área ya cerró, el programa sigue en pausa', fill: chartColors.coral, soft: chartSoft.coral, ink: chartInk.coral },
 ];
 
 const PRESENCIA_STYLE: Record<Presencia, { fill: string; ink: string; label: string }> = {
-  dentro: { fill: '#0CA35A', ink: '#067647', label: 'Entregado' },
-  proceso: { fill: '#0DD9D0', ink: '#067A76', label: 'En proceso' },
-  puerta: { fill: '#E8A317', ink: '#92600A', label: 'Plantilla lista' },
-  fuera: { fill: '#FF6B4A', ink: '#C2412D', label: 'Pausa' },
-  na: { fill: '#D5E3E1', ink: '#6B7F7C', label: 'No aplica' },
+  dentro: { fill: chartColors.green, ink: chartInk.green, label: 'Entregado' },
+  proceso: { fill: chartColors.teal, ink: chartColors.tealDeep, label: 'En proceso' },
+  puerta: { fill: chartColors.yellow, ink: chartInk.amber, label: 'Plantilla lista' },
+  fuera: { fill: chartColors.coral, ink: chartInk.coral, label: 'Pausa' },
+  na: { fill: chartSoft.neutral, ink: chartInk.muted, label: 'No aplica' },
 };
 
 function lecturaFrente(presencia: Presencia) {
@@ -317,11 +318,11 @@ function FlujoCobertura({ programas }: { programas: Programa[] }) {
         })}
         {layout.left.map((nodo) => (
           <g key={nodo.id}>
-            <rect x={layout.x1} y={nodo.y} width={layout.nodeW} height={Math.max(nodo.h, 1)} rx={4} fill="#067A76" />
-            <text x={layout.x1 - 10} y={nodo.y + nodo.h / 2} textAnchor="end" dominantBaseline="middle" fill="#1F2A2A" fontSize="12" fontWeight="600">
+            <rect x={layout.x1} y={nodo.y} width={layout.nodeW} height={Math.max(nodo.h, 1)} rx={4} fill={chartColors.tealDeep} />
+            <text x={layout.x1 - 10} y={nodo.y + nodo.h / 2} textAnchor="end" dominantBaseline="middle" fill={chartInk.strong} fontSize="12" fontWeight="600">
               {LINEA_CORTA[nodo.id]}
             </text>
-            <text x={layout.x1 - 10} y={nodo.y + nodo.h / 2 + 14} textAnchor="end" dominantBaseline="middle" fill="#6B7F7C" fontSize="10">
+            <text x={layout.x1 - 10} y={nodo.y + nodo.h / 2 + 14} textAnchor="end" dominantBaseline="middle" fill={chartInk.muted} fontSize="10">
               {nodo.n}
             </text>
           </g>
@@ -329,9 +330,9 @@ function FlujoCobertura({ programas }: { programas: Programa[] }) {
         {layout.right.map((nodo) => (
           <g key={nodo.id}>
             <rect x={layout.x2} y={nodo.y} width={layout.nodeW} height={Math.max(nodo.h, 1)} rx={4} fill={nodo.fill} />
-            <text x={layout.x2 + layout.nodeW + 10} y={nodo.etiquetaY} dominantBaseline="middle" fill="#1F2A2A" fontSize="12" fontWeight="600">
+            <text x={layout.x2 + layout.nodeW + 10} y={nodo.etiquetaY} dominantBaseline="middle" fill={chartInk.strong} fontSize="12" fontWeight="600">
               {nodo.label}
-              <tspan fill="#6B7F7C" fontWeight="500">{`  ${nodo.n}`}</tspan>
+              <tspan fill={chartInk.muted} fontWeight="500">{`  ${nodo.n}`}</tspan>
             </text>
           </g>
         ))}
@@ -374,7 +375,7 @@ function TotalesCobertura({
     <section className={cn(CARD, 'p-5')}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Cobertura</p>
+          <p className="text-2xs font-semibold tracking-[0.14em] text-muted-foreground">Cobertura</p>
           <h2 className="text-base font-semibold text-foreground">{total} programas</h2>
         </div>
         <p className="text-xs text-muted-foreground">Seleccione un estado para ver el detalle por línea.</p>
@@ -455,10 +456,10 @@ function ListaProgramas({
   activo: boolean;
   tono: 'si' | 'no';
 }) {
-  const color = tono === 'si' ? '#067647' : '#C2412D';
+  const color = tono === 'si' ? chartInk.green : chartInk.coral;
   return (
     <div className={cn('rounded-xl px-3 py-2', activo ? (tono === 'si' ? 'bg-[#E7F6EE]' : 'bg-[#FFF1ED]') : 'bg-muted/40')}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
+      <p className="text-2xs font-semibold " style={{ color }}>
         {titulo} · {programas.length}
       </p>
       {programas.length === 0 ? (
@@ -497,19 +498,19 @@ function PorLinea({ programas }: { programas: Programa[] }) {
           <div className="flex h-7 overflow-hidden rounded-lg bg-[#FFF1ED]" aria-hidden>
             {fila.entregados > 0 ? (
               <div
-                className="flex items-center justify-end px-2 text-[11px] font-semibold text-white"
-                style={{ width: `${Math.max(fila.pct, fila.pct > 0 ? 8 : 0)}%`, background: '#0CA35A' }}
+                className="flex items-center justify-end px-2 text-2xs font-semibold text-white"
+                style={{ width: `${Math.max(fila.pct, fila.pct > 0 ? 8 : 0)}%`, background: chartColors.green }}
               >
                 {fila.pct >= 18 ? fila.entregados : ''}
               </div>
             ) : null}
             {fila.pendientes > 0 ? (
-              <div className="flex flex-1 items-center px-2 text-[11px] font-semibold text-[#C2412D]">
+              <div className="flex flex-1 items-center px-2 text-2xs font-semibold text-[#C2412D]">
                 {fila.pct <= 82 ? fila.pendientes : ''}
               </div>
             ) : null}
           </div>
-          <div className="mt-1 flex justify-between text-[11px]">
+          <div className="mt-1 flex justify-between text-2xs">
             <span className="font-medium text-[#067647]">{fila.entregados} entregados</span>
             <span className="font-medium text-[#C2412D]">{fila.pendientes} pendientes</span>
           </div>
@@ -670,7 +671,7 @@ function MapaProgramas({ programas }: { programas: Programa[] }) {
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{seleccionado.linea}{seleccionado.area ? ` · ${seleccionado.area}` : ''}</p>
+                <p className="text-xs text-muted-foreground">{seleccionado.linea}{seleccionado.area ? ` · ${seleccionado.area}` : ''}</p>
                 <p className="text-base font-semibold">{seleccionado.nombre}</p>
               </div>
               <Badge style={{ background: estadoDe(estadoPrograma(seleccionado)).soft, color: estadoDe(estadoPrograma(seleccionado)).ink }} className="border-0">
@@ -683,8 +684,8 @@ function MapaProgramas({ programas }: { programas: Programa[] }) {
                 const estilo = celda ? lecturaFrente(celda.presencia) : null;
                 return (
                   <div key={frente.id} className="rounded-lg bg-card px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{frente.label}</p>
-                    <p className="text-sm font-medium" style={{ color: estilo?.ink ?? '#6B7F7C' }}>
+                    <p className="text-2xs text-muted-foreground">{frente.label}</p>
+                    <p className="text-sm font-medium" style={{ color: estilo?.ink ?? chartInk.muted }}>
                       {celda ? celda.raw : 'No se registra en esta línea'}
                     </p>
                     {celda && celda.presencia !== 'dentro' && celda.presencia !== 'na' && (
@@ -702,7 +703,7 @@ function MapaProgramas({ programas }: { programas: Programa[] }) {
           <div className="max-h-[560px] overflow-auto rounded-xl border border-border">
             <table className="w-full min-w-[860px] text-sm">
               <thead className="sticky top-0 z-10 bg-card">
-                <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b text-left text-2xs text-muted-foreground">
                   <th className="px-4 py-3 font-medium">Programa</th>
                   {FRENTES.map((frente) => (
                     <th key={frente.id} className="px-3 py-3 font-medium">{frente.label}</th>
@@ -724,7 +725,7 @@ function MapaProgramas({ programas }: { programas: Programa[] }) {
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium leading-snug">{programa.nombre}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">{LINEA_CORTA[programa.linea]}{programa.area ? ` · ${programa.area}` : ''}</p>
+                        <p className="mt-0.5 text-2xs text-muted-foreground">{LINEA_CORTA[programa.linea]}{programa.area ? ` · ${programa.area}` : ''}</p>
                       </td>
                       {FRENTES.map((frente) => (
                         <td key={frente.id} className="px-3 py-3">
@@ -784,7 +785,7 @@ function OpenDentalCard() {
         <div className="overflow-x-auto">
           <table className="w-max min-w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+              <tr className="text-left text-2xs text-muted-foreground">
                 <th className="pb-2 pr-3 font-medium">Módulo</th>
                 {etapas.map((etapa) => (
                   <th key={etapa} className="whitespace-nowrap px-2 pb-2 text-center font-medium">{etapa}</th>
@@ -815,7 +816,7 @@ function OpenDentalCard() {
             </tbody>
           </table>
         </div>
-        <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">Cursos HTML de analistas</p>
+        <p className="mt-4 text-xs font-medium text-muted-foreground">Cursos HTML de analistas</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cursosHtml.map((curso) => (
             <span key={curso.nombre} className="rounded-full bg-[#E7F6EE] px-2.5 py-1 text-xs font-medium text-[#067647]" title={curso.raw}>
@@ -867,7 +868,7 @@ function EscuelaCard() {
                     <span
                       key={i}
                       className="h-2.5 w-2.5 rounded-full"
-                      style={{ background: i < llenos ? '#0DD9D0' : '#E7EEED' }}
+                      style={{ background: i < llenos ? chartColors.teal : chartSoft.track }}
                     />
                   ))}
                 </div>
@@ -907,16 +908,16 @@ function TendenciasCard() {
                   cx={x}
                   cy={y}
                   r={7}
-                  fill={entregado ? '#0CA35A' : '#fff'}
-                  stroke={entregado ? '#0CA35A' : '#FF6B4A'}
+                  fill={entregado ? chartColors.green : chartSurface.card}
+                  stroke={entregado ? chartColors.green : chartColors.coral}
                   strokeWidth="2"
                 >
                   <title>{entregado ? 'Video entregado' : 'Fecha sin entrega'}</title>
                 </circle>
               );
             })}
-            <text x={centro} y={centro - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1F2A2A">{entregados}</text>
-            <text x={centro} y={centro + 14} textAnchor="middle" fontSize="11" fill="#6B7F7C">de {total}</text>
+            <text x={centro} y={centro - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill={chartInk.strong}>{entregados}</text>
+            <text x={centro} y={centro + 14} textAnchor="middle" fontSize="11" fill={chartInk.muted}>de {total}</text>
           </svg>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{data.nota} Inicio {data.inicio}.</p>
@@ -960,7 +961,7 @@ function BienestarCard() {
                   <span
                     key={i}
                     className="h-3 w-3 rounded-[3px]"
-                    style={{ background: i < material.listos ? '#0CA35A' : '#FFD2C8', boxShadow: i < material.listos ? undefined : 'inset 0 0 0 1px #FF6B4A' }}
+                    style={{ background: i < material.listos ? chartColors.green : chartSoft.coralBorder, boxShadow: i < material.listos ? undefined : 'inset 0 0 0 1px #FF6B4A' }}
                   />
                 ))}
               </div>
@@ -1023,7 +1024,7 @@ function RemasterCard() {
             })}
           </ol>
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Programas remasterizados</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Programas remasterizados</p>
             <ul className="space-y-1.5">
               {data.programas.map((programa) => (
                 <li key={programa.nombre} className="flex items-start gap-2 text-sm">

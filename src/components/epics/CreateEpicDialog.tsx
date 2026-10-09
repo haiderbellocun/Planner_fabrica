@@ -144,7 +144,7 @@ export function CreateEpicDialog({ projectId, epic, open, onOpenChange }: Create
                     key={preset}
                     type="button"
                     onClick={() => setColor(preset)}
-                    className="h-7 w-7 rounded-full border-2 transition-all"
+                    className="h-7 w-7 rounded-full border-2 transition-ui"
                     style={{
                       backgroundColor: preset,
                       borderColor: color === preset ? '#111827' : 'transparent',

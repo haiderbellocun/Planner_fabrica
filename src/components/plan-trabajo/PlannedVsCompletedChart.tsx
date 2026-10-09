@@ -32,14 +32,14 @@ export function PlannedVsCompletedChart({ data, loading }: { data: PlannedVsComp
       empty={!loading && chartData.length === 0}
       minHeight={horizontal ? Math.max(300, chartData.length * 36) : 320}
       actions={
-        <div className="flex gap-1 text-[11px]">
+        <div className="flex gap-1 text-2xs">
           {([
             ['volumen', 'Volumen'], ['planificadas', 'Planificadas'], ['completadas', 'Completadas'], ['cumplimiento', '% Cumplimiento'],
           ] as [SortKey, string][]).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setSortKey(k)}
-              className={`px-2 py-1 rounded-full border transition-colors ${sortKey === k ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border'}`}
+              className={`px-2 py-1 rounded-full border transition-colors ${sortKey === k ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
             >
               {label}
             </button>
@@ -79,7 +79,7 @@ export function PlannedVsCompletedChart({ data, loading }: { data: PlannedVsComp
             const row = rowByName.get(String(indexValue));
             if (!row) return null;
             return (
-              <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs min-w-[160px]">
+              <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs min-w-[160px]">
                 <p className="font-semibold mb-1">{String(indexValue)}</p>
                 <div className="flex justify-between gap-4"><span>{String(id)}</span><b>{value}</b></div>
                 <div className="flex justify-between gap-4"><span>% cumplimiento</span><b>{row.cumplimiento_pct}%</b></div>

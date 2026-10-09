@@ -49,7 +49,7 @@ export function ProjectActivityFeed({ projectId, projectKey, onTaskClick }: Proj
         >
           <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
             <AvatarImage src={event.actor?.avatar_url || undefined} />
-            <AvatarFallback className="text-[10px] bg-primary/80 text-white">
+            <AvatarFallback className="text-2xs bg-primary/80 text-white">
               {getInitials(event.actor?.full_name ?? null)}
             </AvatarFallback>
           </Avatar>
@@ -84,7 +84,7 @@ export function ProjectActivityFeed({ projectId, projectKey, onTaskClick }: Proj
             {event.type === 'comment' && event.detail.comment && (
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{event.detail.comment}</p>
             )}
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-2xs text-muted-foreground mt-0.5">
               {formatDistanceToNow(new Date(event.created_at), { addSuffix: true, locale: es })}
             </p>
           </div>

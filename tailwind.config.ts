@@ -4,6 +4,8 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // Los estilos :hover solo se aplican en dispositivos con puntero real (sin hover pegado en tactil).
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,
@@ -28,6 +30,7 @@ export default {
           DEFAULT: "hsl(var(--coral))",
           foreground: "hsl(var(--coral-foreground))",
           tint: "hsl(var(--coral-tint))",
+          strong: "hsl(var(--coral-strong))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -36,6 +39,7 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          strong: "hsl(var(--destructive-strong))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -66,14 +70,17 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          strong: "hsl(var(--success-strong))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          strong: "hsl(var(--warning-strong))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
+          strong: "hsl(var(--info-strong))",
         },
         status: {
           pending: "hsl(var(--status-pending))",
@@ -103,10 +110,40 @@ export default {
         sans: ['"IBM Plex Sans"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
         mono: ['"IBM Plex Mono"', "ui-monospace", '"SF Mono"', '"Cascadia Code"', "Consolas", "monospace"],
       },
+      // Dos niveles de elevacion: card = superficie en reposo, floating = hover / menus / popovers.
+      // card-hover se conserva como alias de floating para no romper referencias existentes.
       boxShadow: {
         card: "0 1px 3px rgba(0,0,0,0.06)",
-        "card-hover": "0 4px 16px rgba(10,20,20,0.08)",
         floating: "0 8px 24px rgba(10,20,20,0.10)",
+        "card-hover": "0 8px 24px rgba(10,20,20,0.10)",
+      },
+      // Espaciado semantico sobre la rejilla de 4px de Tailwind:
+      // card = relleno interno de tarjetas (20px), section = separacion entre bloques (32px), page = margen de pagina (40px).
+      spacing: {
+        card: "1.25rem",
+        section: "2rem",
+        page: "2.5rem",
+      },
+      // Escala tipografica: 2xs (11px) es el minimo legible; el resto sigue la escala de Tailwind
+      // (xs 12 / sm 14 / base 16 / lg 18 / xl 20 / 2xl 24 / 3xl 30).
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
+      },
+      // Movimiento: ease-out fuerte por defecto; duraciones press 150 / ui 200 / panel 250.
+      transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.23, 1, 0.32, 1)",
+        "out-strong": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "in-out-strong": "cubic-bezier(0.77, 0, 0.175, 1)",
+        drawer: "cubic-bezier(0.32, 0.72, 0, 1)",
+      },
+      transitionDuration: {
+        press: "150ms",
+        ui: "200ms",
+        panel: "250ms",
+      },
+      // Sustituto acotado de transition-all: solo las propiedades que cambian en la UI.
+      transitionProperty: {
+        ui: "color, background-color, border-color, box-shadow, opacity, transform",
       },
       keyframes: {
         "accordion-down": {

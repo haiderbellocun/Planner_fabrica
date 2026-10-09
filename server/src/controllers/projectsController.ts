@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { env } from '../config/env.js';
 import { sendTaskAssignedEmail } from '../services/emailService.js';
 
@@ -210,12 +210,10 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Start transaction
-    await query('BEGIN');
-
-    try {
+    // Una sola conexión dedicada para toda la creación (atómica)
+    const project = await withTransaction(async (client) => {
       // 1. Insert project
-      const projectResult = await query(
+      const projectResult = await client.query(
         `INSERT INTO public.projects (name, description, key, owner_id, start_date, end_date, status, tipo_programa, category, link, link_label, es_virtualizacion)
          VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11)
          RETURNING *`,
@@ -225,7 +223,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       const project = projectResult.rows[0];
 
       // 2. Add creator as project leader
-      await query(
+      await client.query(
         `INSERT INTO public.project_members (project_id, user_id, role, can_view, can_create, can_edit, can_assign, invited_by)
          VALUES ($1, $2, 'leader', true, true, true, true, $2)`,
         [project.id, profileId]
@@ -240,7 +238,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         'nathaly_amaya@cun.edu.co',
       ];
 
-      const leadersResult = await query(
+      const leadersResult = await client.query(
         `SELECT p.id FROM public.profiles p
          JOIN public.users u ON u.id = p.user_id
          WHERE u.email = ANY($1)`,
@@ -250,7 +248,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       for (const leader of leadersResult.rows) {
         // Skip if the leader is the creator (already added above)
         if (leader.id !== profileId) {
-          await query(
+          await client.query(
             `INSERT INTO public.project_members (project_id, user_id, role, can_view, can_create, can_edit, can_assign, invited_by)
              VALUES ($1, $2, 'leader', true, true, true, true, $3)`,
             [project.id, leader.id, profileId]
@@ -264,7 +262,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
           const asignatura = asignaturas[i];
 
           // Insert asignatura
-          const asignaturaResult = await query(
+          const asignaturaResult = await client.query(
             `INSERT INTO public.asignaturas (project_id, name, code, description, display_order)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
@@ -276,7 +274,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
           // Insert materiales for this asignatura
           if (asignatura.materiales && Array.isArray(asignatura.materiales)) {
             for (const material of asignatura.materiales) {
-              await query(
+              await client.query(
                 `INSERT INTO public.materiales_requeridos (asignatura_id, material_type_id, cantidad, descripcion)
                  VALUES ($1, $2, $3, $4)`,
                 [asignaturaId, material.material_type_id, material.cantidad || 1, material.descripcion || null]
@@ -286,8 +284,8 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      // Commit transaction
-      await query('COMMIT');
+      return project;
+    });
 
       // Notify all project_leaders about the new project (fire and forget)
       query(
@@ -341,11 +339,6 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       });
 
       res.status(201).json(project);
-    } catch (error) {
-      // Rollback on error
-      await query('ROLLBACK');
-      throw error;
-    }
   } catch (error: any) {
     console.error('Create project error:', error);
 

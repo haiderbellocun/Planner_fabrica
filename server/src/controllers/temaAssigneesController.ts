@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 /**
  * PUT /api/tasks/:taskId/tema-assignees
@@ -39,16 +39,13 @@ export const updateTemaAssignees = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Begin transaction
-    await query('BEGIN');
-
-    try {
+    await withTransaction(async (client) => {
       // Delete existing assignments for this task
-      await query('DELETE FROM public.task_tema_assignees WHERE task_id = $1', [taskId]);
+      await client.query('DELETE FROM public.task_tema_assignees WHERE task_id = $1', [taskId]);
 
       // Insert new assignments (un usuario desactivado no puede recibir asignaciones nuevas)
       if (assignments && Array.isArray(assignments) && assignments.length > 0) {
-        const activeIdsResult = await query(
+        const activeIdsResult = await client.query(
           `SELECT p.id FROM public.profiles p
            JOIN public.users u ON u.id = p.user_id AND u.is_active = true`
         );
@@ -60,7 +57,7 @@ export const updateTemaAssignees = async (req: AuthRequest, res: Response) => {
           // Skip if no assignee selected, or if the assignee is deactivated
           if (!assignee_id || !activeProfileIds.has(assignee_id)) continue;
 
-          await query(
+          await client.query(
             `INSERT INTO public.task_tema_assignees (task_id, tema_id, assignee_id)
              VALUES ($1, $2, $3)`,
             [taskId, tema_id, assignee_id]
@@ -68,7 +65,7 @@ export const updateTemaAssignees = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      await query('COMMIT');
+    });
 
       // Fetch and return updated assignments
       const result = await query(
@@ -98,10 +95,6 @@ export const updateTemaAssignees = async (req: AuthRequest, res: Response) => {
       }));
 
       res.json(temaAssignments);
-    } catch (error) {
-      await query('ROLLBACK');
-      throw error;
-    }
   } catch (error) {
     console.error('Update tema assignees error:', error);
     res.status(500).json({ error: 'Internal server error' });

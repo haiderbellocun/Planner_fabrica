@@ -25,12 +25,12 @@ export function ProductionVelocityChart() {
       empty={!isLoading && !hasData}
       minHeight={280}
       actions={
-        <div className="flex gap-1 text-[11px]">
+        <div className="flex gap-1 text-2xs">
           {METRICS.map((m) => (
             <button
               key={m.value}
               onClick={() => setMetric(m.value)}
-              className={`px-2 py-1 rounded-full border transition-colors ${metric === m.value ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border'}`}
+              className={`px-2 py-1 rounded-full border transition-colors ${metric === m.value ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
             >
               {m.label}
             </button>
@@ -58,7 +58,7 @@ export function ProductionVelocityChart() {
           axisBottom={{ tickSize: 0, tickPadding: 8 }}
           axisLeft={{ tickSize: 0, tickPadding: 8 }}
           tooltip={({ point }) => (
-            <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs">
+            <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs">
               <p className="font-semibold">{String(point.data.x)}</p>
               <div className="flex justify-between gap-4"><span>Completados</span><b>{String(point.data.y)}</b></div>
             </div>

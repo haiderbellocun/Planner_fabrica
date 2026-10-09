@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 /**
  * PUT /api/tasks/:taskId/material-assignees
@@ -50,19 +50,16 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
     );
     const defaultStatusId = defaultStatusResult.rows[0]?.id;
 
-    // Begin transaction
-    await query('BEGIN');
-
-    try {
+    await withTransaction(async (client) => {
       // Delete existing assignments for this task
-      await query('DELETE FROM public.task_material_assignees WHERE task_id = $1', [taskId]);
+      await client.query('DELETE FROM public.task_material_assignees WHERE task_id = $1', [taskId]);
 
       // Insert new assignments + create user tasks
       const newAssignments: { material_id: string; assignee_id: string; horas_estimadas: number | null }[] = [];
 
       // Un usuario desactivado no puede recibir asignaciones nuevas -- se resuelven todas
       // de una vez para no hacer una consulta por cada material.
-      const activeIdsResult = await query(
+      const activeIdsResult = await client.query(
         `SELECT p.id FROM public.profiles p
          JOIN public.users u ON u.id = p.user_id AND u.is_active = true`
       );
@@ -75,7 +72,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
           // Skip if no assignee selected, or if the assignee is deactivated
           if (!assignee_id || !activeProfileIds.has(assignee_id)) continue;
 
-          await query(
+          await client.query(
             `INSERT INTO public.task_material_assignees (task_id, material_id, assignee_id, horas_estimadas)
              VALUES ($1, $2, $3, $4)`,
             [taskId, material_id, assignee_id, horas_estimadas || null]
@@ -90,7 +87,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
       // User tasks (level 3+) should NOT create more children.
       let shouldCreateUserTasks = false;
       if (parentTask.parent_task_id) {
-        const parentOfParent = await query(
+        const parentOfParent = await client.query(
           'SELECT parent_task_id FROM public.tasks WHERE id = $1',
           [parentTask.parent_task_id]
         );
@@ -102,7 +99,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
         for (const assignment of newAssignments) {
           // Check if a user task already exists for this exact combination
           // (parent_task = this task, material = this material, assignee = this user)
-          const existingTask = await query(
+          const existingTask = await client.query(
             `SELECT id FROM public.tasks
              WHERE parent_task_id = $1
              AND material_requerido_id = $2
@@ -116,7 +113,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
           }
 
           // Only create tasks for regular members — skip project leaders
-          const leaderCheck = await query(
+          const leaderCheck = await client.query(
             'SELECT public.is_project_leader($1::UUID, $2::UUID) as is_leader',
             [projectId, assignment.assignee_id]
           );
@@ -125,7 +122,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
           }
 
           // Get material type name for the task title
-          const materialInfo = await query(
+          const materialInfo = await client.query(
             `SELECT mt.name as type_name, mr.descripcion
              FROM public.materiales_requeridos mr
              JOIN public.material_types mt ON mt.id = mr.material_type_id
@@ -136,7 +133,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
           const materialDesc = materialInfo.rows[0]?.descripcion || '';
 
           // Create new task for the user in "Sin iniciar"
-          const newTaskResult = await query(
+          const newTaskResult = await client.query(
             `INSERT INTO public.tasks
              (project_id, title, description, priority, status_id, assignee_id, reporter_id,
               asignatura_id, material_requerido_id, due_date, tags, parent_task_id)
@@ -159,7 +156,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
           );
 
           // Send notification to assigned user
-          await query(
+          await client.query(
             `INSERT INTO public.notifications (user_id, project_id, task_id, type, title, message)
              VALUES ($1, $2, $3, 'task_assigned', 'Nueva tarea asignada', $4)`,
             [
@@ -172,7 +169,7 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
         }
       }
 
-      await query('COMMIT');
+    });
 
       // Fetch and return updated assignments
       const result = await query(
@@ -205,10 +202,6 @@ export const updateMaterialAssignees = async (req: AuthRequest, res: Response) =
       }));
 
       res.json(materialAssignments);
-    } catch (error) {
-      await query('ROLLBACK');
-      throw error;
-    }
   } catch (error) {
     console.error('Update material assignees error:', error);
     res.status(500).json({ error: 'Internal server error' });

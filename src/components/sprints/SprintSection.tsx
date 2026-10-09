@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
 const STATUS_META: Record<Sprint['status'], { label: string; className: string }> = {
-  planned: { label: 'Planificado', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  active: { label: 'Activo', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  completed: { label: 'Completado', className: 'bg-gray-100 text-gray-500 border-gray-200' },
+  planned: { label: 'Planificado', className: 'bg-muted text-foreground border-border' },
+  active: { label: 'Activo', className: 'bg-success/10 text-success-strong border-success/30' },
+  completed: { label: 'Completado', className: 'bg-muted text-muted-foreground border-border' },
 };
 
 const priorityConfig = {
@@ -105,7 +105,7 @@ export function SprintSection({
               <div className="flex items-center gap-2 max-w-xs">
                 <div className="h-1.5 flex-1 rounded-full bg-secondary overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    className="h-full rounded-full bg-success transition-[width]"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -182,7 +182,7 @@ export function SprintSection({
                           {...dragProvided.dragHandleProps}
                           className={cn(
                             'flex items-center gap-3 px-6 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors',
-                            dragSnapshot.isDragging && 'bg-background shadow-md'
+                            dragSnapshot.isDragging && 'bg-background shadow-floating'
                           )}
                           onClick={() => onTaskClick(task)}
                         >

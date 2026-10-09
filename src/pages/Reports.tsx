@@ -1,3 +1,5 @@
+import { firstName, getInitials, shortName } from '@/lib/names';
+import { rollingDateRange, toLocalISODate } from '@/lib/dates';
 import { Component, ReactNode, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +36,7 @@ import {
 } from 'recharts';
 import {
   useReportOverview,
+  type ReportOverview,
   useReportProjectsProgress,
   useReportTimeDistribution,
   useReportWorkloadByCargo,
@@ -55,7 +58,7 @@ import {
   formatDuration, formatHours,
   AXIS_STYLE, GRID_STYLE,
 } from '@/components/reports/ReportCharts';
-import { axisTick, gridColor, chartColors } from '@/components/charts/chartTheme';
+import { axisTick, gridColor, chartColors, chartSoft } from '@/components/charts/chartTheme';
 import { PlanDeTrabajoTab } from '@/components/plan-trabajo/PlanDeTrabajoTab';
 import { CapacidadFabricaTab } from '@/components/reports/CapacidadFabricaTab';
 import { CapacidadOperativaTab } from '@/components/reports/CapacidadOperativaTab';
@@ -66,32 +69,32 @@ import PolarAreaChart from '@/components/reports/PolarAreaChart';
 import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState } from '@/components/shared/StoryUI';
 
 // Snapshot Operativo style
-const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200';
+const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card transition-[box-shadow] duration-ui';
 
 // Ranking colors for top collaborators
-const RANKING_COLORS = ['#FBBF24', CHART_COLORS.rust, '#0DD9D0', CHART_COLORS.slate, '#BFEFF0'];
+const RANKING_COLORS = [chartColors.yellow, CHART_COLORS.rust, chartColors.teal, CHART_COLORS.slate, chartSoft.teal];
 
 // ---------- Shared band-color helpers (puntualidad primaria, eficiencia de horas secundaria) ----------
 function punctualityBandColor(pct: number | null): string {
   if (pct == null) return 'text-muted-foreground';
-  if (pct >= 90) return 'text-emerald-600';
-  if (pct >= 80) return 'text-amber-600';
-  return 'text-red-600';
+  if (pct >= 90) return 'text-success-strong';
+  if (pct >= 80) return 'text-warning-strong';
+  return 'text-destructive-strong';
 }
 
 // Two-sided: both over- and under-running the estimate are signals, not just "faster = better".
 function efficiencyBandColor(pct: number | null): string {
   if (pct == null) return 'text-muted-foreground';
-  if (pct >= 80 && pct <= 120) return 'text-emerald-600';
-  if ((pct >= 60 && pct < 80) || (pct > 120 && pct <= 150)) return 'text-amber-600';
-  return 'text-red-600';
+  if (pct >= 80 && pct <= 120) return 'text-success-strong';
+  if ((pct >= 60 && pct < 80) || (pct > 120 && pct <= 150)) return 'text-warning-strong';
+  return 'text-destructive-strong';
 }
 
 const RISK_BADGE_CLASSES: Record<string, string> = {
-  available: 'bg-sky-50 text-sky-700 border-sky-200',
-  ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  warning: 'bg-amber-50 text-amber-700 border-amber-200',
-  over: 'bg-red-50 text-red-700 border-red-200',
+  available: 'bg-info/10 text-info-strong border-info/30',
+  ok: 'bg-success/10 text-success-strong border-success/30',
+  warning: 'bg-warning/10 text-warning-strong border-warning/30',
+  over: 'bg-destructive/10 text-destructive-strong border-destructive/30',
 };
 
 // Shared date-range control — used by any tab needing a completion-time window.
@@ -103,10 +106,7 @@ type ReportRangeKey = typeof REPORT_RANGES[number];
 function resolveRange(key: ReportRangeKey): { date_from?: string; date_to?: string } {
   if (key === 'all') return {};
   const days = key === '7d' ? 7 : key === '30d' ? 30 : 90;
-  const now = new Date();
-  const from = new Date(now);
-  from.setDate(now.getDate() - days);
-  return { date_from: from.toISOString().split('T')[0], date_to: now.toISOString().split('T')[0] };
+  return rollingDateRange(days);
 }
 
 function ReportScopeFilterBar({
@@ -166,10 +166,10 @@ function CapacityWeekStrip({ weeks }: { weeks: { week_start: string; horas: numb
             className="flex flex-col items-center gap-0.5"
             title={`Sem. ${label} · ${formatHours(w.horas)} (${w.utilizacion_pct}% · ${w.risk_label})`}
           >
-            <div className="h-8 w-3 bg-gray-100 rounded-sm overflow-hidden flex items-end">
+            <div className="h-8 w-3 bg-muted rounded-sm overflow-hidden flex items-end">
               <div className="w-full rounded-sm" style={{ height: `${heightPct}%`, backgroundColor: barColor }} />
             </div>
-            <span className="text-[8px] text-muted-foreground">{label}</span>
+            <span className="text-2xs text-muted-foreground">{label}</span>
           </div>
         );
       })}
@@ -189,7 +189,7 @@ class ReportsErrorBoundary extends Component<{ children: ReactNode }, { hasError
     if (this.state.hasError) {
       return (
         <div className="page-container flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <AlertTriangle className="h-12 w-12 mb-4 text-amber-500" />
+          <AlertTriangle className="h-12 w-12 mb-4 text-warning-strong" />
           <h2 className="text-lg font-semibold text-foreground mb-1">No se pudo cargar la página de Reportes</h2>
           <p className="text-sm max-w-md text-center mb-2">{this.state.message}</p>
           <p className="text-xs mb-4">Revisa que el backend esté en marcha (puerto 3001) y que hayas iniciado sesión.</p>
@@ -228,7 +228,7 @@ function TabResumen() {
     return <LoadingState />;
   }
 
-  const tasks = overview.tasks ?? {};
+  const tasks: Partial<ReportOverview['tasks']> = overview.tasks ?? {};
   const byStatus = tasks.by_status ?? [];
   // "Activas" = no completadas todavía — tasks.total incluye tareas de proyectos ya
   // finalizados hace tiempo, lo que infla el número sin decir nada sobre el trabajo real.
@@ -253,7 +253,7 @@ function TabResumen() {
     .sort((a, b) => b.horas_completadas - a.horas_completadas)
     .slice(0, 5);
   const top5 = topPeople.map((t, i) => ({
-    name: (t.full_name || 'Sin nombre').split(' ').slice(0, 2).join(' ') || 'Usuario',
+    name: shortName(t.full_name, 2, 'Usuario'),
     horas: t.horas_completadas,
     puntualidad: t.puntualidad_pct,
     color: RANKING_COLORS[i] || CHART_COLORS.muted,
@@ -371,27 +371,27 @@ function TabResumen() {
 
       {/* Insights importantes */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Insights importantes</p>
+        <p className="text-2xs font-bold text-muted-foreground mb-3">Insights importantes</p>
         {hasInsights ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {bottleneck && bottleneck.promedio > 0 && (
-              <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-[11px] leading-relaxed">
+              <div className="rounded-md bg-warning/10 border border-warning/30 text-warning-strong px-3 py-2 text-2xs leading-relaxed">
                 <strong>Cuello de botella:</strong> promedio de <strong>{formatHours(bottleneck.promedio)}</strong> en estado "<strong>{bottleneck.name}</strong>".
               </div>
             )}
             {totalOverdue > 0 && (
-              <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
-                <strong>{totalOverdue} tareas vencidas</strong> en {overdueMembers.length} colaborador(es): {overdueMembers.map((m) => m.full_name.split(' ')[0]).join(', ')}.
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 text-destructive-strong px-3 py-2 text-2xs leading-relaxed">
+                <strong>{totalOverdue} tareas vencidas</strong> en {overdueMembers.length} colaborador(es): {overdueMembers.map((m) => firstName(m.full_name)).join(', ')}.
               </div>
             )}
             {puntualidadGlobal != null && puntualidadGlobal < 60 && (
-              <div className="rounded-md bg-red-50 border border-red-200 text-red-900 px-3 py-2 text-[11px] leading-relaxed">
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 text-destructive-strong px-3 py-2 text-2xs leading-relaxed">
                 <strong>Puntualidad crítica:</strong> promedio {puntualidadGlobal}%, muy por debajo de la meta del 85%.
               </div>
             )}
           </div>
         ) : (
-          <div className="rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 px-3 py-2 text-[11px]">✓ Sin alertas críticas en este momento.</div>
+          <div className="rounded-md bg-success/10 border border-success/30 text-success-strong px-3 py-2 text-2xs">✓ Sin alertas críticas en este momento.</div>
         )}
       </div>
 
@@ -472,7 +472,7 @@ function TabResumen() {
                   return (
                     <div key={c.category} className="flex flex-col items-center gap-1">
                       <div
-                        className="flex items-center justify-center rounded-full shadow-sm text-sm font-semibold text-white cursor-pointer transition-transform duration-200 hover:scale-110 hover:shadow-[0_12px_30px_rgba(15,23,42,0.35)]"
+                        className="flex items-center justify-center rounded-full shadow-card text-sm font-semibold text-white cursor-pointer transition-transform duration-200 hover:scale-110 hover:shadow-floating"
                         style={{ width: size, height: size, background: color }}
                         title={`${c.label}\nProyectos: ${c.total_projects}\nTareas: ${c.total_tasks}`}
                       >
@@ -593,9 +593,9 @@ function TabProyectos() {
   if (projects.length === 0) return <EmptyState message="No hay proyectos registrados" />;
 
   const bgForRate = (n: number) =>
-    n >= 70 ? 'bg-emerald-50 text-emerald-700'
-      : n >= 40 ? 'bg-amber-50 text-amber-700'
-        : 'bg-red-50 text-red-700';
+    n >= 70 ? 'bg-success/10 text-success-strong'
+      : n >= 40 ? 'bg-warning/10 text-warning-strong'
+        : 'bg-destructive/10 text-destructive-strong';
 
   // Map projects by id for quick lookup in timeline / heatmap
   const projectsById = new Map(projects.map(p => [p.id, p]));
@@ -640,7 +640,7 @@ function TabProyectos() {
     const steps = 4;
     for (let i = 0; i <= steps; i += 1) {
       const t = new Date(minDate.getTime() + (totalSpan * i) / steps);
-      tickDates.push(t.toISOString().split('T')[0]);
+      tickDates.push(toLocalISODate(t));
     }
   }
 
@@ -688,9 +688,9 @@ function TabProyectos() {
                 <div className="min-w-[480px]">
                   {/* Column headers */}
                   <div className="flex items-center gap-3 mb-2 px-2">
-                    <div className="w-36 flex-shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Proyecto</div>
-                    <div className="flex-1 text-[10px] uppercase tracking-wide text-muted-foreground">Progreso</div>
-                    <div className="w-20 flex-shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground text-right">Finaliza</div>
+                    <div className="w-36 flex-shrink-0 text-2xs text-muted-foreground">Proyecto</div>
+                    <div className="flex-1 text-2xs text-muted-foreground">Progreso</div>
+                    <div className="w-20 flex-shrink-0 text-2xs text-muted-foreground text-right">Finaliza</div>
                   </div>
 
                   <div className="space-y-1">
@@ -715,12 +715,12 @@ function TabProyectos() {
                       return (
                         <div
                           key={p.id}
-                          className={`flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/30 ${isAtRisk ? 'bg-red-50/40' : ''}`}
+                          className={`flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/30 ${isAtRisk ? 'bg-destructive/10' : ''}`}
                         >
                           {/* Project name */}
                           <div className="w-36 flex-shrink-0">
                             <p className="text-xs font-medium truncate text-foreground leading-tight">{p.name}</p>
-                            <p className="text-[10px] text-muted-foreground leading-tight">{p.key} · {completion}%</p>
+                            <p className="text-2xs text-muted-foreground leading-tight">{p.key} · {completion}%</p>
                           </div>
 
                           {/* Bar track */}
@@ -740,7 +740,7 @@ function TabProyectos() {
                                 }}
                               >
                                 {completedBarWidth > 10 && (
-                                  <span className="px-1.5 text-[10px] font-semibold text-white whitespace-nowrap">
+                                  <span className="px-1.5 text-2xs font-semibold text-white whitespace-nowrap">
                                     {completion}%
                                   </span>
                                 )}
@@ -767,7 +767,7 @@ function TabProyectos() {
                                 className="absolute top-0 bottom-0 w-px bg-foreground/50 z-10"
                                 style={{ left: `${todayPct}%` }}
                               >
-                                <div className="absolute -top-5 -translate-x-1/2 text-[9px] font-semibold text-foreground/70 whitespace-nowrap bg-background px-0.5 rounded">
+                                <div className="absolute -top-5 -translate-x-1/2 text-2xs font-semibold text-foreground/70 whitespace-nowrap bg-background px-0.5 rounded">
                                   Hoy
                                 </div>
                               </div>
@@ -778,18 +778,18 @@ function TabProyectos() {
                           <div className="w-20 flex-shrink-0 text-right">
                             {endBase ? (
                               <>
-                                <p className={`text-[11px] font-medium leading-tight ${isPastDeadline ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                <p className={`text-2xs font-medium leading-tight ${isPastDeadline ? 'text-destructive-strong' : 'text-muted-foreground'}`}>
                                   {formatShortDate(endBase)}
                                 </p>
                                 {overdue > 0 && (
-                                  <p className="text-[10px] text-red-500 leading-tight">{overdue} vencidas</p>
+                                  <p className="text-2xs text-destructive-strong leading-tight">{overdue} vencidas</p>
                                 )}
                                 {isPastDeadline && overdue === 0 && (
-                                  <p className="text-[10px] text-red-400 leading-tight">Tarde</p>
+                                  <p className="text-2xs text-destructive-strong leading-tight">Tarde</p>
                                 )}
                               </>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground">Sin fecha</p>
+                              <p className="text-2xs text-muted-foreground">Sin fecha</p>
                             )}
                           </div>
                         </div>
@@ -801,7 +801,7 @@ function TabProyectos() {
                   {tickDates.length > 0 && (
                     <div className="mt-3 ml-[153px] mr-[84px]">
                       <div className="h-px bg-border mb-1" />
-                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <div className="flex justify-between text-2xs text-muted-foreground">
                         {tickDates.map(d => (
                           <span key={d}>{formatShortDate(d)}</span>
                         ))}
@@ -828,12 +828,12 @@ function TabProyectos() {
                       <Badge variant="secondary" className="text-xs capitalize">{p.tipo_programa}</Badge>
                     )}
                     {p.overdue_tasks > 0 && (
-                      <Badge className="text-[10px] px-1.5 py-0.5 border border-red-200 bg-red-50 text-red-700">
+                      <Badge className="text-2xs px-1.5 py-0.5 border border-destructive/30 bg-destructive/10 text-destructive-strong">
                         ⚠ {p.overdue_tasks} vencidas
                       </Badge>
                     )}
                     {p.due_soon_tasks > 0 && p.overdue_tasks === 0 && (
-                      <Badge className="text-[10px] px-1.5 py-0.5 border border-amber-200 bg-amber-50 text-amber-700">
+                      <Badge className="text-2xs px-1.5 py-0.5 border border-warning/30 bg-warning/10 text-warning-strong">
                         {p.due_soon_tasks} vencen pronto
                       </Badge>
                     )}
@@ -927,7 +927,7 @@ function TabProyectos() {
                       total_tasks: number;
                     };
                     return (
-                      <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
+                      <div className="rounded-lg border bg-background p-2 text-xs shadow-floating">
                         <p className="font-semibold">{d.name}</p>
                         <p>Avance: {d.completion_rate}%</p>
                         <p>Vencidas: {d.overdue_tasks}</p>
@@ -1014,23 +1014,23 @@ function TabProyectos() {
 
                   const riskClass =
                     risk === 'crítico'
-                      ? 'border-red-200 bg-red-50 text-red-700 text-[11px]'
+                      ? 'border-destructive/30 bg-destructive/10 text-destructive-strong text-2xs'
                       : risk === 'riesgo'
-                        ? 'border-amber-200 bg-amber-50 text-amber-700 text-[11px]'
+                        ? 'border-warning/30 bg-warning/10 text-warning-strong text-2xs'
                         : risk === 'ok'
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px]'
-                          : 'border-slate-200 bg-slate-50 text-slate-600 text-[11px]';
+                          ? 'border-success/30 bg-success/10 text-success-strong text-2xs'
+                          : 'border-border bg-muted/50 text-muted-foreground text-2xs';
 
                   return (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="py-2 px-2">
                         <div className="flex flex-col">
                           <span className="font-medium text-xs truncate">{p.name}</span>
-                          <span className="text-[11px] text-muted-foreground">{p.key}</span>
+                          <span className="text-2xs text-muted-foreground">{p.key}</span>
                         </div>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] ${bgForRate(p.completion_rate)}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-2xs ${bgForRate(p.completion_rate)}`}>
                           {p.completion_rate}%
                         </span>
                       </td>
@@ -1038,8 +1038,8 @@ function TabProyectos() {
                         <span
                           className={
                             p.overdue_tasks > 0
-                              ? 'inline-flex px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[11px]'
-                              : 'text-muted-foreground text-[11px]'
+                              ? 'inline-flex px-2 py-0.5 rounded-full bg-destructive/10 text-destructive-strong text-2xs'
+                              : 'text-muted-foreground text-2xs'
                           }
                         >
                           {p.overdue_tasks}
@@ -1049,15 +1049,15 @@ function TabProyectos() {
                         <span
                           className={
                             p.due_soon_tasks > 0
-                              ? 'inline-flex px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[11px]'
-                              : 'text-muted-foreground text-[11px]'
+                              ? 'inline-flex px-2 py-0.5 rounded-full bg-warning/10 text-warning-strong text-2xs'
+                              : 'text-muted-foreground text-2xs'
                           }
                         >
                           {p.due_soon_tasks}
                         </span>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] ${bgForRate(materialsRate)}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-2xs ${bgForRate(materialsRate)}`}>
                           {materialsRate}%
                         </span>
                       </td>
@@ -1207,27 +1207,27 @@ function TabEquipo() {
               />
               <div className="flex flex-wrap gap-2">
                 {overall.risk_counts.available > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.available}`}>
+                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.available}`}>
                     Disponible · {overall.risk_counts.available}
                   </Badge>
                 )}
                 {overall.risk_counts.ok > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.ok}`}>
+                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.ok}`}>
                     OK · {overall.risk_counts.ok}
                   </Badge>
                 )}
                 {overall.risk_counts.warning > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.warning}`}>
+                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.warning}`}>
                     Riesgo · {overall.risk_counts.warning}
                   </Badge>
                 )}
                 {overall.risk_counts.over > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-[11px] ${RISK_BADGE_CLASSES.over}`}>
+                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.over}`}>
                     Sobrecargado · {overall.risk_counts.over}
                   </Badge>
                 )}
                 {overall.unidades_semana_actual_sin_estimacion > 0 && (
-                  <Badge variant="outline" className="px-2 py-0.5 text-[11px] bg-amber-50 text-amber-700 border-amber-200">
+                  <Badge variant="outline" className="px-2 py-0.5 text-2xs bg-warning/10 text-warning-strong border-warning/30">
                     Sin horas estimadas · {overall.unidades_semana_actual_sin_estimacion}
                   </Badge>
                 )}
@@ -1236,18 +1236,18 @@ function TabEquipo() {
           )}
 
           {/* Schedule info bar */}
-          <Card className={`${CARD_CLASS} border-teal-200 bg-teal-50/50`}>
+          <Card className={`${CARD_CLASS} border-primary/40 bg-accent/50`}>
             <CardContent className="flex flex-wrap items-center gap-4 py-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-teal-600" />
-                <span className="font-medium text-teal-900">Jornada laboral:</span>
+                <Clock className="h-3.5 w-3.5 text-primary-deep" />
+                <span className="font-medium text-primary-deep">Jornada laboral:</span>
               </div>
               {capacity.schedule && (
                 <>
-                  <span className="text-teal-700">Lun-Jue: {capacity.schedule.mon_thu_hours}h</span>
-                  <span className="text-teal-700">Vie: {capacity.schedule.friday_hours}h</span>
-                  <span className="text-teal-700 font-semibold">Semanal: {capacity.schedule.weekly_hours}h</span>
-                  <span className="text-teal-700">Promedio diario: {capacity.schedule.avg_daily_hours}h</span>
+                  <span className="text-primary-deep">Lun-Jue: {capacity.schedule.mon_thu_hours}h</span>
+                  <span className="text-primary-deep">Vie: {capacity.schedule.friday_hours}h</span>
+                  <span className="text-primary-deep font-semibold">Semanal: {capacity.schedule.weekly_hours}h</span>
+                  <span className="text-primary-deep">Promedio diario: {capacity.schedule.avg_daily_hours}h</span>
                 </>
               )}
             </CardContent>
@@ -1341,20 +1341,20 @@ function TabEquipo() {
                   <button
                     type="button"
                     onClick={onClick}
-                    className="w-full text-left pt-5 pb-4 px-4 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-2xl hover:bg-muted/40 transition-colors"
+                    className="w-full text-left pt-5 pb-4 px-4 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl hover:bg-muted/40 transition-colors"
                   >
                     {/* Header: Avatar + Name + Risk badge */}
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={member.avatar_url || ''} />
                         <AvatarFallback className="text-xs">
-                          {(member.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
+                          {getInitials(member.full_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm truncate">{member.full_name || 'Sin nombre'}</p>
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 border ${riskBadgeClass}`}>
+                          <Badge variant="outline" className={`text-2xs px-1.5 py-0.5 border ${riskBadgeClass}`}>
                             {member.current.risk_label}
                           </Badge>
                         </div>
@@ -1368,27 +1368,27 @@ function TabEquipo() {
                         <p className="text-lg font-bold" style={{ color: CHART_COLORS.rust }}>
                           {pm?.unidades_pendientes ?? '-'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Pendientes</p>
+                        <p className="text-2xs text-muted-foreground">Pendientes</p>
                       </div>
                       <div>
                         <p className={`text-lg font-bold ${punctualityBandColor(pm?.puntualidad_pct ?? null)}`}>
                           {pm?.puntualidad_pct != null ? `${pm.puntualidad_pct}%` : '-'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Puntualidad</p>
+                        <p className="text-2xs text-muted-foreground">Puntualidad</p>
                       </div>
                       <div>
                         <p className="text-lg font-bold" style={{ color: isOverloaded ? CHART_COLORS.coral : CHART_COLORS.teal }}>
                           {member.backlog.dias_para_vaciar > 0 ? `${member.backlog.dias_para_vaciar}d` : '-'}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Días backlog</p>
+                        <p className="text-2xs text-muted-foreground">Días backlog</p>
                       </div>
                     </div>
 
                     {/* Utilization bar + gap */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[10px]">
+                      <div className="flex justify-between text-2xs">
                         <span className="text-muted-foreground">Compromiso semana actual</span>
-                        <span className={`font-semibold ${isOverloaded ? 'text-red-500' : ''}`}>
+                        <span className={`font-semibold ${isOverloaded ? 'text-destructive-strong' : ''}`}>
                           {member.current.unidades_semana_actual_sin_estimacion > 0 ? (
                             <>
                               ~{member.current.utilizacion_aprox_pct}%
@@ -1399,9 +1399,9 @@ function TabEquipo() {
                           )}
                         </span>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all"
+                          className="h-full rounded-full transition-[width]"
                           style={{
                             width: `${Math.min(barPct, 100)}%`,
                             background: isOverloaded
@@ -1411,9 +1411,9 @@ function TabEquipo() {
                         />
                       </div>
                       {gapText && (
-                        <div className="flex justify-between text-[10px] mt-1">
+                        <div className="flex justify-between text-2xs mt-1">
                           <span className="text-muted-foreground">Gap semana actual</span>
-                          <span className={`font-medium ${holgura < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          <span className={`font-medium ${holgura < 0 ? 'text-destructive-strong' : 'text-success-strong'}`}>
                             {gapText}
                           </span>
                         </div>
@@ -1422,7 +1422,7 @@ function TabEquipo() {
 
                     {/* Proyección próximas semanas */}
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[9px] text-muted-foreground">Próximas semanas</span>
+                      <span className="text-2xs text-muted-foreground">Próximas semanas</span>
                       <CapacityWeekStrip weeks={member.weeks} />
                     </div>
 
@@ -1437,9 +1437,9 @@ function TabEquipo() {
                         <span className="text-muted-foreground text-xs">Sin backlog pendiente</span>
                       )}
                       {(member.backlog.unidades_sin_estimacion > 0 || member.backlog.horas_sin_fecha > 0) && (
-                        <div className="flex items-center gap-1 text-amber-500" title="Trabajo sin estimación u sin fecha límite">
+                        <div className="flex items-center gap-1 text-warning-strong" title="Trabajo sin estimación u sin fecha límite">
                           <AlertTriangle className="h-3 w-3" />
-                          <span className="text-[10px]">
+                          <span className="text-2xs">
                             {member.backlog.unidades_sin_estimacion > 0 && `${member.backlog.unidades_sin_estimacion} sin est.`}
                             {member.backlog.unidades_sin_estimacion > 0 && member.backlog.horas_sin_fecha > 0 && ' · '}
                             {member.backlog.horas_sin_fecha > 0 && `${formatHours(member.backlog.horas_sin_fecha)} sin fecha`}
@@ -1508,7 +1508,7 @@ function TabEquipo() {
 
       {/* Drawer lateral de mini-reporte por usuario */}
       <Dialog open={drawerOpen} onOpenChange={open => setDrawerOpen(open)}>
-        <DialogContent className="sm:max-w-[480px] sm:ml-auto sm:mr-4 w-full h-[90vh] sm:h-[90vh] flex flex-col p-0 border-l shadow-xl">
+        <DialogContent className="sm:max-w-[480px] sm:ml-auto sm:mr-4 w-full h-[90vh] sm:h-[90vh] flex flex-col p-0 border-l shadow-floating">
           <DialogHeader className="px-4 pt-4 pb-2 border-b">
             <DialogTitle className="text-base">
               {userReport?.user.full_name || 'Detalle de colaborador'}
@@ -1576,7 +1576,7 @@ function TabEquipo() {
                         <Avatar className="h-7 w-7">
                           <AvatarImage src={member.avatar_url || ''} />
                           <AvatarFallback className="text-xs">
-                            {(member.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
+                            {getInitials(member.full_name)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-medium truncate max-w-[150px]">{member.full_name || 'Sin nombre'}</span>
@@ -1618,12 +1618,12 @@ function ColaboradorHeader({ report }: { report: UserMiniReport }) {
 
   const healthClasses =
     health.color === 'red'
-      ? 'border-red-200 bg-red-50 text-red-700'
+      ? 'border-destructive/30 bg-destructive/10 text-destructive-strong'
       : health.color === 'amber'
-        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        ? 'border-warning/30 bg-warning/10 text-warning-strong'
         : health.color === 'slate'
-          ? 'border-slate-200 bg-slate-50 text-slate-700'
-          : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+          ? 'border-border bg-muted/50 text-foreground'
+          : 'border-success/30 bg-success/10 text-success-strong';
 
   const shortReasons = health.reasons.slice(0, 2).join(' · ');
 
@@ -1634,13 +1634,13 @@ function ColaboradorHeader({ report }: { report: UserMiniReport }) {
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatar_url || ''} />
             <AvatarFallback className="text-xs">
-              {(user.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('') || 'U'}
+              {getInitials(user.full_name)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-semibold text-sm truncate">{user.full_name || 'Sin nombre'}</p>
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${healthClasses}`}>
+              <Badge variant="outline" className={`text-2xs px-1.5 py-0.5 ${healthClasses}`}>
                 {health.label}
               </Badge>
             </div>
@@ -1652,25 +1652,25 @@ function ColaboradorHeader({ report }: { report: UserMiniReport }) {
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Resumen rápido</p>
-            <p className="text-[11px] text-foreground">
+            <p className="text-2xs text-muted-foreground ">Resumen rápido</p>
+            <p className="text-2xs text-foreground">
               {summary.pending_tasks} pendientes, {summary.overdue_tasks} vencidas,{' '}
               {summary.today_tasks} para hoy.
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Capacidad semanal</p>
-            <p className="text-[11px] text-foreground">
+            <p className="text-2xs text-muted-foreground ">Capacidad semanal</p>
+            <p className="text-2xs text-foreground">
               Utilización {summary.utilization_pct}% ·{' '}
               {summary.holgura_horas > 0
                 ? `Holgura ${formatHours(summary.holgura_horas)}`
-                : `Exceso ${formatHours(Math.abs(summary.capacity_gap_hours))}`}
+                : `Exceso ${formatHours(Math.abs(summary.holgura_horas))}`}
             </p>
           </div>
         </div>
 
         {shortReasons && (
-          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+          <p className="text-2xs text-warning-strong bg-warning/10 border border-warning/30 rounded-md px-2 py-1">
             {shortReasons}
           </p>
         )}
@@ -1752,10 +1752,10 @@ function AlertasClave({ report }: { report: UserMiniReport }) {
   }
 
   const toneClass = (tone: 'red' | 'amber' | 'slate' | 'teal') => {
-    if (tone === 'red') return 'border-red-200 bg-red-50 text-red-700';
-    if (tone === 'amber') return 'border-amber-200 bg-amber-50 text-amber-700';
-    if (tone === 'teal') return 'border-teal-200 bg-teal-50 text-teal-700';
-    return 'border-slate-200 bg-slate-50 text-slate-700';
+    if (tone === 'red') return 'border-destructive/30 bg-destructive/10 text-destructive-strong';
+    if (tone === 'amber') return 'border-warning/30 bg-warning/10 text-warning-strong';
+    if (tone === 'teal') return 'border-primary/40 bg-accent text-primary-deep';
+    return 'border-border bg-muted/50 text-foreground';
   };
 
   return (
@@ -1771,7 +1771,7 @@ function AlertasClave({ report }: { report: UserMiniReport }) {
           <Badge
             key={item.label}
             variant="outline"
-            className={`px-2 py-1 text-[11px] font-medium ${toneClass(item.tone)}`}
+            className={`px-2 py-1 text-2xs font-medium ${toneClass(item.tone)}`}
           >
             {item.label}: {item.value}
           </Badge>
@@ -1817,22 +1817,22 @@ function TareasCriticasList({ report }: { report: UserMiniReport }) {
           >
             <div className="flex items-center justify-between gap-2">
               <p className="font-medium truncate">{task.title}</p>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {task.project.key || ''} {task.project.name}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center justify-between gap-2 text-2xs">
               <div className="flex flex-wrap items-center gap-1.5">
-                <Badge variant="outline" className="px-1.5 py-0.5 text-[10px]">
+                <Badge variant="outline" className="px-1.5 py-0.5 text-2xs">
                   {task.status_name}
                 </Badge>
                 {task.priority && (
                   <Badge
                     variant="outline"
-                    className={`px-1.5 py-0.5 text-[10px] ${
+                    className={`px-1.5 py-0.5 text-2xs ${
                       task.priority === 'high' || task.priority === 'urgent'
-                        ? 'border-red-200 bg-red-50 text-red-700'
-                        : 'border-sky-200 bg-sky-50 text-sky-700'
+                        ? 'border-destructive/30 bg-destructive/10 text-destructive-strong'
+                        : 'border-info/30 bg-info/10 text-info-strong'
                     }`}
                   >
                     {priorityLabel[task.priority] || task.priority}
@@ -1841,18 +1841,18 @@ function TareasCriticasList({ report }: { report: UserMiniReport }) {
                 {task.horas_estimadas == null && (
                   <Badge
                     variant="outline"
-                    className="px-1.5 py-0.5 text-[10px] border-amber-200 bg-amber-50 text-amber-700"
+                    className="px-1.5 py-0.5 text-2xs border-warning/30 bg-warning/10 text-warning-strong"
                   >
                     Sin estimación
                   </Badge>
                 )}
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-2xs text-muted-foreground">
                   Compromiso: {formatDateShort(task.due_date)}
                 </span>
                 {task.horas_estimadas != null && task.horas_estimadas > 0 && (
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-2xs text-muted-foreground">
                     Est.: {formatHours(task.horas_estimadas)}
                   </span>
                 )}
@@ -1879,33 +1879,33 @@ function CapacidadResumen({ report }: { report: UserMiniReport }) {
       <CardContent className="space-y-2 text-xs">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Capacidad semanal</p>
-            <p className="text-[11px] font-medium">
+            <p className="text-2xs text-muted-foreground ">Capacidad semanal</p>
+            <p className="text-2xs font-medium">
               {formatHours(summary.weekly_hours_capacity)} disponibles
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Horas pendientes</p>
-            <p className="text-[11px] font-medium">
+            <p className="text-2xs text-muted-foreground ">Horas pendientes</p>
+            <p className="text-2xs font-medium">
               {summary.pending_horas > 0 ? formatHours(summary.pending_horas) : '0h'}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Utilización</p>
-            <p className="text-[11px] font-medium">{summary.utilization_pct}%</p>
+            <p className="text-2xs text-muted-foreground ">Utilización</p>
+            <p className="text-2xs font-medium">{summary.utilization_pct}%</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Gap / Holgura</p>
-            <p className="text-[11px] font-medium">
-              {summary.capacity_gap_hours < 0
-                ? `Holgura ${formatHours(Math.abs(summary.capacity_gap_hours))}`
-                : `Exceso ${formatHours(summary.capacity_gap_hours)}`}
+            <p className="text-2xs text-muted-foreground ">Gap / Holgura</p>
+            <p className="text-2xs font-medium">
+              {summary.holgura_horas > 0
+                ? `Holgura ${formatHours(summary.holgura_horas)}`
+                : `Exceso ${formatHours(Math.abs(summary.holgura_horas))}`}
             </p>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-2xs text-muted-foreground">
           Este resumen usa las mismas horas semanales configuradas en la sección de capacidad del
           equipo.
         </p>
@@ -1940,7 +1940,7 @@ function IndividualPerformanceTab() {
   const enRiesgo = members.filter((m) => m.puntualidad_pct !== null && m.puntualidad_pct < 80 && m.entregas_evaluables >= 3).length;
 
   const completedChartData = activeMembers.slice(0, 10).map((m) => ({
-    name: m.full_name.split(' ')[0],
+    name: firstName(m.full_name),
     unidades: m.unidades_completadas,
     horas: m.horas_completadas,
   }));
@@ -1949,7 +1949,7 @@ function IndividualPerformanceTab() {
     .filter((m) => m.horas_completadas > 0 || m.eficiencia_horas_pct != null)
     .slice(0, 10)
     .map((m) => ({
-      name: m.full_name.split(' ')[0],
+      name: firstName(m.full_name),
       estimadas: m.horas_completadas,
       efectivas: m.eficiencia_horas_pct != null && m.eficiencia_horas_pct > 0
         ? Math.round((m.horas_completadas / (m.eficiencia_horas_pct / 100)) * 100) / 100
@@ -2091,7 +2091,7 @@ function IndividualPerformanceTab() {
                             <Avatar className="h-7 w-7">
                               <AvatarImage src={m.avatar_url ?? undefined} />
                               <AvatarFallback className="text-xs">
-                                {m.full_name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                                {getInitials(m.full_name)}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{m.full_name}</span>
@@ -2130,7 +2130,7 @@ function IndividualPerformanceTab() {
         <Card className={CARD_CLASS}>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-warning-strong" />
               Sin tareas asignadas
               <Badge variant="secondary" className="ml-1">
                 {inactiveMembers.length}
@@ -2150,11 +2150,7 @@ function IndividualPerformanceTab() {
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={m.avatar_url ?? undefined} />
                     <AvatarFallback className="text-xs">
-                      {m.full_name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')}
+                      {getInitials(m.full_name)}
                     </AvatarFallback>
                   </Avatar>
                   <div>

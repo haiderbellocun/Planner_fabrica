@@ -1,3 +1,4 @@
+import { chartSurface } from '@/components/charts/chartTheme';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -53,7 +54,7 @@ export function CollaboratorDetailDrawer({
               ].map((k) => (
                 <div key={k.label} className="rounded-lg border bg-card px-2 py-2 text-center">
                   <p className="text-lg font-bold tabular-nums">{k.value}</p>
-                  <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{k.label}</p>
+                  <p className="text-2xs text-muted-foreground">{k.label}</p>
                 </div>
               ))}
             </div>
@@ -93,7 +94,7 @@ export function CollaboratorDetailDrawer({
                     theme={nivoTheme}
                     enableArcLinkLabels={false}
                     arcLabelsSkipAngle={20}
-                    arcLabelsTextColor="#ffffff"
+                    arcLabelsTextColor={chartSurface.card}
                   />
                 </div>
               </div>
@@ -102,7 +103,7 @@ export function CollaboratorDetailDrawer({
             <div>
               <p className="text-xs font-semibold mb-2">Tareas ({data.tasks.length})</p>
               <div className="rounded-xl border overflow-auto max-h-[360px]">
-                <table className="w-full text-[11px]">
+                <table className="w-full text-2xs">
                   <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
                     <tr>
                       {['Prioridad', 'Proyecto', 'Programa', 'Materia', 'Gránulo', 'Tarea', 'Estado', 'Sprint', 'Fecha límite', 'Actualizado'].map((h) => (
@@ -113,14 +114,14 @@ export function CollaboratorDetailDrawer({
                   <tbody>
                     {data.tasks.map((t) => (
                       <tr key={t.id} className="border-t border-border/60">
-                        <td className="px-2 py-1.5"><Badge variant="outline" className="text-[10px] capitalize">{t.priority}</Badge></td>
+                        <td className="px-2 py-1.5"><Badge variant="outline" className="text-2xs capitalize">{t.priority}</Badge></td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.project_name}</td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.programa_name ?? '—'}</td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.materia_name ?? '—'}</td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.granulo_name ?? '—'}</td>
                         <td className="px-2 py-1.5 max-w-[160px] truncate" title={t.title}>{t.title}</td>
                         <td className="px-2 py-1.5">
-                          <span className="px-1.5 py-0.5 rounded text-white text-[10px]" style={{ backgroundColor: t.status_color }}>{t.status_name}</span>
+                          <span className="px-1.5 py-0.5 rounded text-white text-2xs" style={{ backgroundColor: t.status_color }}>{t.status_name}</span>
                         </td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.sprint_name ?? '—'}</td>
                         <td className="px-2 py-1.5 whitespace-nowrap">{t.due_date ? new Date(t.due_date).toLocaleDateString('es-CO') : '—'}</td>

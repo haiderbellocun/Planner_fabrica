@@ -259,7 +259,7 @@ export function TaskListView({
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={task.assignee.avatar_url || undefined} />
-                          <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+                          <AvatarFallback className="text-2xs bg-primary text-primary-foreground">
                             {getInitials(task.assignee.full_name)}
                           </AvatarFallback>
                         </Avatar>
@@ -275,7 +275,7 @@ export function TaskListView({
                       const d = parseDateOnly(task.due_date);
                       return (
                         <span className={cn(
-                          bucket === 'overdue' ? 'text-red-600 font-medium' : bucket === 'due_today' ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+                          bucket === 'overdue' ? 'text-destructive-strong font-medium' : bucket === 'due_today' ? 'text-warning-strong font-medium' : 'text-muted-foreground',
                         )}>
                           {bucket === 'due_today' ? 'Vence hoy' : d ? format(d, 'd MMM yyyy', { locale: es }) : '-'}
                         </span>

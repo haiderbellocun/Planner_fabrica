@@ -18,14 +18,14 @@ export default function Index() {
           <div className="flex items-center gap-4">
             {user ? (
               <Link to="/dashboard">
-                <Button className="shadow-md shadow-primary/20">
+                <Button className="shadow-floating shadow-primary/20">
                   Ir al Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button className="shadow-md shadow-primary/20">Iniciar Sesión</Button>
+                <Button className="shadow-floating shadow-primary/20">Iniciar Sesión</Button>
               </Link>
             )}
           </div>
@@ -65,7 +65,7 @@ export default function Index() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8 w-full mx-auto max-w-6xl">
-            <div className="group bg-card p-8 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/30 hover:shadow-xl transition-all">
+            <div className="group bg-card p-8 rounded-xl border border-border hover:border-primary/30 hover:shadow-floating transition-ui">
               <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <LayoutGrid className="h-8 w-8 text-primary" />
               </div>
@@ -75,7 +75,7 @@ export default function Index() {
                 Gestión visual intuitiva para máxima productividad.
               </p>
             </div>
-            <div className="group bg-card p-8 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/30 hover:shadow-xl transition-all">
+            <div className="group bg-card p-8 rounded-xl border border-border hover:border-primary/30 hover:shadow-floating transition-ui">
               <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Clock className="h-8 w-8 text-primary" />
               </div>
@@ -85,7 +85,7 @@ export default function Index() {
                 Métricas precisas sin esfuerzo manual.
               </p>
             </div>
-            <div className="group bg-card p-8 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/30 hover:shadow-xl transition-all">
+            <div className="group bg-card p-8 rounded-xl border border-border hover:border-primary/30 hover:shadow-floating transition-ui">
               <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Users className="h-8 w-8 text-primary" />
               </div>

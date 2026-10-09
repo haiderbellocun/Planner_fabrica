@@ -118,7 +118,7 @@ export function AppSidebar() {
     const muted = opts?.muted;
     return (
       <SidebarGroup>
-        <SidebarGroupLabel className={cn('text-sm font-semibold uppercase tracking-wide px-2 mb-1', muted ? 'text-white/55' : 'text-white/90')}>
+        <SidebarGroupLabel className={cn('text-sm font-semibold px-2 mb-1', muted ? 'text-white/85' : 'text-white/90')}>
           {label}
         </SidebarGroupLabel>
         <SidebarGroupContent>
@@ -135,8 +135,8 @@ export function AppSidebar() {
                     className={cn(
                       'flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
                       muted
-                        ? 'text-[13.5px] font-medium text-white/65 hover:bg-white/10 hover:text-white/90 [&>svg]:text-white/65'
-                        : 'text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90',
+                        ? 'text-sm font-medium text-white/85 hover:bg-white/10 hover:text-white/90 [&>svg]:text-white/85'
+                        : 'text-base font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90',
                     )}
                     activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
                   >
@@ -157,7 +157,7 @@ export function AppSidebar() {
       <div
         className="flex h-full flex-col"
         style={{
-          backgroundImage: 'linear-gradient(180deg, rgba(4,58,56,0.2), rgba(4,58,56,0.2)), url(./deco_coral.png)',
+          backgroundImage: 'linear-gradient(180deg, rgba(4,58,56,0.2), rgba(4,58,56,0.2)), url(./deco_coral.webp)',
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundRepeat: 'no-repeat, no-repeat',
@@ -165,12 +165,12 @@ export function AppSidebar() {
       >
         <SidebarHeader className="border-b border-white/20 px-3 py-4">
           <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <img src="./logo_foca.png" alt="FC" className="h-8 w-8 object-contain" />
+          <div className="h-11 w-11 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 shadow-card">
+            <img src="./logo_foca.webp" alt="FC" className="h-8 w-8 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold uppercase tracking-wide text-white/90">Dirección Ops</span>
+              <span className="text-sm font-semibold text-white/90">Dirección Ops</span>
               <span className="font-semibold text-sm text-white/90 leading-tight truncate">Fábrica de Contenido</span>
             </div>
           )}
@@ -194,13 +194,13 @@ export function AppSidebar() {
                 >
                   <NavLink
                     to="/notifications"
-                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[15px] font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-base font-medium text-white/90 hover:bg-white/10 [&>svg]:text-white/90"
                     activeClassName="bg-white/15 border border-white/20 rounded-xl text-white [&>svg]:text-white"
                   >
                     <div className="relative">
                       <Bell className="h-[18px] w-[18px]" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-coral text-[10px] font-medium text-white flex items-center justify-center">
+                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-coral-strong text-2xs font-medium text-white flex items-center justify-center">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -231,7 +231,7 @@ export function AppSidebar() {
                   <span className="text-sm font-medium truncate max-w-[140px] text-white/90">
                     {profile?.full_name || 'Usuario'}
                   </span>
-                  <span className="text-xs text-white/70 truncate max-w-[140px]">
+                  <span className="text-xs text-white/85 truncate max-w-[140px]">
                     {roleLabel(!!isAdmin, !!isProjectLeader)}
                   </span>
                 </div>

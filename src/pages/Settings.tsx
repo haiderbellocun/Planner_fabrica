@@ -177,7 +177,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] mb-8">
+      <Card className="rounded-2xl border border-black/5 shadow-card mb-8">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -284,11 +284,11 @@ export default function SettingsPage() {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && isDirty && !isInvalid) handleSave(member);
                               }}
-                              className={`h-9 ${isDirty && !isInvalid ? 'border-amber-400 focus-visible:ring-amber-400' : ''}`}
+                              className={`h-9 ${isDirty && !isInvalid ? 'border-warning/50 focus-visible:ring-warning' : ''}`}
                               aria-label={`Capacidad semanal de ${member.full_name}`}
                             />
                             {isDirty && !isInvalid && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" title="Cambios sin guardar" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-warning flex-shrink-0" title="Cambios sin guardar" />
                             )}
                           </div>
                         </td>
@@ -313,7 +313,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Gestión de usuarios */}
-      <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <Card className="rounded-2xl border border-black/5 shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
@@ -341,17 +341,22 @@ export default function SettingsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Nombre completo *</label>
+                    <label htmlFor="new-user-name" className="text-xs font-medium">Nombre completo *</label>
                     <Input
+                      id="new-user-name"
+                      autoComplete="off"
                       value={newUser.full_name}
                       onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
                       placeholder="Ej: Nombre Apellido"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Correo *</label>
+                    <label htmlFor="new-user-email" className="text-xs font-medium">Correo *</label>
                     <Input
+                      id="new-user-email"
                       type="email"
+                      autoComplete="off"
+                      aria-invalid={newUser.email.length > 0 && !emailValid}
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                       placeholder="correo@cun.edu.co"
@@ -362,10 +367,11 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Cargo</label>
+                    <label htmlFor="new-user-cargo" className="text-xs font-medium">Cargo</label>
                     {cargoCustom ? (
                       <div className="flex gap-1.5">
                         <Input
+                          id="new-user-cargo"
                           value={newUser.cargo}
                           onChange={(e) => setNewUser({ ...newUser, cargo: e.target.value })}
                           placeholder="Escribe el cargo..."
@@ -395,7 +401,7 @@ export default function SettingsPage() {
                           }
                         }}
                       >
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger id="new-user-cargo" className="h-9">
                           <SelectValue placeholder="Sin cargo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -409,9 +415,10 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium">Contraseña inicial *</label>
+                    <label htmlFor="new-user-password" className="text-xs font-medium">Contraseña inicial *</label>
                     <div className="relative">
                       <Input
+                        id="new-user-password"
                         type={showPassword ? 'text' : 'password'}
                         value={newUser.password}
                         onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
@@ -430,12 +437,12 @@ export default function SettingsPage() {
                   </div>
                   {isAdmin && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium">Rol</label>
+                      <label htmlFor="new-user-role" className="text-xs font-medium">Rol</label>
                       <Select
                         value={newUser.role}
                         onValueChange={(v) => setNewUser({ ...newUser, role: v as 'admin' | 'project_leader' | 'user' })}
                       >
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger id="new-user-role" className="h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

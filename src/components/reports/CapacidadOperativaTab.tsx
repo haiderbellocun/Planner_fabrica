@@ -2,6 +2,7 @@
 // backlog acumulado, que es lo que ya resuelve CapacidadFabricaTab). Reutiliza por
 // completo capacity-forecast (semana actual + próximas semanas + backlog por persona)
 // y people-workload (distribución por proyecto); no agrega endpoints nuevos.
+import { toLocalISODate } from '@/lib/dates';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Search, Users, HelpCircle, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, FileWarning, PieChart, CheckCircle2 } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Cell, LabelList, ReferenceLine } from 'recharts';
@@ -16,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { CHART_COLORS, formatHours, AXIS_STYLE, GRID_STYLE, BAR_RADIUS, GradientDef } from '@/components/reports/ReportCharts';
-import { chartColors, axisTick } from '@/components/charts/chartTheme';
+import { axisTick, chartColors, chartSurface } from '@/components/charts/chartTheme';
 import { StatTile, SectionHeader, LoadingState, EmptyState, StatusPill } from '@/components/shared/StoryUI';
 import { cn } from '@/lib/utils';
 import {
@@ -29,11 +30,12 @@ import {
   type PersonWorkloadProject,
 } from '@/hooks/useReports';
 import { useProjects, type ProjectWithDetails } from '@/hooks/useProjects';
+import {
+  aggregatePeriodKpis, backlogHeadroom, currentWeekCapacityForTrend, forecastWeekLabel,
+  operativeBand, periodSnapshot, weeklyTeamCapacity, type PeriodKey, type Tone,
+} from '@/lib/capacityMetrics';
 
-const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
-
-type PeriodKey = 'current' | 'next' | 'next4';
-type Tone = 'available' | 'good' | 'warning' | 'critical';
+const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card';
 
 const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
   { value: 'current', label: 'Esta semana' },
@@ -58,13 +60,6 @@ const TONE_CLASSES: Record<Tone, string> = {
 
 const STATUS_PRIORITY: Record<Tone, number> = { critical: 0, warning: 1, good: 2, available: 3 };
 
-function operativeBand(pct: number): { tone: Tone; label: string } {
-  if (pct > 100) return { tone: 'critical', label: 'Sobrecarga' };
-  if (pct >= 86) return { tone: 'warning', label: 'Alta ocupación' };
-  if (pct >= 61) return { tone: 'good', label: 'Saludable' };
-  return { tone: 'available', label: 'Disponible' };
-}
-
 const TONE_HEX: Record<Tone, string> = {
   available: chartColors.info,
   good: CHART_COLORS.green,
@@ -88,20 +83,6 @@ function formatSignedHours(hours: number): string {
   return `${sign}${formatHours(Math.abs(hours))}`;
 }
 
-// Business days left in the work week, counting today. Mon=5, Tue=4, ... Fri=1.
-// Weekends return 0: once Sat/Sun arrive, the current work week's days are spent —
-// there's no "remaining capacity" to show, and the next work week hasn't started.
-function remainingBusinessDays(date: Date): number {
-  const dow = date.getDay();
-  if (dow === 0 || dow === 6) return 0;
-  return 6 - dow;
-}
-
-function remainingWeekCapacity(weeklyCapacity: number, date: Date = new Date()): number {
-  const days = remainingBusinessDays(date);
-  return Math.round((weeklyCapacity / 5) * days * 100) / 100;
-}
-
 function weekRangeLabel(weekStartISO: string): string {
   const start = new Date(`${weekStartISO}T12:00:00`);
   const end = new Date(start);
@@ -109,42 +90,6 @@ function weekRangeLabel(weekStartISO: string): string {
   const day = (d: Date) => String(d.getDate()).padStart(2, '0');
   const month = end.toLocaleDateString('es-CO', { month: 'short' });
   return `${day(start)}–${day(end)} ${month}`;
-}
-
-interface PeriodSnapshot {
-  horas: number;
-  capacidad: number;
-  holgura: number;
-  pct: number;
-}
-
-function periodSnapshot(
-  member: Pick<CapacityForecastMember, 'weekly_hours_capacity' | 'current' | 'weeks'>,
-  period: PeriodKey,
-): PeriodSnapshot {
-  const capacidadSemana = member.weekly_hours_capacity;
-  if (period === 'current') {
-    return {
-      horas: member.current.carga_semana_actual,
-      capacidad: capacidadSemana,
-      holgura: member.current.holgura_horas,
-      pct: member.current.utilizacion_pct,
-    };
-  }
-  if (period === 'next') {
-    // weeks[0] is always the current week (es_semana_actual) — "next" is the first
-    // week after it, never weeks[0] itself.
-    const w = member.weeks.find((w) => !w.es_semana_actual) ?? member.weeks[1];
-    if (!w) return { horas: 0, capacidad: capacidadSemana, holgura: capacidadSemana, pct: 0 };
-    return { horas: w.horas, capacidad: capacidadSemana, holgura: w.holgura_horas, pct: w.utilizacion_pct };
-  }
-  // 'next4' = the full visible forecast window (current week + the following ones),
-  // the same span shown in the chart/heatmap below — not 4 weeks strictly after today.
-  const ws = member.weeks;
-  const horas = ws.reduce((s, w) => s + w.horas, 0);
-  const capacidad = capacidadSemana * (ws.length || 1);
-  const pct = capacidad > 0 ? Math.round((horas / capacidad) * 100) : 0;
-  return { horas, capacidad, holgura: Math.round((capacidad - horas) * 100) / 100, pct };
 }
 
 interface OperativeRow {
@@ -240,7 +185,7 @@ function FragmentationTag({ count }: { count: number }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold cursor-help', TONE_CLASSES[tone])}>
+        <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold cursor-help', TONE_CLASSES[tone])}>
           {count} {count === 1 ? 'proyecto' : 'proyectos'} · {label}
           <HelpCircle className="h-3 w-3 opacity-60" />
         </span>
@@ -273,7 +218,7 @@ function AlertCard({ kind, title, description }: OperationalAlert) {
   const meta = ALERT_KIND_META[kind];
   const Icon = meta.icon;
   return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-3 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-3 shadow-card">
       <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', TONE_CLASSES[meta.tone])}>
         <Icon className="h-4 w-4" />
       </div>
@@ -281,7 +226,7 @@ function AlertCard({ kind, title, description }: OperationalAlert) {
         <p className="text-sm font-semibold truncate">{title}</p>
         <p className="text-xs text-muted-foreground truncate">{description}</p>
       </div>
-      <span className={cn('shrink-0 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap', TONE_CLASSES[meta.tone])}>
+      <span className={cn('shrink-0 text-2xs font-bold px-2 py-1 rounded-full whitespace-nowrap', TONE_CLASSES[meta.tone])}>
         {meta.badge}
       </span>
     </div>
@@ -321,7 +266,7 @@ function SortableTh({
 
 // ---------- Chart tooltips (rich, per-chart fields — CustomTooltip only echoes series) ----------
 
-const CHART_TOOLTIP_CLASS = 'bg-card border border-black/5 shadow-lg rounded-xl p-3 min-w-[170px] text-xs space-y-1';
+const CHART_TOOLTIP_CLASS = 'bg-card border border-black/5 shadow-floating rounded-xl p-3 min-w-[170px] text-xs space-y-1';
 
 function TooltipRow({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -543,18 +488,8 @@ export function CapacidadOperativaTab() {
     return [...rows].sort((a, b) => periodSnapshot(b, periodKey).pct - periodSnapshot(a, periodKey).pct);
   }, [searchedRows, statusFilter, periodKey]);
 
-  const kpis = useMemo(() => {
-    let capacidad = 0, comprometidas = 0, sobrecargadas = 0;
-    for (const r of tableRows) {
-      const snap = periodSnapshot(r, periodKey);
-      capacidad += snap.capacidad;
-      comprometidas += snap.horas;
-      if (operativeBand(snap.pct).tone === 'critical') sobrecargadas++;
-    }
-    const disponible = Math.round((capacidad - comprometidas) * 100) / 100;
-    const ocupacion = capacidad > 0 ? Math.round((comprometidas / capacidad) * 100) : 0;
-    return { capacidad, comprometidas, disponible, ocupacion, sobrecargadas };
-  }, [tableRows, periodKey]);
+  const kpis = useMemo(() => aggregatePeriodKpis(tableRows, periodKey), [tableRows, periodKey]);
+  const periodLabel = PERIOD_OPTIONS.find((p) => p.value === periodKey)?.label;
 
   const barChartData = useMemo(() => {
     return tableRows.slice(0, 10).map((r) => {
@@ -575,9 +510,7 @@ export function CapacidadOperativaTab() {
 
   const trendData = useMemo(() => {
     const capacidadTotal = Math.round(tableRows.reduce((s, r) => s + r.weekly_hours_capacity, 0) * 100) / 100;
-    const capacidadRestanteTotal = Math.round(
-      tableRows.reduce((s, r) => s + remainingWeekCapacity(r.weekly_hours_capacity), 0) * 100,
-    ) / 100;
+    const capacidadRestanteTotal = currentWeekCapacityForTrend(capacidadTotal);
     const weeksArr = tableRows[0]?.weeks ?? [];
     return weeksArr.map((w, i) => {
       const isCurrent = w.es_semana_actual;
@@ -746,30 +679,12 @@ export function CapacidadOperativaTab() {
   // semana) contra la capacidad semanal del equipo, expresado en semanas equivalentes.
   // Es la misma lente que usa Capacidad de Fábrica (horas_pendientes_total / capacidad),
   // solo que aquí se expresa en semanas y con un veredicto explícito en vez de un %.
-  const capacityHeadroom = useMemo(() => {
-    const capacidadSemanal = kpis.capacidad;
-    const backlogTotal = backlogSummary.horasTotal;
-    const semanasEquivalentes = capacidadSemanal > 0 ? Math.round((backlogTotal / capacidadSemanal) * 10) / 10 : 0;
-    // Misma lente que Capacidad de Fábrica: backlog completo (sin importar vencimiento)
-    // contra una semana de capacidad — por diseño puede superar 100%.
-    const ocupacionBacklogPct = capacidadSemanal > 0 ? Math.round((backlogTotal / capacidadSemanal) * 100) : 0;
-    let tone: Tone;
-    let verdict: string;
-    if (capacidadSemanal === 0) {
-      tone = 'warning';
-      verdict = 'Sin datos de capacidad en este alcance';
-    } else if (semanasEquivalentes <= 1) {
-      tone = 'good';
-      verdict = 'Hay espacio para más proyectos';
-    } else if (semanasEquivalentes <= 2) {
-      tone = 'warning';
-      verdict = 'Espacio limitado';
-    } else {
-      tone = 'critical';
-      verdict = 'Sin espacio — equipo saturado';
-    }
-    return { capacidadSemanal, backlogTotal, semanasEquivalentes, ocupacionBacklogPct, tone, verdict };
-  }, [kpis, backlogSummary]);
+  // La capacidad es SIEMPRE una semana del equipo (no depende del período elegido arriba):
+  // el backlog se mide en semanas equivalentes de capacidad.
+  const capacityHeadroom = useMemo(
+    () => backlogHeadroom(weeklyTeamCapacity(tableRows), backlogSummary.horasTotal),
+    [tableRows, backlogSummary],
+  );
 
   const backlogChartData = useMemo(() => backlogSummary.top
     .filter((r) => r.backlog.horas_total > 0)
@@ -834,7 +749,7 @@ export function CapacidadOperativaTab() {
 
   const sortedTasks = useMemo(() => {
     const tasks = userMini?.top_tasks ?? [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalISODate(new Date());
     return [...tasks].sort((a, b) => {
       const aOverdue = !!a.due_date && a.due_date < today;
       const bOverdue = !!b.due_date && b.due_date < today;
@@ -860,7 +775,7 @@ export function CapacidadOperativaTab() {
   }
 
   const heatmapWeeks = tableRows[0]?.weeks ?? scopedRows[0]?.weeks ?? [];
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalISODate(new Date());
 
   return (
     <div className="space-y-7">
@@ -868,7 +783,7 @@ export function CapacidadOperativaTab() {
         <div className="space-y-1 max-w-xl">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold tracking-tight">Capacidad Operativa</h2>
-            <Badge variant="outline" className="text-[10px] font-semibold">Experimental</Badge>
+            <Badge variant="outline" className="text-2xs font-semibold">Experimental</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             Visión de la carga real del equipo, disponibilidad, compromisos y capacidad futura.
@@ -884,28 +799,23 @@ export function CapacidadOperativaTab() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <StatTile label="Capacidad semanal" value={formatHours(capacityHeadroom.capacidadSemanal)} sub={PERIOD_OPTIONS.find((p) => p.value === periodKey)?.label} />
-        <StatTile label="Horas comprometidas" value={formatHours(capacityHeadroom.backlogTotal)} sub="Backlog total" />
+        <StatTile label="Capacidad del período" value={formatHours(kpis.capacidad)} sub={periodLabel} />
+        <StatTile label="Carga del período" value={formatHours(kpis.comprometidas)} sub="Horas asignadas en el período" />
         <StatTile
           label="Horas disponibles"
-          value={formatSignedHours(capacityHeadroom.capacidadSemanal - capacityHeadroom.backlogTotal)}
-          sub="Capacidad semanal − backlog total"
+          value={formatSignedHours(kpis.disponible)}
+          sub="Capacidad − carga del período"
         />
         <StatTile
           label="Ocupación"
-          value={`${capacityHeadroom.ocupacionBacklogPct}%`}
-          sub={
-            <>
-              Backlog total: {formatHours(capacityHeadroom.backlogTotal)}<br />
-              Capacidad semanal: {formatHours(capacityHeadroom.capacidadSemanal)}
-            </>
-          }
-          pill={{ tone: operativeBand(capacityHeadroom.ocupacionBacklogPct).tone, label: operativeBand(capacityHeadroom.ocupacionBacklogPct).label }}
+          value={`${kpis.ocupacion}%`}
+          sub={`${formatHours(kpis.comprometidas)} de ${formatHours(kpis.capacidad)}`}
+          pill={{ tone: operativeBand(kpis.ocupacion).tone, label: operativeBand(kpis.ocupacion).label }}
         />
         <StatTile
           label="Sobrecarga del equipo"
           value={kpis.sobrecargadas}
-          sub={`de ${tableRows.length} en el alcance`}
+          sub={`de ${tableRows.length} en el alcance · ${periodLabel?.toLowerCase()}`}
           pill={kpis.sobrecargadas > 0 ? { tone: 'critical', label: 'Revisar' } : { tone: 'good', label: 'OK' }}
         />
       </div>
@@ -917,25 +827,25 @@ export function CapacidadOperativaTab() {
               {capacityHeadroom.tone === 'good' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             </div>
             <p className="text-sm font-bold flex-1 min-w-0">{capacityHeadroom.verdict}</p>
-            <span className={cn('shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap', TONE_CLASSES[capacityHeadroom.tone])}>
+            <span className={cn('shrink-0 text-2xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap', TONE_CLASSES[capacityHeadroom.tone])}>
               {capacityHeadroom.tone === 'good' ? '¿Nuevo proyecto? Sí' : capacityHeadroom.tone === 'warning' ? '¿Nuevo proyecto? Con cuidado' : '¿Nuevo proyecto? No todavía'}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border/60">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Capacidad total</p>
+              <p className="text-2xs text-muted-foreground">Capacidad total</p>
               <p className="text-base font-bold tabular-nums">{formatHours(capacityHeadroom.capacidadSemanal)}</p>
-              <p className="text-[11px] text-muted-foreground">por semana, equipo en el alcance</p>
+              <p className="text-2xs text-muted-foreground">una semana del equipo en el alcance</p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Backlog total</p>
+              <p className="text-2xs text-muted-foreground">Backlog total</p>
               <p className="text-base font-bold tabular-nums">{formatHours(capacityHeadroom.backlogTotal)}</p>
-              <p className="text-[11px] text-muted-foreground">todo lo pendiente, sin importar vencimiento</p>
+              <p className="text-2xs text-muted-foreground">todo lo pendiente, sin importar el período</p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Equivalente</p>
+              <p className="text-2xs text-muted-foreground">Equivalente</p>
               <p className="text-base font-bold tabular-nums">{capacityHeadroom.semanasEquivalentes} sem</p>
-              <p className="text-[11px] text-muted-foreground">semanas de capacidad para vaciarlo</p>
+              <p className="text-2xs text-muted-foreground">semanas de capacidad para vaciarlo</p>
             </div>
           </div>
         </CardContent>
@@ -1020,7 +930,7 @@ export function CapacidadOperativaTab() {
                             cy={props.cy ?? 0}
                             r={tone === 'critical' ? 5 : 3.5}
                             fill={TONE_HEX[tone]}
-                            stroke="#fff"
+                            stroke={chartSurface.card}
                             strokeWidth={1}
                           />
                         );
@@ -1082,7 +992,7 @@ export function CapacidadOperativaTab() {
                         >
                           <div>{weekRangeLabel(w.week_start)}</div>
                           {w.es_semana_actual && (
-                            <div className="text-[9px] font-bold uppercase tracking-wide">Semana actual</div>
+                            <div className="text-2xs font-bold ">Semana actual</div>
                           )}
                         </th>
                       ))}
@@ -1172,7 +1082,7 @@ export function CapacidadOperativaTab() {
                         <StatusPill tone={band.tone}>{band.label}</StatusPill>
                       </div>
                       <FragmentationTag count={r.projects.length} />
-                      <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+                      <div className="grid grid-cols-3 gap-2 text-center text-2xs">
                         <div><p className="text-muted-foreground">Tareas</p><p className="font-semibold tabular-nums">{r.tareasActivas}</p></div>
                         <div><p className="text-muted-foreground">Semana</p><p className="font-semibold tabular-nums">{formatHours(snap.horas)}</p></div>
                         <div><p className="text-muted-foreground">Capacidad</p><p className="font-semibold tabular-nums">{formatHours(r.weekly_hours_capacity)}</p></div>
@@ -1326,19 +1236,19 @@ export function CapacidadOperativaTab() {
           <CardContent className="p-4 space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Horas pendientes totales</p>
+                <p className="text-2xs text-muted-foreground">Horas pendientes totales</p>
                 <p className="text-lg font-bold tabular-nums">{formatHours(backlogSummary.horasTotal)}</p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Horas vencidas</p>
+                <p className="text-2xs text-muted-foreground">Horas vencidas</p>
                 <p className="text-lg font-bold tabular-nums text-destructive">{formatHours(backlogSummary.horasVencidas)}</p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Horas sin fecha</p>
+                <p className="text-2xs text-muted-foreground">Horas sin fecha</p>
                 <p className="text-lg font-bold tabular-nums">{formatHours(backlogSummary.horasSinFecha)}</p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Liberación más lejana</p>
+                <p className="text-2xs text-muted-foreground">Liberación más lejana</p>
                 <p className="text-lg font-bold tabular-nums">
                   {backlogSummary.maxFecha
                     ? new Date(`${backlogSummary.maxFecha}T12:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
@@ -1349,8 +1259,8 @@ export function CapacidadOperativaTab() {
 
             {backlogChartData.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">Backlog por colaborador</h4>
-                <p className="text-[11px] text-muted-foreground mb-2">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-0.5">Backlog por colaborador</h4>
+                <p className="text-2xs text-muted-foreground mb-2">
                   Trabajo pendiente total y semanas estimadas para vaciar el backlog.
                 </p>
                 <ChartContainer config={{ horas: { label: 'Backlog', color: CHART_COLORS.teal } }} className="h-[280px] w-full">
@@ -1408,7 +1318,7 @@ export function CapacidadOperativaTab() {
       </section>
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DialogContent className="sm:max-w-[520px] sm:ml-auto sm:mr-4 w-full h-[90vh] flex flex-col p-0 border-l shadow-xl">
+        <DialogContent className="sm:max-w-[520px] sm:ml-auto sm:mr-4 w-full h-[90vh] flex flex-col p-0 border-l shadow-floating">
           <DialogHeader className="px-4 pt-4 pb-2 border-b">
             <div className="flex items-center gap-2.5">
               <Avatar className="h-9 w-9 shrink-0">
@@ -1427,29 +1337,29 @@ export function CapacidadOperativaTab() {
               <>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Capacidad</p>
+                    <p className="text-2xs text-muted-foreground">Capacidad</p>
                     <p className="text-sm font-bold tabular-nums">{formatHours(selectedRow.weekly_hours_capacity)}</p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Comprometidas</p>
+                    <p className="text-2xs text-muted-foreground">Comprometidas</p>
                     <p className="text-sm font-bold tabular-nums">{formatHours(selectedSnapshot.horas)}</p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Disponibles</p>
+                    <p className="text-2xs text-muted-foreground">Disponibles</p>
                     <p className={cn('text-sm font-bold tabular-nums', selectedSnapshot.holgura < 0 && 'text-destructive')}>
                       {formatSignedHours(selectedSnapshot.holgura)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Ocupación</p>
+                    <p className="text-2xs text-muted-foreground">Ocupación</p>
                     <p className="text-sm font-bold tabular-nums">{selectedSnapshot.pct}%</p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Backlog</p>
+                    <p className="text-2xs text-muted-foreground">Backlog</p>
                     <p className="text-sm font-bold tabular-nums">{Math.round((selectedRow.backlog.dias_para_vaciar / 5) * 10) / 10} sem</p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Vencidas</p>
+                    <p className="text-2xs text-muted-foreground">Vencidas</p>
                     <p className="text-sm font-bold tabular-nums text-destructive">
                       {loadingUserMini ? '…' : userMini?.summary.overdue_tasks ?? '—'}
                     </p>
@@ -1457,7 +1367,7 @@ export function CapacidadOperativaTab() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Proyectos</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Proyectos</h4>
                   <div className="space-y-2.5">
                     {selectedRow.projects.map((p) => (
                       <div key={p.project_id} className="space-y-1">
@@ -1475,7 +1385,7 @@ export function CapacidadOperativaTab() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Tareas activas</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Tareas activas</h4>
                   {loadingUserMini ? (
                     <div className="h-[120px] rounded-xl bg-muted/40 animate-pulse" />
                   ) : (
@@ -1503,12 +1413,11 @@ export function CapacidadOperativaTab() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Capacidad futura</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Capacidad futura</h4>
                   <div className="space-y-2">
-                    {[{ label: 'Esta semana', pct: selectedRow.current.utilizacion_pct }, ...selectedRow.weeks.map((w, i) => ({
-                      label: i === 0 ? 'Próxima semana' : `Semana +${i + 1}`,
-                      pct: w.utilizacion_pct,
-                    }))].map((w) => {
+                    {[{ label: 'Esta semana', pct: selectedRow.current.utilizacion_pct }, ...selectedRow.weeks.flatMap((w, i) => (
+                      w.es_semana_actual ? [] : [{ label: forecastWeekLabel(w, i), pct: w.utilizacion_pct }]
+                    ))].map((w) => {
                       const band = operativeBand(w.pct);
                       return (
                         <div key={w.label} className="space-y-1">

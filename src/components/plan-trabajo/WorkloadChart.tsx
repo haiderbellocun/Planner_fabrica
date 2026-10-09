@@ -1,3 +1,4 @@
+import { chartSurface } from '@/components/charts/chartTheme';
 import { ResponsiveBar } from '@nivo/bar';
 import type { WorkloadByCollaborator } from '@/types/workPlan.types';
 import { ChartContainer } from './charts/ChartContainer';
@@ -43,7 +44,7 @@ export function WorkloadChart({ data, loading, onSelectCollaborator }: WorkloadC
           enableLabel
           label={(d) => `${d.value}`}
           labelSkipWidth={16}
-          labelTextColor="#ffffff"
+          labelTextColor={chartSurface.card}
           onClick={(d) => {
             const row = rowByName.get(String(d.indexValue));
             if (row) onSelectCollaborator?.(row.collaborator_id);
@@ -52,7 +53,7 @@ export function WorkloadChart({ data, loading, onSelectCollaborator }: WorkloadC
             const row = rowByName.get(String(indexValue));
             if (!row) return null;
             return (
-              <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs space-y-1 min-w-[180px]">
+              <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs space-y-1 min-w-[180px]">
                 <p className="font-semibold">{row.full_name}</p>
                 {row.cargo && <p className="text-muted-foreground">{row.cargo}</p>}
                 <div className="pt-1 space-y-0.5">

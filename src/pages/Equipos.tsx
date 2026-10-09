@@ -97,13 +97,13 @@ export default function Equipos() {
                       {equipo.members.slice(0, 6).map((m) => (
                         <Avatar key={m.id} className="h-7 w-7 ring-2 ring-white" title={m.full_name ?? ''}>
                           <AvatarImage src={m.avatar_url || undefined} />
-                          <AvatarFallback className="text-[10px] font-semibold bg-primary/20 text-primary">
+                          <AvatarFallback className="text-2xs font-semibold bg-primary/20 text-primary">
                             {m.full_name?.charAt(0) ?? '?'}
                           </AvatarFallback>
                         </Avatar>
                       ))}
                       {equipo.members.length > 6 && (
-                        <div className="h-7 w-7 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                        <div className="h-7 w-7 rounded-full ring-2 ring-white bg-muted flex items-center justify-center text-2xs font-semibold text-muted-foreground">
                           +{equipo.members.length - 6}
                         </div>
                       )}
@@ -126,7 +126,7 @@ export default function Equipos() {
                   <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border">
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={p.avatar_url || undefined} />
-                      <AvatarFallback className="text-[10px] font-semibold bg-muted text-muted-foreground">
+                      <AvatarFallback className="text-2xs font-semibold bg-muted text-muted-foreground">
                         {p.full_name?.charAt(0) ?? '?'}
                       </AvatarFallback>
                     </Avatar>

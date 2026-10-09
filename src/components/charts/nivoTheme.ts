@@ -2,7 +2,7 @@
 // tokens de chartTheme.ts (teal de marca) para que Nivo y Recharts se vean como
 // un solo sistema visual, no dos librerías distintas pegadas una junto a otra.
 import type { PartialTheme } from '@nivo/theming';
-import { chartColors, gridColor, axisTick } from './chartTheme';
+import { chartColors, chartInk, chartShadow, chartSurface, gridColor, axisTick } from './chartTheme';
 
 export const nivoTheme: PartialTheme = {
   background: 'transparent',
@@ -27,11 +27,11 @@ export const nivoTheme: PartialTheme = {
   },
   tooltip: {
     container: {
-      background: 'white',
-      color: '#1f2937',
+      background: chartSurface.card,
+      color: chartInk.strong,
       fontSize: 12,
       borderRadius: 10,
-      boxShadow: '0 4px 14px rgba(15, 23, 42, 0.12)',
+      boxShadow: chartShadow,
       border: `1px solid ${gridColor}`,
       padding: '8px 12px',
     },
@@ -40,7 +40,7 @@ export const nivoTheme: PartialTheme = {
     line: { stroke: chartColors.tealDeep, strokeWidth: 1, strokeOpacity: 0.4 },
   },
   labels: {
-    text: { fontSize: 11, fill: '#1f2937' },
+    text: { fontSize: 11, fill: chartInk.strong },
   },
   dots: {
     text: { fontSize: 10, fill: axisTick.fill },

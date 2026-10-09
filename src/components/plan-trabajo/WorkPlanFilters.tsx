@@ -1,3 +1,4 @@
+import { resolvePeriodRangeFor } from '@/lib/dates';
 import type { PeriodKey } from '@/types/workPlan.types';
 import { useWorkPlanFilterOptions } from '@/hooks/useWorkPlan';
 import { Input } from '@/components/ui/input';
@@ -119,29 +120,5 @@ export function WorkPlanFilters({
 
 /** Resuelve el periodo elegido a un rango date_from/date_to concreto (o ninguno). */
 export function resolvePeriodRange(state: WorkPlanFilterState): { date_from?: string; date_to?: string } {
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const today = new Date();
-
-  if (state.period === 'hoy') return { date_from: iso(today), date_to: iso(today) };
-
-  if (state.period === 'semana') {
-    const day = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((day + 6) % 7));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    return { date_from: iso(monday), date_to: iso(sunday) };
-  }
-
-  if (state.period === 'mes') {
-    const first = new Date(today.getFullYear(), today.getMonth(), 1);
-    const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return { date_from: iso(first), date_to: iso(last) };
-  }
-
-  if (state.period === 'personalizado' && state.customFrom && state.customTo) {
-    return { date_from: state.customFrom, date_to: state.customTo };
-  }
-
-  return {};
+  return resolvePeriodRangeFor(state.period, { from: state.customFrom, to: state.customTo });
 }

@@ -62,23 +62,23 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
   return (
-    <div className={cn('w-full rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden', className)}>
+    <div className={cn('w-full rounded-2xl bg-card shadow-card border border-border overflow-hidden', className)}>
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <button
           onClick={prevMonth}
-          className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <h2 className="text-3xl font-black tracking-widest text-slate-800 select-none">
+        <h2 className="text-3xl font-black text-foreground select-none">
           {MONTH_NAMES[month]} {year}
         </h2>
 
         <button
           onClick={nextMonth}
-          className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -87,7 +87,7 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
       {/* ── Day-of-week row ── */}
       <div className="grid grid-cols-7 px-2 pb-1">
         {DOW.map((d) => (
-          <div key={d} className="py-2 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          <div key={d} className="py-2 text-center text-xs font-semibold text-muted-foreground ">
             {d}
           </div>
         ))}
@@ -114,7 +114,7 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
                       'h-8 w-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors',
                       isToday
                         ? 'ring-2 ring-blue-400 text-blue-500 bg-blue-50'
-                        : 'text-slate-700 hover:bg-slate-100 cursor-default',
+                        : 'text-foreground hover:bg-muted cursor-default',
                     )}
                   >
                     {day.getDate()}
@@ -129,7 +129,7 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
                           onClick={ev.onClick}
                           title={ev.label}
                           className={cn(
-                            'w-full max-w-[90%] text-center text-[10px] font-medium px-1 py-0 rounded-md truncate text-white leading-tight transition-opacity hover:opacity-80',
+                            'w-full max-w-[90%] text-center text-2xs font-medium px-1 py-0 rounded-md truncate text-white leading-tight transition-opacity hover:opacity-80',
                             ev.color ?? 'bg-teal-500',
                             !ev.onClick && 'cursor-default',
                           )}
@@ -138,7 +138,7 @@ export function MiniCalendar({ events, className }: MiniCalendarProps) {
                         </button>
                       ))}
                       {dayEvents.length > 1 && (
-                        <span className="text-[9px] text-slate-400">+{dayEvents.length - 1}</span>
+                        <span className="text-2xs text-muted-foreground">+{dayEvents.length - 1}</span>
                       )}
                     </div>
                   )}

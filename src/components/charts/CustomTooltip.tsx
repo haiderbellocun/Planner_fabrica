@@ -14,7 +14,7 @@ export function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-card border border-black/5 shadow-lg rounded-xl p-3 min-w-[140px]">
+    <div className="bg-card border border-black/5 shadow-floating rounded-xl p-3 min-w-[140px]">
       {label != null && (
         <p className="figure text-sm font-medium text-foreground mb-2">{String(label)}</p>
       )}

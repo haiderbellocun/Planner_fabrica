@@ -29,12 +29,12 @@ export function CollaboratorStatusChart({ data, loading }: { data: StatusByColla
       empty={!loading && chartData.length === 0}
       minHeight={Math.max(300, chartData.length * 34)}
       actions={
-        <div className="flex gap-1 text-[11px]">
+        <div className="flex gap-1 text-2xs">
           {(['cantidad', 'porcentaje'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`px-2 py-1 rounded-full border capitalize transition-colors ${mode === m ? 'bg-primary text-white border-primary' : 'text-muted-foreground border-border'}`}
+              className={`px-2 py-1 rounded-full border capitalize transition-colors ${mode === m ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
             >
               {m}
             </button>
@@ -68,7 +68,7 @@ export function CollaboratorStatusChart({ data, loading }: { data: StatusByColla
             symbolShape: 'circle',
           }]}
           tooltip={({ id, value, indexValue }) => (
-            <div className="rounded-lg bg-white border shadow-md px-3 py-2 text-xs min-w-[150px]">
+            <div className="rounded-lg bg-white border shadow-floating px-3 py-2 text-xs min-w-[150px]">
               <p className="font-semibold mb-1">{String(indexValue)}</p>
               <div className="flex justify-between gap-4"><span>{String(id)}</span><b>{value}{mode === 'porcentaje' ? '%' : ''}</b></div>
             </div>

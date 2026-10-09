@@ -40,7 +40,7 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
       </div>
 
       <div className="rounded-xl border bg-card overflow-auto max-h-[520px]">
-        <table className="w-full text-[11px]">
+        <table className="w-full text-2xs">
           <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
             <tr>
               {COLUMNS.map((c) => (
@@ -65,7 +65,7 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
                 <td className="px-3 py-2 text-right tabular-nums">{r.en_proceso}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.en_revision}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.completadas}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.vencidas > 0 ? <span className="text-red-600 font-semibold">{r.vencidas}</span> : 0}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{r.vencidas > 0 ? <span className="text-destructive-strong font-semibold">{r.vencidas}</span> : 0}</td>
                 <td className="px-3 py-2 text-right tabular-nums font-semibold">{r.cumplimiento_pct}%</td>
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatRelativeDate(r.last_activity)}</td>
               </tr>

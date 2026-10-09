@@ -16,17 +16,17 @@ import { getBusinessTodayStr, getDueBucket, isWithinDays } from '@/lib/dueDate';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
 const priorityConfig = {
-  low:    { label: 'Baja',    className: BADGE_TONES.neutral,   cardBg: 'bg-slate-50/70 border-slate-200' },
-  medium: { label: 'Media',   className: BADGE_TONES.warning,   cardBg: 'bg-teal-50/70 border-teal-200' },
-  high:   { label: 'Alta',    className: BADGE_TONES.escalated, cardBg: 'bg-orange-50/70 border-orange-200' },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger,    cardBg: 'bg-red-50/70 border-red-200' },
+  low:    { label: 'Baja',    className: BADGE_TONES.neutral,   cardBg: 'bg-muted/50 border-border' },
+  medium: { label: 'Media',   className: BADGE_TONES.warning,   cardBg: 'bg-accent/70 border-primary/40' },
+  high:   { label: 'Alta',    className: BADGE_TONES.escalated, cardBg: 'bg-coral/10 border-coral/30' },
+  urgent: { label: 'Urgente', className: BADGE_TONES.danger,    cardBg: 'bg-destructive/10 border-destructive/30' },
 };
 
 const TASK_COLORS: Record<string, string> = {
   low:    'bg-gray-400',
-  medium: 'bg-amber-400',
-  high:   'bg-orange-500',
-  urgent: 'bg-red-500',
+  medium: 'bg-warning',
+  high:   'bg-coral',
+  urgent: 'bg-destructive',
 };
 
 export default function MyTasksPage() {
@@ -78,8 +78,8 @@ export default function MyTasksPage() {
       <div
         onClick={() => handleTaskClick(task)}
         className={cn(
-          'p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:brightness-95',
-          isOverdue ? 'border-red-300 bg-red-50/80' : isDueToday ? 'border-amber-300 bg-amber-50/80' : priority.cardBg,
+          'p-4 rounded-xl border cursor-pointer transition-ui hover:shadow-floating hover:brightness-95',
+          isOverdue ? 'border-destructive/30 bg-destructive/10' : isDueToday ? 'border-warning/30 bg-warning/10' : priority.cardBg,
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -113,7 +113,7 @@ export default function MyTasksPage() {
             {task.due_date && (
               <span className={cn(
                 'text-xs',
-                isOverdue ? 'text-red-600 font-medium' : isDueToday ? 'text-amber-700 font-medium' : 'text-muted-foreground',
+                isOverdue ? 'text-destructive-strong font-medium' : isDueToday ? 'text-warning-strong font-medium' : 'text-muted-foreground',
               )}>
                 {isOverdue && <AlertTriangle className="inline h-3 w-3 mr-1" />}
                 {isDueToday ? 'Vence hoy' : parsedDue ? format(parsedDue, 'dd MMM yyyy', { locale: es }) : null}
@@ -136,28 +136,28 @@ export default function MyTasksPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 text-center">
-            <ListTodo className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+            <ListTodo className="h-5 w-5 mx-auto mb-1 text-info-strong" />
             <p className="text-2xl font-bold">{tasks.length}</p>
             <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <Clock className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+            <Clock className="h-5 w-5 mx-auto mb-1 text-warning-strong" />
             <p className="text-2xl font-bold">{pendingTasks.length}</p>
             <p className="text-xs text-muted-foreground">Pendientes</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <AlertTriangle className="h-5 w-5 mx-auto mb-1 text-red-500" />
+            <AlertTriangle className="h-5 w-5 mx-auto mb-1 text-destructive-strong" />
             <p className="text-2xl font-bold">{overdueTasks.length}</p>
             <p className="text-xs text-muted-foreground">Vencidas</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <CheckCircle className="h-5 w-5 mx-auto mb-1 text-green-500" />
+            <CheckCircle className="h-5 w-5 mx-auto mb-1 text-success-strong" />
             <p className="text-2xl font-bold">{completedTasks.length}</p>
             <p className="text-xs text-muted-foreground">Completadas</p>
           </CardContent>
@@ -179,7 +179,7 @@ export default function MyTasksPage() {
         <TabsContent value="pending" className="mt-4">
           {pendingTasks.length === 0 ? (
             <Card><CardContent className="p-8 text-center">
-              <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+              <CheckCircle className="h-12 w-12 text-success-strong mx-auto mb-3" />
               <p className="text-muted-foreground">No tienes tareas pendientes</p>
             </CardContent></Card>
           ) : (
@@ -192,7 +192,7 @@ export default function MyTasksPage() {
         <TabsContent value="overdue" className="mt-4">
           {overdueTasks.length === 0 ? (
             <Card><CardContent className="p-8 text-center">
-              <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
+              <CheckCircle className="h-12 w-12 text-success-strong mx-auto mb-3" />
               <p className="text-muted-foreground">No tienes tareas vencidas</p>
             </CardContent></Card>
           ) : (
@@ -242,11 +242,11 @@ export default function MyTasksPage() {
               <div className="flex gap-3 text-xs flex-wrap">
                 {[
                   { label: 'Baja', color: 'bg-gray-400' },
-                  { label: 'Media', color: 'bg-amber-400' },
-                  { label: 'Alta', color: 'bg-orange-500' },
-                  { label: 'Urgente', color: 'bg-red-500' },
+                  { label: 'Media', color: 'bg-warning' },
+                  { label: 'Alta', color: 'bg-coral' },
+                  { label: 'Urgente', color: 'bg-destructive' },
                 ].map((l) => (
-                  <span key={l.label} className="flex items-center gap-1.5 text-slate-500">
+                  <span key={l.label} className="flex items-center gap-1.5 text-muted-foreground">
                     <span className={cn('h-2.5 w-2.5 rounded-full', l.color)} />
                     {l.label}
                   </span>

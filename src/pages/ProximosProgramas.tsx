@@ -105,15 +105,15 @@ const MODALIDAD_LABELS: Record<Modalidad, string> = {
 };
 
 const PRIORIDAD_CONFIG: Record<Prioridad, { label: string; className: string }> = {
-  alta: { label: 'Alta', className: 'bg-red-100 text-red-700 border-red-200' },
-  media: { label: 'Media', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  baja: { label: 'Baja', className: 'bg-green-100 text-green-700 border-green-200' },
+  alta: { label: 'Alta', className: 'bg-destructive/15 text-destructive-strong border-destructive/30' },
+  media: { label: 'Media', className: 'bg-warning/15 text-warning-strong border-warning/30' },
+  baja: { label: 'Baja', className: 'bg-success/15 text-success-strong border-success/30' },
 };
 
 const ESTADO_CONFIG: Record<EstadoPrograma, { label: string; className: string }> = {
-  pendiente: { label: 'Pendiente', className: 'bg-slate-100 text-slate-600 border-slate-200' },
-  en_proceso: { label: 'En Proceso', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-  completado: { label: 'Completado', className: 'bg-teal-100 text-teal-700 border-teal-200' },
+  pendiente: { label: 'Pendiente', className: 'bg-muted text-muted-foreground border-border' },
+  en_proceso: { label: 'En Proceso', className: 'bg-info/15 text-info-strong border-info/30' },
+  completado: { label: 'Completado', className: 'bg-secondary text-primary-deep border-primary/40' },
 };
 
 // ─── Blank form ────────────────────────────────────────────────────────────────
@@ -170,9 +170,9 @@ function sortPrograms(
 function dateUrgencyClass(dateStr: string, estado: EstadoPrograma): string {
   if (estado === 'completado') return '';
   const date = parseDate(dateStr);
-  if (isPast(date)) return 'text-red-600 font-semibold';
+  if (isPast(date)) return 'text-destructive-strong font-semibold';
   if (isWithinInterval(date, { start: new Date(), end: addDays(new Date(), 14) }))
-    return 'text-amber-600 font-medium';
+    return 'text-warning-strong font-medium';
   return '';
 }
 
@@ -384,15 +384,15 @@ export default function ProximosProgramasPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total', value: total, color: 'text-foreground' },
-          { label: 'Pendientes', value: pendientes, color: 'text-slate-600' },
-          { label: 'Próximos 14 días', value: proximos14, color: 'text-amber-600' },
-          { label: 'Vencidos', value: vencidos, color: 'text-red-600' },
+          { label: 'Pendientes', value: pendientes, color: 'text-muted-foreground' },
+          { label: 'Próximos 14 días', value: proximos14, color: 'text-warning-strong' },
+          { label: 'Vencidos', value: vencidos, color: 'text-destructive-strong' },
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-xl border bg-card p-4 shadow-sm"
+            className="rounded-xl border bg-card p-4 shadow-card"
           >
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</p>
+            <p className="text-xs text-muted-foreground ">{s.label}</p>
             <p className={cn('text-3xl font-semibold mt-1', s.color)}>{s.value}</p>
           </div>
         ))}
@@ -463,9 +463,9 @@ export default function ProximosProgramasPage() {
       {/* Calendar view */}
       {view === 'calendar' && (() => {
         const PRIORIDAD_COLORS: Record<string, string> = {
-          alta:  'bg-red-500',
-          media: 'bg-amber-400',
-          baja:  'bg-green-500',
+          alta:  'bg-destructive',
+          media: 'bg-warning',
+          baja:  'bg-success',
         };
         const calEvents: CalendarEvent[] = filtered.map((p) => ({
           id:    p.id,
@@ -476,11 +476,11 @@ export default function ProximosProgramasPage() {
         }));
         return (
           <div className="space-y-3 mb-4">
-            <div className="flex gap-4 flex-wrap text-xs text-slate-500">
+            <div className="flex gap-4 flex-wrap text-xs text-muted-foreground">
               {[
-                { label: 'Alta prioridad',  color: 'bg-red-500'   },
-                { label: 'Media prioridad', color: 'bg-amber-400' },
-                { label: 'Baja prioridad',  color: 'bg-green-500' },
+                { label: 'Alta prioridad',  color: 'bg-destructive'   },
+                { label: 'Media prioridad', color: 'bg-warning' },
+                { label: 'Baja prioridad',  color: 'bg-success' },
               ].map((l) => (
                 <span key={l.label} className="flex items-center gap-1.5">
                   <span className={cn('h-2.5 w-2.5 rounded-full', l.color)} />
@@ -494,7 +494,7 @@ export default function ProximosProgramasPage() {
       })()}
 
       {/* Table */}
-      {view === 'table' && <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
+      {view === 'table' && <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -549,8 +549,8 @@ export default function ProximosProgramasPage() {
                       className={cn(
                         'text-xs',
                         p.clasificacion_programa === 'nuevo'
-                          ? 'border-teal-300 text-teal-700 bg-teal-50'
-                          : 'border-orange-300 text-orange-700 bg-orange-50',
+                          ? 'border-primary/40 text-primary-deep bg-accent'
+                          : 'border-coral/30 text-warning-strong bg-coral/10',
                       )}
                     >
                       {CLASIFICACION_LABELS[p.clasificacion_programa]}
@@ -598,7 +598,7 @@ export default function ProximosProgramasPage() {
                   >
                     {format(parseDate(p.fecha_envio_curriculo), 'dd/MM/yyyy', { locale: es })}
                   </TableCell>
-                  <TableCell className="text-sm text-slate-600">
+                  <TableCell className="text-sm text-muted-foreground">
                     {p.dependencia ?? <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-center">

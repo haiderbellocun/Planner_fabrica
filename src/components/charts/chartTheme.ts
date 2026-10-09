@@ -18,10 +18,39 @@ export const chartColors = {
   muted: '#DDF6F7',
 } as const;
 
+// Tinta para texto/etiquetas dentro de graficos: variantes oscuras de cada serie (>=4.5:1 sobre blanco).
+export const chartInk = {
+  strong: '#1F2A2A',
+  muted: '#5F7371',
+  green: '#067647',
+  teal: '#067A76',
+  amber: '#92600A',
+  coral: '#C2412D',
+} as const;
+
+// Rellenos suaves, pistas y celdas vacias.
+export const chartSoft = {
+  green: '#E7F6EE',
+  coral: '#FFF1ED',
+  coralBorder: '#FFD2C8',
+  neutral: '#D5E3E1',
+  track: '#E7EEED',
+  empty: '#F4FAF9',
+  teal: '#BFEFF0',
+  page: '#EAF6F8',
+  border: '#E2ECEB',
+  yellowLight: '#F0BE5C',
+} as const;
+
+export const chartSurface = { card: '#FFFFFF' } as const;
+
+// Sombra de tooltips de graficos (equivale al nivel "floating" del sistema de sombras).
+export const chartShadow = '0 8px 24px rgba(10, 20, 20, 0.10)';
+
 export const gridColor = '#E1EFEE';
 
 export const axisTick = {
-  fill: '#6B7F7C',
+  fill: chartInk.muted,
   fontSize: 12,
 } as const;
 

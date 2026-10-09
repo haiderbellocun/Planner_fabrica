@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 export const listEquipos = async (req: AuthRequest, res: Response) => {
   try {
@@ -64,29 +64,24 @@ export const setEquipoMembers = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Equipo not found' });
     }
 
-    await query('BEGIN');
-    try {
+    await withTransaction(async (client) => {
       // Una persona solo puede pertenecer a un equipo: se libera de este equipo
       // y de cualquier otro al que ya perteneciera antes de reasignarla.
-      await query(
+      await client.query(
         'DELETE FROM public.equipo_members WHERE equipo_id = $1 OR profile_id = ANY($2::uuid[])',
         [id, profileIds]
       );
 
       for (const profileId of profileIds) {
         if (!profileId) continue;
-        await query(
+        await client.query(
           `INSERT INTO public.equipo_members (equipo_id, profile_id) VALUES ($1, $2)
            ON CONFLICT (profile_id) DO NOTHING`,
           [id, profileId]
         );
       }
 
-      await query('COMMIT');
-    } catch (error) {
-      await query('ROLLBACK');
-      throw error;
-    }
+    });
 
     const result = await query(
       `SELECT em.id, em.profile_id, p.full_name, p.avatar_url

@@ -1,3 +1,4 @@
+import { isAccountDisabledResponse, markAccountDisabledNotice } from '@/lib/session';
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { apiBaseUrl } from '@/lib/api';
 
@@ -70,6 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authenticatedFetch(`${apiBaseUrl}/api/auth/me`);
 
       if (!response.ok) {
+        // Cuenta deshabilitada: se avisa en el login. Otro 401 (token vencido/inválido) no avisa.
+        const body = await response.clone().json().catch(() => null);
+        if (isAccountDisabledResponse(response.status, body)) markAccountDisabledNotice();
         // Token invalid or expired
         localStorage.removeItem('taskflow_token');
         setUser(null);

@@ -31,15 +31,15 @@ export function WorkPlanAlerts({ data, loading }: { data: WorkPlanAlertsType | u
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {alerts.map((a) => (
-        <div key={a.key} className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
-          <a.icon className="h-4 w-4 text-red-600 shrink-0" />
-          <span className="text-xs text-red-900 font-medium">{a.label(a.count)}</span>
+        <div key={a.key} className="flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+          <a.icon className="h-4 w-4 text-destructive-strong shrink-0" />
+          <span className="text-xs text-destructive-strong font-medium">{a.label(a.count)}</span>
         </div>
       ))}
       {data.high_concentration.length > 0 && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 sm:col-span-2">
-          <Flame className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <span className="text-xs text-amber-900 font-medium">
+        <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 sm:col-span-2">
+          <Flame className="h-4 w-4 text-warning-strong shrink-0 mt-0.5" />
+          <span className="text-xs text-warning-strong font-medium">
             Alta concentración de tareas en: {data.high_concentration.map((c) => `${c.full_name} (${c.active_tasks})`).join(', ')}
           </span>
         </div>

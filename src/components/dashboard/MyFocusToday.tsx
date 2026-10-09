@@ -44,6 +44,32 @@ type PersonLoad = {
   tasks: LeadersFocusTask[];
 };
 
+// Selector "Mi foco / Foco del equipo". Recibe el valor como FocusTab completo: dentro de los
+// retornos anticipados del componente TypeScript estrecha `focusTab` a un solo caso.
+function FocusTabSwitcher({ value, onChange }: { value: FocusTab; onChange: (tab: FocusTab) => void }) {
+  const tabs: { id: FocusTab; label: string }[] = [
+    { id: 'mine', label: 'Mi foco' },
+    { id: 'team', label: 'Foco del equipo' },
+  ];
+  return (
+    <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onChange(t.id)}
+          className={cn(
+            'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+            value === t.id ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function MyFocusToday() {
   const { isAdmin, isProjectLeader } = useAuth();
 
@@ -115,11 +141,15 @@ export function MyFocusToday() {
     return typeof name === 'string' && /revis/i.test(name);
   });
 
+  // "Tareas prioritarias" son SIEMPRE las del usuario (MyTask): vencidas, luego las que vencen
+  // hoy y luego el resto por fecha. Las cifras de arriba pueden venir del equipo (líderes).
+  const myOverdue = pending.filter((t) => getDueBucket(t.due_date, false, todayStr) === 'overdue');
+  const myDueToday = pending.filter((t) => getDueBucket(t.due_date, false, todayStr) === 'due_today');
   const priorityList: MyTask[] = [
-    ...vencidas,
-    ...vencenHoy.filter((t) => !vencidas.some((v) => v.id === t.id)),
+    ...myOverdue,
+    ...myDueToday,
     ...pending
-      .filter((t) => !vencidas.some((v) => v.id === t.id) && !vencenHoy.some((v) => v.id === t.id))
+      .filter((t) => !myOverdue.some((v) => v.id === t.id) && !myDueToday.some((v) => v.id === t.id))
       .sort((a, b) => {
         const da = parseDue(a.due_date)?.getTime() ?? Infinity;
         const db = parseDue(b.due_date)?.getTime() ?? Infinity;
@@ -133,30 +163,7 @@ export function MyFocusToday() {
     return (
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
-        {showTeamTab && (
-          <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
-            <button
-              type="button"
-              onClick={() => setFocusTab('mine')}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Mi foco
-            </button>
-            <button
-              type="button"
-              onClick={() => setFocusTab('team')}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Foco del equipo
-            </button>
-          </div>
-        )}
+        {showTeamTab && <FocusTabSwitcher value={focusTab} onChange={setFocusTab} />}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-[88px] rounded-2xl" />
@@ -170,30 +177,7 @@ export function MyFocusToday() {
     return (
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
-        {showTeamTab && (
-          <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
-            <button
-              type="button"
-              onClick={() => setFocusTab('mine')}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Mi foco
-            </button>
-            <button
-              type="button"
-              onClick={() => setFocusTab('team')}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Foco del equipo
-            </button>
-          </div>
-        )}
+        {showTeamTab && <FocusTabSwitcher value={focusTab} onChange={setFocusTab} />}
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error al cargar tu foco</AlertTitle>
@@ -269,37 +253,16 @@ export function MyFocusToday() {
 
     const getRiskBadge = (person: PersonLoad) => {
       if (person.overdue > 0)
-        return { label: 'RIESGO ALTO', className: 'bg-red-50 text-red-700 border-red-200' };
-      if (person.dueToday > 0) return { label: 'HOY', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-      if (person.pending >= 5) return { label: 'CARGA MEDIA', className: 'bg-slate-50 text-slate-700 border-slate-200' };
-      return { label: 'OK', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: 'Riesgo alto', className: 'bg-destructive/10 text-destructive-strong border-destructive/30' };
+      if (person.dueToday > 0) return { label: 'Hoy', className: 'bg-warning/10 text-warning-strong border-warning/30' };
+      if (person.pending >= 5) return { label: 'Carga media', className: 'bg-muted/50 text-foreground border-border' };
+      return { label: 'OK', className: 'bg-success/10 text-success-strong border-success/30' };
     };
 
     return (
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
-        <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
-          <button
-            type="button"
-            onClick={() => setFocusTab('mine')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Mi foco
-          </button>
-          <button
-            type="button"
-            onClick={() => setFocusTab('team')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Foco del equipo
-          </button>
-        </div>
+        <FocusTabSwitcher value={focusTab} onChange={setFocusTab} />
         {teamLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -322,10 +285,10 @@ export function MyFocusToday() {
             </div>
 
             {showTeamTab && teamCapacityMembers.length > 0 && (
-              <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <Card className="rounded-2xl border border-black/5 shadow-card">
                 <CardContent className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
-                    CARGA DEL EQUIPO POR HORAS
+                  <p className="text-xs text-muted-foreground font-medium mb-3">
+                    Carga del equipo por horas
                   </p>
                   <ul className="space-y-2">
                     {[...teamCapacityMembers]
@@ -342,11 +305,11 @@ export function MyFocusToday() {
                               {m.pending_horas}h / {m.weekly_hours_capacity}h
                             </span>
                             <Badge className={cn(
-                              'text-[10px] font-medium border-0',
-                              m.risk_color === 'red' ? 'bg-red-100 text-red-700'
-                                : m.risk_color === 'amber' ? 'bg-amber-100 text-amber-700'
-                                : m.risk_color === 'sky' ? 'bg-blue-100 text-blue-700'
-                                : 'bg-emerald-100 text-emerald-700',
+                              'text-2xs font-medium border-0',
+                              m.risk_color === 'red' ? 'bg-destructive/15 text-destructive-strong'
+                                : m.risk_color === 'amber' ? 'bg-warning/15 text-warning-strong'
+                                : m.risk_color === 'sky' ? 'bg-info/15 text-info-strong'
+                                : 'bg-success/15 text-success-strong',
                             )}>
                               {m.risk_label}
                             </Badge>
@@ -362,9 +325,9 @@ export function MyFocusToday() {
             )}
 
             {showTeamTab && (
-              <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <Card className="rounded-2xl border border-black/5 shadow-card">
                 <CardContent className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">
+                  <p className="text-xs text-muted-foreground font-medium mb-3">
                     CARGA POR PERSONA (por tareas)
                   </p>
                   {ranking.length === 0 ? (
@@ -392,7 +355,7 @@ export function MyFocusToday() {
                                     <div className="min-w-0">
                                       <p className="font-semibold text-sm text-foreground truncate">{person.name}</p>
                                       {person.cargo && (
-                                        <p className="text-[12px] text-muted-foreground truncate">{person.cargo}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{person.cargo}</p>
                                       )}
                                       {person.projects.length > 0 && (
                                         <p className="text-xs text-muted-foreground/70 truncate">
@@ -407,31 +370,31 @@ export function MyFocusToday() {
                                     <span className={cn('inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium', risk.className)}>
                                       {risk.label}
                                     </span>
-                                    <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium border', person.overdue > 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-black/5 text-muted-foreground border-black/10')}>
+                                    <span className={cn('inline-flex items-center rounded-md px-2 py-1 text-xs font-medium border', person.overdue > 0 ? 'bg-destructive/10 text-destructive-strong border-destructive/30' : 'bg-black/5 text-muted-foreground border-black/10')}>
                                       Vencidas {person.overdue}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Hoy {person.dueToday}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Semana {person.dueThisWeek}
                                     </span>
-                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium bg-black/5 text-muted-foreground border border-black/10">
+                                    <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-black/5 text-muted-foreground border border-black/10">
                                       Pend. {person.pending}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="h-2 w-full rounded-xl border border-black/5 bg-black/5 overflow-hidden">
                                   <div
-                                    className={cn('h-full rounded-xl transition-all', person.overdue > 0 ? 'bg-red-500/40' : 'bg-primary/60')}
+                                    className={cn('h-full rounded-xl transition-[width]', person.overdue > 0 ? 'bg-destructive' : 'bg-primary/60')}
                                     style={{ width: `${barWidth}%` }}
                                   />
                                 </div>
                               </button>
 
                               {isExpanded && person.tasks.length > 0 && (
-                                <ul className="mx-3 mb-2 border-l-2 border-slate-100 pl-3 space-y-0.5">
-                                  {person.tasks
+                                <ul className="mx-3 mb-2 border-l-2 border-border pl-3 space-y-0.5">
+                                  {[...person.tasks]
                                     .sort((a, b) => {
                                       const da = parseDue(a.due_date)?.getTime() ?? Infinity;
                                       const db = parseDue(b.due_date)?.getTime() ?? Infinity;
@@ -452,15 +415,15 @@ export function MyFocusToday() {
                                               {task.project?.key ?? ''}
                                             </span>
                                             {due && (
-                                              <span className={cn('text-xs shrink-0', isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground')}>
+                                              <span className={cn('text-xs shrink-0', isOverdue ? 'text-destructive-strong font-semibold' : 'text-muted-foreground')}>
                                                 {format(due, 'd MMM', { locale: es })}
                                               </span>
                                             )}
                                             <span
                                               className="text-xs px-1.5 py-0.5 rounded-md border shrink-0"
-                                              style={{ backgroundColor: `${task.status.color}20`, color: task.status.color, borderColor: `${task.status.color}40` }}
+                                              style={{ backgroundColor: task.status?.color ? `${task.status.color}20` : undefined, color: task.status?.color, borderColor: task.status?.color ? `${task.status.color}40` : undefined }}
                                             >
-                                              {task.status.name}
+                                              {task.status?.name ?? 'Sin estado'}
                                             </span>
                                           </button>
                                         </li>
@@ -487,9 +450,9 @@ export function MyFocusToday() {
               </Card>
             )}
 
-            <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <Card className="rounded-2xl border border-black/5 shadow-card">
               <CardContent className="p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Foco del equipo</p>
+                <p className="text-xs text-muted-foreground font-medium mb-3">Foco del equipo</p>
                 <ul className="space-y-2">
                   {teamList.slice(0, 5).map((task: LeadersFocusTask) => {
                     const parsed = parseDue(task.due_date);
@@ -508,7 +471,7 @@ export function MyFocusToday() {
                             {task.assignee?.cargo ? ` · ${task.assignee.cargo}` : ''}
                           </span>
                           <span className="text-xs text-muted-foreground">{task.project?.name ?? task.project?.key ?? '—'}</span>
-                          <span className={cn('text-xs', isOverdue && 'text-red-600 font-medium')}>{dueFormatted}</span>
+                          <span className={cn('text-xs', isOverdue && 'text-destructive-strong font-medium')}>{dueFormatted}</span>
                           <Badge
                             variant="secondary"
                             className="text-xs font-medium rounded-md"
@@ -542,30 +505,7 @@ export function MyFocusToday() {
   return (
     <section className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
-      {showTeamTab && (
-        <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
-          <button
-            type="button"
-            onClick={() => setFocusTab('mine')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'mine' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Mi foco
-          </button>
-          <button
-            type="button"
-            onClick={() => setFocusTab('team')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              focusTab === 'team' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Foco del equipo
-          </button>
-        </div>
-      )}
+      {showTeamTab && <FocusTabSwitcher value={focusTab} onChange={setFocusTab} />}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile label="Vencen hoy" value={vencenHoy.length} />
         <StatTile
@@ -577,9 +517,9 @@ export function MyFocusToday() {
         <StatTile label="Esta semana" value={estaSemana.length} />
       </div>
 
-      <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+      <Card className="rounded-2xl border border-black/5 shadow-card">
         <CardContent className="p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Tu carga por horas</p>
+          <p className="text-xs text-muted-foreground font-medium mb-3">Tu carga por horas</p>
           {myCapacityLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Calculando…
@@ -597,7 +537,7 @@ export function MyFocusToday() {
                 {myCapacity.weekly_hours_capacity != null ? (
                   <p className="figure text-lg font-semibold text-foreground">{myCapacity.weekly_hours_capacity}h</p>
                 ) : (
-                  <p className="text-sm font-medium text-amber-700">Sin configurar</p>
+                  <p className="text-sm font-medium text-warning-strong">Sin configurar</p>
                 )}
               </div>
               <div>
@@ -630,9 +570,9 @@ export function MyFocusToday() {
       {tasks.length === 0 ? (
         <p className="text-sm text-muted-foreground">No tienes tareas asignadas.</p>
       ) : priorityList.length > 0 ? (
-        <Card className="rounded-2xl border border-black/5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+        <Card className="rounded-2xl border border-black/5 shadow-card">
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-3">Tareas prioritarias</p>
+            <p className="text-xs text-muted-foreground font-medium mb-3">Tareas prioritarias</p>
             <ul className="space-y-2">
               {priorityList.map((task) => {
                 const parsed = parseDue(task.due_date ?? null);
@@ -647,7 +587,7 @@ export function MyFocusToday() {
                     >
                       <span className="font-medium text-sm text-foreground flex-1 min-w-0 truncate group-hover:text-primary-deep">{task.title}</span>
                       <span className="text-xs text-muted-foreground">{task.project?.name ?? task.project?.key ?? '—'}</span>
-                      <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`text-xs ${isOverdue ? 'text-destructive-strong font-medium' : 'text-muted-foreground'}`}>
                         {dueFormatted}
                       </span>
                       <Badge
