@@ -28,9 +28,12 @@ const members = [
   member('2', 'Luis Gómez', 10, [10, 5, 5, 5], 20),
 ];
 
+const flags = { loading: false, error: false, workloadError: false, keepData: false, refetch: vi.fn() };
 vi.mock('@/hooks/useReports', () => ({
-  useReportCapacityForecast: () => ({ data: { members }, isLoading: false }),
-  useReportPeopleWorkload: () => ({ data: { people: [] }, isLoading: false }),
+  useReportCapacityForecast: () => ({
+    data: flags.error && !flags.keepData ? undefined : { members }, isLoading: flags.loading, isError: flags.error, error: flags.error ? new Error('sin red') : null, isFetching: false, refetch: flags.refetch,
+  }),
+  useReportPeopleWorkload: () => ({ data: flags.workloadError ? undefined : { people: [] }, isLoading: flags.loading, isError: flags.workloadError, error: flags.workloadError ? new Error('workload caído') : null, isFetching: false, refetch: flags.refetch }),
   useReportWorkloadByCargo: () => ({ data: [] }),
   useUserMiniReport: () => ({ data: undefined, isLoading: false }),
 }));
@@ -91,5 +94,67 @@ describe('CapacidadOperativaTab (render de humo)', () => {
     expect(within(tile('Horas disponibles')).getByText('235h')).toBeInTheDocument();
     expect(within(tile('Ocupación')).getByText('27%')).toBeInTheDocument();
     expect(screen.getByText('1.5 sem')).toBeInTheDocument();
+  });
+
+  it('la nota de alcance nombra el período elegido y separa el backlog total', () => {
+    render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    expect(screen.getByTestId('kpi-scope-note')).toHaveTextContent('Indicadores de esta semana');
+    choosePeriod('Próximas 4 semanas');
+    expect(screen.getByTestId('kpi-scope-note')).toHaveTextContent('Indicadores de próximas 4 semanas');
+    expect(screen.getByTestId('kpi-scope-note')).toHaveTextContent('backlog total se mide aparte');
+  });
+
+  it('datos vacíos: sin miembros no hay NaN ni caídas', () => {
+    const saved = members.splice(0, members.length);
+    try {
+      expect(() => render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>)).not.toThrow();
+      expect(document.body.textContent).not.toMatch(/NaN|undefined|Infinity/);
+    } finally {
+      members.push(...saved);
+    }
+  });
+
+  it('cargando: esqueleto con la forma de la página; error: alerta con Reintentar (no «sin datos»)', () => {
+    flags.loading = true;
+    const a = render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    expect(screen.getByRole('status', { name: 'Cargando capacidad operativa' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    a.unmount();
+
+    flags.loading = false; flags.error = true; flags.refetch = vi.fn();
+    render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo cargar la capacidad operativa.');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(flags.refetch).toHaveBeenCalled();
+    flags.error = false;
+  });
+
+  it('las cabeceras ordenables son botones y exponen aria-sort', () => {
+    render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    const th = screen.getAllByRole('columnheader').find((h) => h.hasAttribute('aria-sort') && h.textContent?.includes('Colaborador'))!;
+    expect(th).toHaveAttribute('aria-sort', 'none');
+    const btn = within(th).getByRole('button', { name: /Colaborador/ });
+    fireEvent.click(btn);
+    expect(th).toHaveAttribute('aria-sort', 'ascending');
+    fireEvent.click(btn);
+    expect(th).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  it('error al actualizar con datos previos: se mantienen las fichas y se avisa (no se oculta la vista)', () => {
+    flags.error = true; flags.keepData = true;
+    render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    expect(within(tile('Capacidad del período')).getByText('80h')).toBeInTheDocument();
+    expect(screen.getByText(/Se muestran los datos anteriores/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    flags.error = false; flags.keepData = false;
+  });
+
+  it('consultas concurrentes: si falla la de carga por proyecto sin datos, se explica y se puede reintentar', () => {
+    flags.workloadError = true; flags.refetch = vi.fn();
+    render(<TooltipProvider><CapacidadOperativaTab /></TooltipProvider>);
+    expect(screen.getByRole('alert')).toHaveTextContent('workload caído');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(flags.refetch).toHaveBeenCalled();
+    flags.workloadError = false;
   });
 });

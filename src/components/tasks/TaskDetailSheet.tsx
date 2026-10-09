@@ -1,3 +1,6 @@
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { PriorityBadge } from '@/components/shared/StatusBadge';
+import { getPriority } from '@/lib/priority';
 import { TaskWithDetails, useTask, useTaskHistory, useTaskActivityLog, useTaskStatuses } from '@/hooks/useTasks';
 import { useTaskComments, useCreateTaskComment, useDeleteTaskComment } from '@/hooks/useTaskComments';
 import {
@@ -49,12 +52,6 @@ interface TaskDetailSheetProps {
   onNavigateToTask?: (taskId: string) => void;
 }
 
-const priorityConfig = {
-  low: { label: 'Baja', className: BADGE_TONES.neutral },
-  medium: { label: 'Media', className: BADGE_TONES.warning },
-  high: { label: 'Alta', className: BADGE_TONES.escalated },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
-};
 
 // `profiles` only lists active users (disabled accounts can't be assigned new
 // work). If a task is already assigned to someone since disabled, they'd be
@@ -93,6 +90,7 @@ function SaveStatus({ state }: { state: SaveState }) {
 }
 
 export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNavigateToTask }: TaskDetailSheetProps) {
+  const { confirmAction, confirmDialog } = useConfirmDialog();
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState<'detalles' | 'materiales' | 'actividad'>('detalles');
   // Fetch full task details with temas_materiales
@@ -174,7 +172,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
       (member) => member.user_id === user?.profileId && member.role === 'leader'
     );
 
-  const priorityInfo = priorityConfig[taskData.priority];
+  const priorityInfo = getPriority(taskData.priority);
 
   const formatDurationSeconds = (seconds: number | null) => {
     if (!seconds) return '-';
@@ -353,9 +351,13 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
   };
 
   const handleDeleteComment = (commentId: string) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-      deleteComment.mutate(commentId);
-    }
+    confirmAction({
+      title: '¿Estás seguro de que quieres eliminar este comentario?',
+      description: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteComment.mutateAsync(commentId),
+    });
   };
 
   // Calculate total time in each status
@@ -406,7 +408,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                 <span className="text-xs font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
                   {projectKey}-{taskData.task_number}
                 </span>
-                <Badge className={cn('text-xs', priorityInfo.className)}>{priorityInfo.label}</Badge>
+                <PriorityBadge priority={taskData.priority} />
                 <Button
                   variant="ghost"
                   size="sm"
@@ -426,8 +428,16 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                     className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7"
                     disabled={deleteTask.isPending}
                     onClick={() => {
-                      if (!confirm(`¿Eliminar la tarea "${taskData.title}"?`)) return;
-                      deleteTask.mutate({ taskId: taskData.id, projectId: taskData.project_id }, { onSuccess: () => onOpenChange(false) });
+                      confirmAction({
+                        title: `¿Eliminar la tarea "${taskData.title}"?`,
+                        description: 'Se eliminará la tarea. Esta acción no se puede deshacer.',
+                        confirmLabel: 'Eliminar tarea',
+                        destructive: true,
+                        onConfirm: async () => {
+                          await deleteTask.mutateAsync({ taskId: taskData.id, projectId: taskData.project_id });
+                          onOpenChange(false);
+                        },
+                      });
                     }}
                     title="Eliminar tarea"
                     aria-label="Eliminar tarea"
@@ -895,7 +905,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
                     placeholder="Agregar subtarea..."
                     className="h-8 text-sm"
                   />
-                  <Button
+                  <Button aria-label="Agregar"
                     size="icon"
                     variant="outline"
                     className="h-8 w-8 flex-shrink-0"
@@ -1066,6 +1076,7 @@ export function TaskDetailSheet({ task, projectKey, open, onOpenChange, onNaviga
 
         </div>{/* end flex row */}
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

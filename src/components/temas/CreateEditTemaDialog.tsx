@@ -1,3 +1,4 @@
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { useCreateTema, useUpdateTema, Tema } from '@/hooks/useTemas';
 import { DIALOG_SIZES } from '@/lib/dialogSizes';
@@ -46,6 +47,7 @@ export function CreateEditTemaDialog({
   open,
   onOpenChange,
 }: CreateEditTemaDialogProps) {
+  const { confirmAction, confirmDialog } = useConfirmDialog();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [activeTab, setActiveTab] = useState('info');
@@ -132,9 +134,13 @@ export function CreateEditTemaDialog({
   };
 
   const handleDeleteMaterial = (materialId: string) => {
-    if (confirm('¿Eliminar este material?')) {
-      deleteMaterial.mutate(materialId);
-    }
+    confirmAction({
+      title: '¿Eliminar este material?',
+      description: 'Se quitará el material de este tema. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteMaterial.mutateAsync(materialId),
+    });
   };
 
   const isPending = createTema.isPending || updateTema.isPending;
@@ -237,7 +243,7 @@ export function CreateEditTemaDialog({
                     className="w-20"
                   />
 
-                  <Button
+                  <Button aria-label="Agregar"
                     type="button"
                     size="icon"
                     onClick={handleAddMaterial}
@@ -294,7 +300,7 @@ export function CreateEditTemaDialog({
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary">x{material.cantidad}</Badge>
-                          <Button
+                          <Button aria-label="Eliminar"
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
@@ -322,6 +328,7 @@ export function CreateEditTemaDialog({
           </TabsContent>
         </Tabs>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

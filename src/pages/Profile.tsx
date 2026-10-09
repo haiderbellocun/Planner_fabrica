@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, Lock } from 'lucide-react';
@@ -108,12 +109,7 @@ export default function Profile() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Mi perfil</h1>
-        <p className="page-description">
-          Datos básicos de tu cuenta en la plataforma.
-        </p>
-      </div>
+      <PageHeader title="Mi perfil" description="Datos básicos de tu cuenta en la plataforma." />
 
       <Card className="max-w-xl">
         <CardHeader>

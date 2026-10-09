@@ -1,3 +1,7 @@
+import { PageSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { activatable, activatableRow } from '@/lib/a11y';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification } from '@/hooks/useNotifications';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +22,8 @@ const notificationIcons = {
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
-  const { data: notifications = [], isLoading } = useNotifications();
+  const { data: notificationsData, isLoading, isError, error, refetch, isFetching } = useNotifications();
+  const notifications = notificationsData ?? [];
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
@@ -36,22 +41,28 @@ export default function NotificationsPage() {
 
   if (isLoading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-container max-w-3xl">
+        <PageSkeleton tiles={0} rows={6} />
+      </div>
+    );
+  }
+
+  // Error sin datos: se explica y se ofrece reintentar. Con datos anteriores se conservan (aviso abajo).
+  if (isError && notificationsData === undefined) {
+    return (
+      <div className="page-container max-w-3xl">
+        <PageHeader title="Notificaciones" />
+        <ErrorState message="No se pudieron cargar las notificaciones." error={error} onRetry={() => refetch()} retrying={isFetching} />
       </div>
     );
   }
 
   return (
     <div className="page-container max-w-3xl">
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Notificaciones</h1>
-          <p className="page-description">
-            {unreadCount > 0 ? `${unreadCount} sin leer` : 'Todas leídas'}
-          </p>
-        </div>
-        {unreadCount > 0 && (
+      <PageHeader
+        title="Notificaciones"
+        description={unreadCount > 0 ? `${unreadCount} sin leer` : notifications.length > 0 ? 'Todas leídas' : undefined}
+        actions={unreadCount > 0 && (
           <Button
             variant="outline"
             onClick={() => markAllAsRead.mutate()}
@@ -61,7 +72,8 @@ export default function NotificationsPage() {
             Marcar todas como leídas
           </Button>
         )}
-      </div>
+      />
+      {isError && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
 
       <Card>
         <CardContent className="p-0">
@@ -82,9 +94,9 @@ export default function NotificationsPage() {
                 return (
                   <div
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
+                    {...(isClickable ? activatable(() => handleNotificationClick(notification)) : { onClick: () => handleNotificationClick(notification) })}
                     className={cn(
-                      'flex items-start gap-4 p-4 transition-colors',
+                      'flex items-start gap-4 p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                       !notification.read && 'bg-accent/20',
                       isClickable && 'cursor-pointer hover:bg-muted/60',
                       !isClickable && 'hover:bg-muted/30',
@@ -134,7 +146,7 @@ export default function NotificationsPage() {
 
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {!notification.read && (
-                        <Button
+                        <Button aria-label="Confirmar"
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
@@ -143,7 +155,7 @@ export default function NotificationsPage() {
                           <Check className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button
+                      <Button aria-label="Eliminar"
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"

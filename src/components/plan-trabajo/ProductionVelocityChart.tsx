@@ -14,7 +14,7 @@ const METRICS: { value: ProductionMetricKey; label: string }[] = [
 
 export function ProductionVelocityChart() {
   const [metric, setMetric] = useState<ProductionMetricKey>('tareas');
-  const { data, isLoading } = useWorkPlanProductionVelocity(metric);
+  const { data, isLoading, isError, error, refetch, isFetching } = useWorkPlanProductionVelocity(metric);
   const hasData = (data?.data ?? []).some((s) => s.data.some((p) => p.y > 0));
 
   return (
@@ -22,6 +22,10 @@ export function ProductionVelocityChart() {
       title="Velocidad de producción"
       subtitle={data?.is_approximate ? 'Aproximado — se usa la última edición del registro, no existe fecha de finalización dedicada' : 'Elementos completados por semana'}
       loading={isLoading}
+      error={isError && !data}
+      errorDetail={error}
+      onRetry={() => refetch()}
+      retrying={isFetching}
       empty={!isLoading && !hasData}
       minHeight={280}
       actions={

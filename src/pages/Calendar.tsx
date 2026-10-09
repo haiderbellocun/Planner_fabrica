@@ -1,3 +1,6 @@
+import { CalendarSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -96,7 +99,7 @@ export default function CalendarPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedProjectKey, setSelectedProjectKey] = useState('');
 
-  const { data: eventsData, isLoading } = useCalendarEvents();
+  const { data: eventsData, isLoading, isError: eventsError, error: eventsErr, refetch: refetchEvents, isFetching: eventsFetching } = useCalendarEvents();
   const { data: selectedTask } = useTask(selectedTaskId ?? undefined);
   const { data: allProfiles = [] } = useProfiles();
 
@@ -194,13 +197,7 @@ export default function CalendarPage() {
   return (
     <div className="page-container flex flex-col gap-4 h-full">
       {/* Header */}
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-primary" />
-          Calendario
-        </h1>
-        <p className="page-description">Fechas de finalización de proyectos y tareas del equipo</p>
-      </div>
+      <PageHeader icon={CalendarDays} title="Calendario" description="Fechas de finalización de proyectos y tareas del equipo" />
 
       <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
         {/* Sidebar filters */}
@@ -377,10 +374,13 @@ export default function CalendarPage() {
           </div>
 
           {/* Views */}
+          {eventsError && eventsData !== undefined && (
+            <RefetchError error={eventsErr} onRetry={() => refetchEvents()} retrying={eventsFetching} className="mb-0" />
+          )}
           {isLoading ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-              Cargando eventos...
-            </div>
+            <CalendarSkeleton />
+          ) : eventsError && eventsData === undefined ? (
+            <ErrorState message="No se pudieron cargar los eventos del calendario." error={eventsErr} onRetry={() => refetchEvents()} retrying={eventsFetching} />
           ) : view === 'month' ? (
             <MonthView
               currentDate={currentDate}
@@ -440,7 +440,7 @@ function MonthView({
   return (
     <div className="flex-1 overflow-auto">
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b">
+      <div className="grid grid-cols-7 border-b min-w-[640px]">
         {WEEK_DAYS.map(d => (
           <div key={d} className="py-2 text-center text-2xs font-semibold text-muted-foreground">
             {d}
@@ -448,7 +448,7 @@ function MonthView({
         ))}
       </div>
       {/* Days grid */}
-      <div className="grid grid-cols-7" style={{ gridAutoRows: 'minmax(100px, 1fr)' }}>
+      <div className="grid grid-cols-7 min-w-[640px]" style={{ gridAutoRows: 'minmax(100px, 1fr)' }}>
         {days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const { proj, tsk } = getEventsForDate(dateStr);
@@ -540,7 +540,7 @@ function WeekView({
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="grid grid-cols-7 border-b min-h-full">
+      <div className="grid grid-cols-7 border-b min-h-full min-w-[640px]">
         {days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const { proj, tsk } = getEventsForDate(dateStr);

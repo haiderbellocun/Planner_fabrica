@@ -1,3 +1,11 @@
+import { PageSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { activatable, activatableRow } from '@/lib/a11y';
+import { PriorityBadge } from '@/components/shared/StatusBadge';
+import { TaskStatusBadge } from '@/components/shared/StatusBadge';
+import { getPriority } from '@/lib/priority';
+import { priorityConfig } from '@/lib/priority';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,22 +23,10 @@ import { parseDateOnly } from '@/lib/dates';
 import { getBusinessTodayStr, getDueBucket, isWithinDays } from '@/lib/dueDate';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
-const priorityConfig = {
-  low:    { label: 'Baja',    className: BADGE_TONES.neutral,   cardBg: 'bg-muted/50 border-border' },
-  medium: { label: 'Media',   className: BADGE_TONES.warning,   cardBg: 'bg-accent/70 border-primary/40' },
-  high:   { label: 'Alta',    className: BADGE_TONES.escalated, cardBg: 'bg-coral/10 border-coral/30' },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger,    cardBg: 'bg-destructive/10 border-destructive/30' },
-};
 
-const TASK_COLORS: Record<string, string> = {
-  low:    'bg-gray-400',
-  medium: 'bg-warning',
-  high:   'bg-coral',
-  urgent: 'bg-destructive',
-};
 
 export default function MyTasksPage() {
-  const { tasks, isLoading } = useMyTasks();
+  const { tasks, data: myTasksData, isLoading, isError, error, refetch, isFetching } = useMyTasks();
   const { data: statuses = [] } = useTaskStatuses();
   const [selectedTask, setSelectedTask] = useState<MyTaskWithProject | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -55,20 +51,29 @@ export default function MyTasksPage() {
       id:    t.id,
       date:  format(parseDateOnly(t.due_date)!, 'yyyy-MM-dd'),
       label: `${t.title} · ${t.project.name}`,
-      color: TASK_COLORS[t.priority] ?? 'bg-primary',
+      color: priorityConfig[t.priority as keyof typeof priorityConfig]?.dotClass ?? 'bg-primary',
       onClick: () => handleTaskClick(t),
     }));
 
   if (isLoading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-container max-w-4xl">
+        <PageSkeleton tiles={4} rows={5} />
+      </div>
+    );
+  }
+
+  if (isError && myTasksData === undefined) {
+    return (
+      <div className="page-container max-w-4xl">
+        <PageHeader title="Mis Tareas" description="Tareas asignadas a ti en todos los proyectos" />
+        <ErrorState message="No se pudieron cargar tus tareas." error={error} onRetry={() => refetch()} retrying={isFetching} />
       </div>
     );
   }
 
   const TaskCard = ({ task }: { task: MyTaskWithProject }) => {
-    const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
+    const priority = getPriority(task.priority);
     const parsedDue = parseDateOnly(task.due_date);
     const dueBucket = getDueBucket(task.due_date, task.status.is_completed, todayStr);
     const isOverdue = dueBucket === 'overdue';
@@ -76,9 +81,9 @@ export default function MyTasksPage() {
 
     return (
       <div
-        onClick={() => handleTaskClick(task)}
+        {...activatable(() => handleTaskClick(task))}
         className={cn(
-          'p-4 rounded-xl border cursor-pointer transition-ui hover:shadow-floating hover:brightness-95',
+          'p-4 rounded-xl border cursor-pointer transition-ui hover:shadow-floating hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           isOverdue ? 'border-destructive/30 bg-destructive/10' : isDueToday ? 'border-warning/30 bg-warning/10' : priority.cardBg,
         )}
       >
@@ -88,9 +93,7 @@ export default function MyTasksPage() {
               <Badge variant="outline" className="text-xs shrink-0">
                 {task.project.key}-{task.task_number}
               </Badge>
-              <Badge className={cn('text-xs', priority.className)}>
-                {priority.label}
-              </Badge>
+              <PriorityBadge priority={task.priority} />
             </div>
             <p className="font-medium truncate">{task.title}</p>
             {/* Project name as link */}
@@ -103,13 +106,7 @@ export default function MyTasksPage() {
             </Link>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge
-              style={{ backgroundColor: task.status.color + '20', color: task.status.color, borderColor: task.status.color }}
-              variant="outline"
-              className="text-xs"
-            >
-              {task.status.name}
-            </Badge>
+            <TaskStatusBadge name={task.status.name} color={task.status.color} />
             {task.due_date && (
               <span className={cn(
                 'text-xs',
@@ -127,10 +124,8 @@ export default function MyTasksPage() {
 
   return (
     <div className="page-container max-w-4xl">
-      <div className="page-header">
-        <h1 className="page-title">Mis Tareas</h1>
-        <p className="page-description">Tareas asignadas a ti en todos los proyectos</p>
-      </div>
+      <PageHeader title="Mis Tareas" description="Tareas asignadas a ti en todos los proyectos" />
+      {isError && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

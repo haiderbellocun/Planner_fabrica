@@ -17,16 +17,16 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-4">
             {user ? (
-              <Link to="/dashboard">
-                <Button className="shadow-floating shadow-primary/20">
+              <Button asChild className="shadow-floating shadow-primary/20">
+                <Link to="/dashboard">
                   Ir al Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
             ) : (
-              <Link to="/auth">
-                <Button className="shadow-floating shadow-primary/20">Iniciar Sesión</Button>
-              </Link>
+              <Button asChild className="shadow-floating shadow-primary/20">
+                <Link to="/auth">Iniciar Sesión</Link>
+              </Button>
             )}
           </div>
         </div>

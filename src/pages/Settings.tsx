@@ -1,3 +1,6 @@
+import { TableSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, NoPermissionState, NoResultsState, RefetchError, SetupNeededState } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings, Loader2, UserPlus, Shield, Search, Eye, EyeOff, X } from 'lucide-react';
@@ -50,6 +53,10 @@ export default function SettingsPage() {
   const {
     data: capacity,
     isLoading: capacityLoading,
+    isError: capacityError,
+    error: capacityErr,
+    refetch: refetchCapacity,
+    isFetching: capacityFetching,
   } = useReportTeamCapacity();
 
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -67,7 +74,8 @@ export default function SettingsPage() {
 
   // Gestión de usuarios (admin + project_leader)
   const canManageUsers = isAdmin || isProjectLeader;
-  const { data: adminUsers = [], isLoading: adminUsersLoading } = useAdminUsers(canManageUsers && !authLoading);
+  const { data: adminUsersData, isLoading: adminUsersLoading, isError: adminUsersError, error: adminUsersErr, refetch: refetchAdminUsers, isFetching: adminUsersFetching } = useAdminUsers(canManageUsers && !authLoading);
+  const adminUsers = adminUsersData ?? [];
   const createUserMutation = useCreateAdminUser();
   const toggleActiveMutation = useToggleUserActive();
   const [userSearch, setUserSearch] = useState('');
@@ -170,12 +178,7 @@ export default function SettingsPage() {
 
   return (
     <div className="page-container max-w-4xl">
-      <div className="page-header">
-        <h1 className="page-title">Configuración</h1>
-        <p className="page-description">
-          Capacidad semanal del equipo y gestión de usuarios
-        </p>
-      </div>
+      <PageHeader title="Configuración" description="Capacidad semanal del equipo y gestión de usuarios" />
 
       <Card className="rounded-2xl border border-black/5 shadow-card mb-8">
         <CardHeader>
@@ -205,29 +208,25 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading && (
-            <div className="flex items-center justify-center py-8 text-muted-foreground gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Cargando datos de capacidad...</span>
-            </div>
+          {isLoading && <TableSkeleton rows={5} columns={4} className="border-0 shadow-none" />}
+
+          {!isLoading && isAdmin && capacityError && capacity === undefined && (
+            <ErrorState message="No se pudieron cargar los datos de capacidad." error={capacityErr} onRetry={() => refetchCapacity()} retrying={capacityFetching} />
+          )}
+          {!isLoading && isAdmin && capacityError && capacity !== undefined && (
+            <RefetchError error={capacityErr} onRetry={() => refetchCapacity()} retrying={capacityFetching} />
           )}
 
           {!isLoading && !isAdmin && (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              Solo administradores pueden editar capacidad.
-            </div>
+            <NoPermissionState message="Solo administradores pueden editar capacidad." className="py-6" />
           )}
 
-          {!isLoading && isAdmin && members.length === 0 && (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              No hay datos de capacidad de equipo disponibles.
-            </div>
+          {!isLoading && isAdmin && !capacityError && members.length === 0 && (
+            <SetupNeededState message="Aún no hay datos de capacidad del equipo. Aparecerán cuando haya colaboradores activos con capacidad semanal definida." className="py-6" />
           )}
 
           {!isLoading && isAdmin && members.length > 0 && filteredMembers.length === 0 && (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              Ningún colaborador coincide con "{capacitySearch}".
-            </div>
+            <NoResultsState message={`Ningún colaborador coincide con "${capacitySearch}".`} onClear={() => setCapacitySearch('')} className="py-6" />
           )}
 
           {!isLoading && isAdmin && filteredMembers.length > 0 && (
@@ -484,19 +483,19 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
+                {adminUsersError && adminUsersData !== undefined && (
+                  <RefetchError error={adminUsersErr} onRetry={() => refetchAdminUsers()} retrying={adminUsersFetching} />
+                )}
                 {adminUsersLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Cargando usuarios...
-                  </div>
+                  <TableSkeleton rows={4} columns={4} className="border-0 shadow-none" />
+                ) : adminUsersError && adminUsersData === undefined ? (
+                  <ErrorState message="No se pudo cargar la lista de usuarios." error={adminUsersErr} onRetry={() => refetchAdminUsers()} retrying={adminUsersFetching} />
                 ) : adminUsers.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
                     No hay usuarios registrados.
                   </div>
                 ) : filteredUsers.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    Ningún usuario coincide con "{userSearch}".
-                  </div>
+                  <NoResultsState message={`Ningún usuario coincide con "${userSearch}".`} onClear={() => setUserSearch('')} className="py-6" />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

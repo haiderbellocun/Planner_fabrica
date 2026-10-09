@@ -1,9 +1,11 @@
+import { NoResultsState } from '@/components/shared/StoryUI';
+import { KanbanSkeleton, TableSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
 import { useState, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Search, Megaphone, Download,
   TableProperties, LayoutGrid, X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { LoadingState, EmptyState } from '@/components/shared/StoryUI';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -589,7 +591,10 @@ export default function SolicitudesMarketing() {
   const { isAdmin, isProjectLeader } = useAuth();
   const canWrite = isAdmin || isProjectLeader;
 
-  const { data: solicitudes = [], isLoading } = useSolicitudesMarketing();
+  const { data: solicitudesData, isLoading, isError, error, refetch, isFetching } = useSolicitudesMarketing();
+  const solicitudes = solicitudesData ?? [];
+  const solicitudesUnknown = isError && solicitudesData === undefined;
+  const retryBlock = <ErrorState message="No se pudieron cargar las solicitudes." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   const deleteMutation = useDeleteSolicitudMarketing();
 
   const [search, setSearch] = useState('');
@@ -620,7 +625,9 @@ export default function SolicitudesMarketing() {
   const openEdit = (s: SolicitudMarketing) => { setEditing(s); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditing(null); };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    // xlsx pesa ~277 KB: se carga bajo demanda al exportar, no con la página.
+    const XLSX = await import('xlsx');
     const rows = filtered.map((s) => ({
       'ID':                        folioLabel(s.folio),
       'Fecha registro':            formatDate(s.fecha_registro),
@@ -708,6 +715,8 @@ export default function SolicitudesMarketing() {
         </div>
       </div>
 
+      {isError && solicitudesData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -789,14 +798,24 @@ export default function SolicitudesMarketing() {
       {view === 'table' && (
         <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
           {isLoading ? (
-            <LoadingState label="Cargando solicitudes…" className="py-20 min-h-0" />
+            <TableSkeleton rows={8} columns={6} className="border-0 shadow-none" />
+          ) : solicitudesUnknown ? (
+            retryBlock
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={Megaphone}
-              message={solicitudes.length === 0 ? 'Aún no hay solicitudes registradas' : 'Sin resultados para los filtros aplicados'}
-              action={canWrite && solicitudes.length === 0 ? { label: 'Crear primera solicitud', onClick: openCreate } : undefined}
-            />
+            solicitudes.length === 0 ? (
+              <EmptyState
+                icon={Megaphone}
+                message="Aún no hay solicitudes registradas"
+                action={canWrite ? { label: 'Crear primera solicitud', onClick: openCreate } : undefined}
+              />
+            ) : (
+              <NoResultsState
+                message="Ninguna solicitud coincide con los filtros aplicados."
+                onClear={() => { setSearch(''); setFilterEstado('todos'); setFilterPrioridad('todos'); }}
+              />
+            )
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground">
@@ -877,12 +896,15 @@ export default function SolicitudesMarketing() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
 
       {/* Kanban view */}
-      {view === 'kanban' && (
+      {view === 'kanban' && isLoading && <KanbanSkeleton columns={4} cards={2} />}
+      {view === 'kanban' && solicitudesUnknown && retryBlock}
+      {view === 'kanban' && !isLoading && !solicitudesUnknown && (
         <div className="flex gap-4 overflow-x-auto pb-2">
           {ESTADO_PRODUCCION_ORDER.map((estado) => {
             const items = filtered.filter((s) => s.estado_produccion === estado);

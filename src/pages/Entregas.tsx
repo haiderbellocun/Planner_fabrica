@@ -1,6 +1,9 @@
+import { Suspense, lazy } from 'react';
+import { NoResultsState } from '@/components/shared/StoryUI';
+import { CalendarSkeleton, ChartCardSkeleton, StatTilesSkeleton, TableSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Search, PackageCheck, Download, CalendarDays, TableProperties, X, LayoutDashboard } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
 import { cn } from '@/lib/utils';
 import { BADGE_TONES } from '@/lib/badgeColors';
@@ -28,7 +31,6 @@ import {
 import { useProjects } from '@/hooks/useProjects';
 import { useAsignaturas } from '@/hooks/useAsignaturas';
 import { useMaterialTypes, useMaterialesAsignatura } from '@/hooks/useMateriales';
-import { EntregasDashboard } from '@/components/entregas/EntregasDashboard';
 import { LoadingState, EmptyState } from '@/components/shared/StoryUI';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -52,6 +54,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+
+// La vista de dashboard usa recharts: se descarga solo al abrirla.
+const EntregasDashboard = lazy(() => import('@/components/entregas/EntregasDashboard').then((m) => ({ default: m.EntregasDashboard })));
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -626,7 +631,11 @@ export default function Entregas() {
   const { isAdmin, isProjectLeader } = useAuth();
   const canWrite = isAdmin || isProjectLeader;
 
-  const { data: entregas = [], isLoading } = useEntregas();
+  const { data: entregasData, isLoading, isError, error, refetch, isFetching } = useEntregas();
+  const entregas = entregasData ?? [];
+  // Sin datos por un error: no se muestran contadores en cero (serían falsos).
+  const entregasUnknown = isError && entregasData === undefined;
+  const retryBlock = <ErrorState message="No se pudieron cargar las entregas." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   const deleteMutation = useDeleteEntrega();
   const { data: materialesResumen = [] } = useEntregaMaterialesResumen();
 
@@ -681,7 +690,9 @@ export default function Entregas() {
     onClick: () => openEdit(e),
   }));
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    // xlsx pesa ~277 KB: se carga bajo demanda al exportar, no con la página.
+    const XLSX = await import('xlsx');
     const rows = filtered.map((e) => ({
       'Proyecto':              e.nombre_proyecto,
       'Escuela':               e.escuela ?? '',
@@ -762,6 +773,8 @@ export default function Entregas() {
       </div>
 
       {/* Stats (el Dashboard tiene su propio resumen, más completo) */}
+      {isError && entregasData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
+
       {view !== 'dashboard' && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -772,7 +785,7 @@ export default function Entregas() {
         ].map((s) => (
           <div key={s.label} className="rounded-xl border bg-card p-3 shadow-card">
             <p className="text-2xs text-muted-foreground ">{s.label}</p>
-            <p className={cn('text-2xl font-semibold mt-0.5', s.color)}>{s.value}</p>
+            <p className={cn('text-2xl font-semibold mt-0.5', s.color)}>{entregasUnknown ? '—' : s.value}</p>
           </div>
         ))}
       </div>
@@ -873,27 +886,43 @@ export default function Entregas() {
               </span>
             ))}
           </div>
-          <MiniCalendar events={calendarEvents} />
+          {entregasUnknown ? retryBlock : isLoading ? <CalendarSkeleton /> : <MiniCalendar events={calendarEvents} />}
         </div>
       )}
 
       {/* Dashboard view */}
       {view === 'dashboard' && (
-        <EntregasDashboard entregas={entregas} materialesResumen={materialesResumen} />
+        entregasUnknown ? retryBlock : isLoading ? (
+          <div className="space-y-5"><StatTilesSkeleton count={4} /><ChartCardSkeleton /></div>
+        ) : (
+          <Suspense fallback={<div className="space-y-5"><StatTilesSkeleton count={4} /><ChartCardSkeleton /></div>}>
+            <EntregasDashboard entregas={entregas} materialesResumen={materialesResumen} />
+          </Suspense>
+        )
       )}
 
       {/* Table */}
       {view === 'table' && (
         <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
           {isLoading ? (
-            <LoadingState label="Cargando entregas…" className="py-20 min-h-0" />
+            <TableSkeleton rows={8} columns={6} className="border-0 shadow-none" />
+          ) : entregasUnknown ? (
+            retryBlock
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={PackageCheck}
-              message={entregas.length === 0 ? 'Aún no hay entregas registradas' : 'Sin resultados para los filtros aplicados'}
-              action={canWrite && entregas.length === 0 ? { label: 'Registrar primera entrega', onClick: openCreate } : undefined}
-            />
+            entregas.length === 0 ? (
+              <EmptyState
+                icon={PackageCheck}
+                message="Aún no hay entregas registradas"
+                action={canWrite ? { label: 'Registrar primera entrega', onClick: openCreate } : undefined}
+              />
+            ) : (
+              <NoResultsState
+                message="Ninguna entrega coincide con los filtros aplicados."
+                onClear={() => { setSearch(''); setFilterEstado('todos'); setFilterTipo('todos'); }}
+              />
+            )
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground">
@@ -1001,6 +1030,7 @@ export default function Entregas() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

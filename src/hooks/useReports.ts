@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 // --- Types ---
@@ -622,6 +622,9 @@ export function useReportCapacityForecast(filters: ReportScopeFilters & { weeks?
     queryKey: ['report-capacity-forecast', filters],
     queryFn: () => api.get<CapacityForecastResponse>(`/api/reports/capacity-forecast${finalQs ? `?${finalQs}` : ''}`),
     staleTime: STALE_TIME,
+    // Al cambiar cargo/proyecto se conserva la vista anterior (atenuada y marcada aria-busy) en vez de
+    // sustituir toda la pantalla, filtros incluidos, por un esqueleto.
+    placeholderData: keepPreviousData,
   });
 }
 

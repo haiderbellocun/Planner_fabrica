@@ -1,5 +1,9 @@
+import { Suspense, lazy } from 'react';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { CardGridSkeleton } from '@/components/shared/Skeletons';
+import { EmptyState, ErrorState, NoResultsState, RefetchError } from '@/components/shared/StoryUI';
 import { parseDateOnly } from '@/lib/dates';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProjects, usePinProject, useUnpinProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,10 +11,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, FolderKanban, Loader2, X, CalendarClock, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CreateProjectWizard } from '@/components/project/CreateProjectWizard';
 import { VirtualizacionToggle } from '@/components/project/VirtualizacionToggle';
 import { cn } from '@/lib/utils';
 import { PROJECT_STATUS_BADGES } from '@/lib/projectStatus';
+
+// El asistente (≈1.200 líneas) se descarga la primera vez que se abre y luego se mantiene montado.
+const CreateProjectWizard = lazy(() => import('@/components/project/CreateProjectWizard').then((m) => ({ default: m.CreateProjectWizard })));
 
 const TIPO_LABELS: Record<string, string> = {
   profesional:  'Profesional',
@@ -39,11 +45,14 @@ function formatEndDate(dateStr: string | null | undefined): string | null {
 }
 
 export default function ProjectsPage() {
-  const { data: projects = [], isLoading } = useProjects();
+  const { data: projectsData, isLoading, isError, error, refetch, isFetching } = useProjects();
+  const projects = projectsData ?? [];
   const { user } = useAuth();
   const pinProject = usePinProject();
   const unpinProject = useUnpinProject();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [wizardOpened, setWizardOpened] = useState(false);
+  useEffect(() => { if (dialogOpen) setWizardOpened(true); }, [dialogOpen]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterTipo, setFilterTipo]     = useState<string>('all');
   const [filterMonth, setFilterMonth]   = useState<number>(-1); // -1 = todos
@@ -102,29 +111,38 @@ export default function ProjectsPage() {
 
   if (isLoading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-container">
+        <CardGridSkeleton />
+      </div>
+    );
+  }
+
+  // Fallo de la API: no se muestra «No hay proyectos» (sería falso).
+  if (isError && projectsData === undefined) {
+    return (
+      <div className="page-container">
+        <ErrorState message="No se pudieron cargar los proyectos." error={error} onRetry={() => refetch()} retrying={isFetching} />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <div className="page-header flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Proyectos</h1>
-          <p className="page-description">Gestiona todos tus proyectos</p>
-        </div>
-        {canCreateProject && (
+      <PageHeader
+        title="Proyectos"
+        description="Gestiona todos tus proyectos"
+        actions={canCreateProject && (
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Proyecto
           </Button>
         )}
-      </div>
+      />
 
-      {canCreateProject && (
-        <CreateProjectWizard open={dialogOpen} onOpenChange={setDialogOpen} />
+      {canCreateProject && (wizardOpened || dialogOpen) && (
+        <Suspense fallback={null}>
+          <CreateProjectWizard open={dialogOpen} onOpenChange={setDialogOpen} />
+        </Suspense>
       )}
 
       {/* ── Filter bar ── */}
@@ -213,7 +231,11 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      {visibleProjects.length === 0 ? (
+      {isError && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
+
+      {visibleProjects.length === 0 && hasFilters && baseProjects.length > 0 ? (
+        <NoResultsState message="Ningún proyecto coincide con los filtros seleccionados." onClear={clearFilters} />
+      ) : visibleProjects.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
@@ -241,16 +263,19 @@ export default function ProjectsPage() {
             const isCompleted = project.status === 'completed';
 
             return (
-              <Link key={project.id} to={`/projects/${project.id}`}>
-                <Card className="h-full hover:shadow-floating hover:border-primary/20 transition-[width] cursor-pointer overflow-hidden">
+              // Enlace "estirado" sobre el nombre: la tarjeta entera es clicable sin anidar botones dentro de <a>.
+              <div key={project.id} className="relative h-full">
+                <Card className="h-full hover:shadow-floating hover:border-primary/20 transition-[box-shadow,border-color] overflow-hidden focus-within:ring-2 focus-within:ring-ring">
                   <CardContent className="p-5 flex flex-col gap-3 h-full">
 
                     {/* Row 1: badges */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
+                        aria-pressed={!!project.is_pinned}
+                        aria-label={project.is_pinned ? `Desfijar proyecto ${project.name}` : `Fijar proyecto ${project.name}`}
                         className={cn(
-                          'p-0.5 rounded hover:bg-muted transition-colors',
+                          'relative z-10 inline-flex h-8 w-8 items-center justify-center rounded hover:bg-muted transition-colors',
                           project.is_pinned ? 'text-warning-strong' : 'text-muted-foreground/50'
                         )}
                         title={project.is_pinned ? 'Desfijar proyecto' : 'Fijar proyecto'}
@@ -268,7 +293,7 @@ export default function ProjectsPage() {
                           {TIPO_LABELS[project.tipo_programa] ?? project.tipo_programa}
                         </span>
                       )}
-                      <VirtualizacionToggle project={project} />
+                      <span className="relative z-10"><VirtualizacionToggle project={project} /></span>
                       {(() => {
                         const statusBadge = PROJECT_STATUS_BADGES[project.status as keyof typeof PROJECT_STATUS_BADGES];
                         if (!statusBadge) return null;
@@ -287,7 +312,12 @@ export default function ProjectsPage() {
                         <FolderKanban className="h-4.5 w-4.5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm leading-snug line-clamp-1">{project.name}</p>
+                        <Link
+                          to={`/projects/${project.id}`}
+                          className="font-semibold text-sm leading-snug line-clamp-1 after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+                        >
+                          {project.name}
+                        </Link>
                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                           {project.description || 'Sin descripción'}
                         </p>
@@ -322,7 +352,7 @@ export default function ProjectsPage() {
 
                   </CardContent>
                 </Card>
-              </Link>
+              </div>
             );
           })}
         </div>

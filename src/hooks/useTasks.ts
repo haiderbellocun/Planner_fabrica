@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Task, TaskStatus, Profile } from '@/types/database';
 import { TaskFilters, taskFiltersToQuery } from '@/lib/taskFilters';
@@ -25,6 +25,9 @@ export function useTasks(projectId: string | undefined, filters?: TaskFilters) {
   return useQuery({
     // No filters -> key identical to before, so every existing caller/invalidation is unaffected.
     queryKey: qs ? ['tasks', projectId, qs] : ['tasks', projectId],
+    // Al cambiar filtros se mantiene la lista anterior (atenuada) en vez de volver al esqueleto, pero
+    // SOLO si es del mismo proyecto: nunca se muestran tareas de otro proyecto mientras carga.
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey?.[1] === projectId ? prev : undefined),
     queryFn: async (): Promise<TaskWithDetails[]> => {
       if (!projectId) return [];
       const tasks = await api.get<TaskWithDetails[]>(`/api/projects/${projectId}/tasks${qs ? `?${qs}` : ''}`);
@@ -38,7 +41,6 @@ export function useTasks(projectId: string | undefined, filters?: TaskFilters) {
       return tasks;
     },
     enabled: !!projectId,
-    placeholderData: keepPreviousData,
   });
 }
 

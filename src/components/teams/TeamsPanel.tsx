@@ -1,3 +1,7 @@
+import { ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { priorityConfig } from '@/lib/priority';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,12 +15,6 @@ import { TaskWithDetails } from '@/hooks/useTasks';
 import { cn } from '@/lib/utils';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
-const priorityConfig = {
-  low: { label: 'Baja', className: BADGE_TONES.neutral },
-  medium: { label: 'Media', className: BADGE_TONES.warning },
-  high: { label: 'Alta', className: BADGE_TONES.escalated },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
-};
 
 interface TeamsPanelProps {
   projectId: string;
@@ -27,7 +25,9 @@ interface TeamsPanelProps {
 }
 
 export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskClick }: TeamsPanelProps) {
-  const { data: teams = [], isLoading } = useTeams(projectId);
+  const { confirmAction, confirmDialog } = useConfirmDialog();
+  const { data: teamsData, isLoading, isError, error, refetch, isFetching } = useTeams(projectId);
+  const teams = teamsData ?? [];
   const deleteTeam = useDeleteTeam(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -53,8 +53,13 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
   };
 
   const handleDelete = (team: Team) => {
-    if (!confirm(`¿Eliminar el equipo "${team.name}"? Las tareas quedarán sin equipo.`)) return;
-    deleteTeam.mutate(team.id);
+    confirmAction({
+      title: `¿Eliminar el equipo "${team.name}"?`,
+      description: 'Las tareas quedarán sin equipo. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteTeam.mutateAsync(team.id),
+    });
   };
 
   return (
@@ -68,10 +73,11 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
         </div>
       )}
 
+      {isError && teamsData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
       {isLoading ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">Cargando equipos...</CardContent>
-        </Card>
+        <ListSkeleton rows={3} />
+      ) : isError && teamsData === undefined ? (
+        <ErrorState message="No se pudieron cargar los equipos del proyecto." error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : sortedTeams.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
@@ -129,7 +135,7 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
 
                       {canManage && (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button
+                          <Button aria-label="Editar equipo"
                             type="button"
                             size="icon"
                             variant="ghost"
@@ -138,7 +144,7 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
+                          <Button aria-label="Eliminar equipo"
                             type="button"
                             size="icon"
                             variant="ghost"
@@ -213,6 +219,7 @@ export function TeamsPanel({ projectId, canManage, members, tasks = [], onTaskCl
           if (!open) setSelectedTeam(null);
         }}
       />
+      {confirmDialog}
     </div>
   );
 }

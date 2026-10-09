@@ -5,7 +5,7 @@ import { nivoTheme, nivoSeriesColors } from '@/components/charts/nivoTheme';
 import { formatRelativeDate } from '@/lib/workPlanFormat';
 
 export function ActivityFeed() {
-  const { data, isLoading } = useWorkPlanActivity();
+  const { data, isLoading, isError, error, refetch, isFetching } = useWorkPlanActivity();
   const hasSeries = (data?.daily ?? []).some((s) => s.data.some((p) => p.y > 0));
 
   return (
@@ -13,6 +13,10 @@ export function ActivityFeed() {
       title="Actividad del equipo"
       subtitle={data ? `${data.last_24h} cambios en 24h · ${data.last_7d} en 7 días` : undefined}
       loading={isLoading}
+      error={isError && !data}
+      errorDetail={error}
+      onRetry={() => refetch()}
+      retrying={isFetching}
       empty={!isLoading && !hasSeries && (data?.feed.length ?? 0) === 0}
       minHeight={320}
     >

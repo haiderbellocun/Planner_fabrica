@@ -20,7 +20,7 @@ interface ProjectHeatMapProps {
 export function ProjectHeatMap({ filters }: ProjectHeatMapProps) {
   const [dimension, setDimension] = useState<Dimension>('project');
   const [expanded, setExpanded] = useState(false);
-  const { data, isLoading } = useWorkPlanMatrix(filters, dimension);
+  const { data, isLoading, isError, error, refetch, isFetching } = useWorkPlanMatrix(filters, dimension);
 
   const rows = data?.rows ?? [];
   const visibleRows = expanded ? rows : rows.slice(0, 12);
@@ -31,6 +31,10 @@ export function ProjectHeatMap({ filters }: ProjectHeatMapProps) {
       title={`Matriz colaborador × ${dimension === 'project' ? 'proyecto' : 'materia'}`}
       subtitle={data ? `Top ${data.shown_projects} de ${data.total_projects} por volumen${dimension === 'materia' ? ' · solo tareas vinculadas a una materia' : ''}` : undefined}
       loading={isLoading}
+      error={isError && !data}
+      errorDetail={error}
+      onRetry={() => refetch()}
+      retrying={isFetching}
       empty={!isLoading && rows.length === 0}
       emptyMessage={dimension === 'materia' ? 'Ninguna tarea en este filtro está vinculada a una materia todavía' : undefined}
       minHeight={Math.max(320, visibleRows.length * 32)}

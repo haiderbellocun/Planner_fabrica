@@ -1,3 +1,4 @@
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { useUpdateAsignatura } from '@/hooks/useAsignaturas';
 import { DIALOG_SIZES } from '@/lib/dialogSizes';
@@ -50,6 +51,7 @@ export function EditAsignaturaDialog({
   open,
   onOpenChange,
 }: EditAsignaturaDialogProps) {
+  const { confirmAction, confirmDialog } = useConfirmDialog();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -133,9 +135,13 @@ export function EditAsignaturaDialog({
   };
 
   const handleDeleteMaterial = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este material?')) {
-      deleteMaterial.mutate(id);
-    }
+    confirmAction({
+      title: '¿Estás seguro de eliminar este material?',
+      description: 'Se quitará el material de esta asignatura. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteMaterial.mutateAsync(id),
+    });
   };
 
   const availableMaterialTypes = materialTypes.filter(
@@ -221,7 +227,7 @@ export function EditAsignaturaDialog({
                   placeholder="Cant."
                 />
 
-                <Button
+                <Button aria-label="Agregar"
                   type="button"
                   onClick={handleAddMaterial}
                   disabled={!selectedMaterialType || createMaterial.isPending}
@@ -292,7 +298,7 @@ export function EditAsignaturaDialog({
                         <span className="text-sm text-muted-foreground">
                           Cantidad: {material.cantidad}
                         </span>
-                        <Button
+                        <Button aria-label="Editar"
                           type="button"
                           size="icon"
                           variant="ghost"
@@ -303,7 +309,7 @@ export function EditAsignaturaDialog({
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
+                        <Button aria-label="Eliminar"
                           type="button"
                           size="icon"
                           variant="ghost"
@@ -341,6 +347,7 @@ export function EditAsignaturaDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

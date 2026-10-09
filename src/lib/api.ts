@@ -2,6 +2,7 @@
 // Base URL must be set via VITE_API_URL (e.g. in .env.production or .env)
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '';
+import { ApiRequestError } from '@/lib/apiError';
 import { TOKEN_KEY, handleAccountDisabled, isAccountDisabledResponse } from '@/lib/session';
 
 interface ApiError {
@@ -24,7 +25,7 @@ class ApiClient {
         error: `HTTP ${response.status}: ${response.statusText}`,
       }));
       if (isAccountDisabledResponse(response.status, error)) handleAccountDisabled();
-      throw new Error(error.error || 'Request failed');
+      throw new ApiRequestError(error.error || 'Request failed', response.status);
     }
 
     // Handle 204 No Content

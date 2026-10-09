@@ -3,7 +3,10 @@
 // .hero-banner / .spotlight-card / .attn-item / .status-pill classes in
 // index.css, so the visual recipe lives in one place.
 import type { ReactNode } from 'react';
-import { Loader2, Inbox, type LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, Loader2, Inbox, SearchX, Settings2, ShieldAlert, type LucideIcon } from 'lucide-react';
+import { describeError, getErrorStatus } from '@/lib/apiError';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 // ---------- Sparkline ----------
@@ -62,7 +65,7 @@ export function StatTile({ label, value, sub, pill, sparkline, className, decora
   return (
     <div className={cn('stat-tile', emphasis === 'primary' && 'stat-tile-primary', className)}>
       {decorationImage && (
-        <img src={decorationImage} alt="" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none select-none" />
+        <img src={decorationImage} alt="" loading="lazy" decoding="async" className="absolute right-1 top-1 h-28 w-28 object-contain opacity-80 pointer-events-none select-none" />
       )}
       {accentImage && (
         <img src={accentImage} alt="" className="absolute left-0 bottom-0 h-24 w-auto object-contain opacity-40 pointer-events-none select-none" />
@@ -269,4 +272,95 @@ export function EmptyState({ message, icon: Icon = Inbox, action, className }: E
       )}
     </div>
   );
+}
+
+// ---------- ErrorState ----------
+// Fallo real de una consulta (red, servidor, permisos). Se distingue de EmptyState (no hay datos) y de
+// LoadingState/Skeletons (aún cargando): nunca debe mostrarse un "no hay X" cuando la API falló.
+// Con `error` conserva el mensaje del servidor y diferencia permisos (401/403) de fallos de red o servidor;
+// un 403 no ofrece «Reintentar» (reintentar no concede permisos).
+
+interface ErrorStateProps {
+  /** Texto base (qué no se pudo cargar). Con `error` se le añade el motivo. */
+  message?: string;
+  error?: unknown;
+  /** Si se pasa, muestra «Reintentar» (normalmente `refetch` de la consulta). */
+  onRetry?: () => void;
+  retrying?: boolean;
+  className?: string;
+}
+
+export function ErrorState({ message = 'No se pudo cargar la información.', error, onRetry, retrying = false, className }: ErrorStateProps) {
+  const status = getErrorStatus(error);
+  const forbidden = status === 403;
+  const d = error === undefined ? { title: undefined, message } : describeError(error, message);
+  const Icon = status === 401 || forbidden ? ShieldAlert : AlertCircle;
+  return (
+    <div role="alert" className={cn('flex flex-col items-center justify-center gap-3 py-12 text-center', className)}>
+      <Icon className="h-10 w-10 text-destructive-strong" aria-hidden="true" />
+      {d.title && <p className="text-sm font-semibold text-foreground">{d.title}</p>}
+      <p className="text-sm text-foreground max-w-sm">{d.message}</p>
+      {onRetry && !forbidden && (
+        <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={retrying}>
+          {retrying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Reintentar
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ---------- RefetchError ----------
+// La actualización falló pero hay datos anteriores: se mantienen visibles y se avisa sin bloquear.
+
+export function RefetchError({ error, onRetry, retrying = false, className }: { error?: unknown; onRetry?: () => void; retrying?: boolean; className?: string }) {
+  const d = describeError(error, 'No se pudo actualizar la información.');
+  return (
+    <div role="status" className={cn('mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning-strong', className)}>
+      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="flex-1 min-w-0">{d.title ? `${d.title}: ` : ''}{d.message} Se muestran los datos anteriores.</span>
+      {onRetry && !isForbidden(error) && (
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-warning-strong" onClick={onRetry} disabled={retrying}>
+          {retrying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Reintentar
+        </Button>
+      )}
+    </div>
+  );
+}
+
+const isForbidden = (error: unknown) => getErrorStatus(error) === 403;
+
+// ---------- UpdatingIndicator ----------
+// Actualización en segundo plano (hay datos): indicador discreto, con retardo para evitar parpadeos.
+
+export function UpdatingIndicator({ active, delayMs = 400, className }: { active: boolean; delayMs?: number; className?: string }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!active) { setShow(false); return; }
+    const t = setTimeout(() => setShow(true), delayMs);
+    return () => clearTimeout(t);
+  }, [active, delayMs]);
+  return (
+    <span role="status" aria-live="polite" className={cn('inline-flex items-center gap-1.5 text-xs text-muted-foreground', className)}>
+      {show && (<><Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />Actualizando…</>)}
+    </span>
+  );
+}
+
+// ---------- Estados vacíos con significado propio ----------
+
+/** Hay registros, pero ninguno cumple los filtros. */
+export function NoResultsState({ message = 'Ningún resultado con los filtros seleccionados.', onClear, className }: { message?: string; onClear?: () => void; className?: string }) {
+  return <EmptyState icon={SearchX} message={message} action={onClear ? { label: 'Limpiar filtros', onClick: onClear } : undefined} className={className} />;
+}
+
+/** El usuario no tiene permiso para ver o gestionar esta sección. */
+export function NoPermissionState({ message = 'No tienes permiso para ver esta sección.', className }: { message?: string; className?: string }) {
+  return <EmptyState icon={ShieldAlert} message={message} className={className} />;
+}
+
+/** Falta una configuración previa para poder mostrar la información. */
+export function SetupNeededState({ message, action, className }: { message: string; action?: { label: string; onClick: () => void }; className?: string }) {
+  return <EmptyState icon={Settings2} message={message} action={action} className={className} />;
 }

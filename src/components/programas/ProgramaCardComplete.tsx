@@ -1,3 +1,4 @@
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -33,6 +34,7 @@ interface ProgramaCardProps {
 }
 
 function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; programaId: string }) {
+  const { confirmAction, confirmDialog } = useConfirmDialog();
   const [isOpen, setIsOpen] = useState(false);
   const [editTemaOpen, setEditTemaOpen] = useState(false);
   const [quickAddTemasOpen, setQuickAddTemasOpen] = useState(false);
@@ -49,20 +51,23 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
   const updateTema = useUpdateTema(asignatura.id);
 
   const handleDeleteAsignatura = async () => {
-    if (
-      confirm(
-        `¿Estás seguro de eliminar la asignatura "${asignatura.name}"? Esto eliminará todos sus temas y materiales.`
-      )
-    ) {
-      try {
-        await api.delete(`/api/asignaturas/${asignatura.id}`);
-        queryClient.invalidateQueries({ queryKey: ['programa', programaId] });
-        queryClient.invalidateQueries({ queryKey: ['programas'] });
-        toast.success('Asignatura eliminada');
-      } catch (error: any) {
-        toast.error('Error al eliminar: ' + error.message);
-      }
-    }
+    confirmAction({
+      title: `¿Estás seguro de eliminar la asignatura "${asignatura.name}"?`,
+      description: 'Esto eliminará todos sus temas y materiales. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/api/asignaturas/${asignatura.id}`);
+          queryClient.invalidateQueries({ queryKey: ['programa', programaId] });
+          queryClient.invalidateQueries({ queryKey: ['programas'] });
+          toast.success('Asignatura eliminada');
+        } catch (error: any) {
+          toast.error('Error al eliminar: ' + error.message);
+          throw error;
+        }
+      },
+    });
   };
 
   const handleEditTema = (tema: any) => {
@@ -71,9 +76,13 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
   };
 
   const handleDeleteTema = (temaId: string, temaTitle: string) => {
-    if (confirm(`¿Estás seguro de eliminar el tema "${temaTitle}"?`)) {
-      deleteTema.mutate(temaId);
-    }
+    confirmAction({
+      title: `¿Estás seguro de eliminar el tema "${temaTitle}"?`,
+      description: 'Se eliminará el tema. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteTema.mutateAsync(temaId),
+    });
   };
 
   const handleToggleAsignaturaCompletado = async (checked: boolean) => {
@@ -130,7 +139,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
             <Badge variant="secondary" className="text-xs">
               {temasCount} temas
             </Badge>
-            <Button
+            <Button aria-label="Editar"
               variant="ghost"
               size="icon"
               className="h-7 w-7"
@@ -138,7 +147,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
             >
               <Pencil className="h-3 w-3" />
             </Button>
-            <Button
+            <Button aria-label="Eliminar"
               variant="ghost"
               size="icon"
               className="h-7 w-7"
@@ -185,7 +194,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
                     <Badge variant="secondary" className="text-xs">
                       {tema.materiales_count || 0} materiales
                     </Badge>
-                    <Button
+                    <Button aria-label="Editar"
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
@@ -193,7 +202,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button
+                    <Button aria-label="Eliminar"
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
@@ -255,6 +264,7 @@ function AsignaturaItem({ asignatura, programaId }: { asignatura: Asignatura; pr
         open={editAsignaturaOpen}
         onOpenChange={setEditAsignaturaOpen}
       />
+      {confirmDialog}
     </>
   );
 }
@@ -314,10 +324,10 @@ export function ProgramaCardComplete({
 
             {canManage && (
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" onClick={onEdit}>
+                <Button aria-label="Editar" variant="ghost" size="icon" onClick={onEdit}>
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onDelete}>
+                <Button aria-label="Eliminar" variant="ghost" size="icon" onClick={onDelete}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>

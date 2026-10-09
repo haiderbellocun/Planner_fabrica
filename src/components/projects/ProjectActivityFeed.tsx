@@ -1,3 +1,5 @@
+import { ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, MessageSquare, ArrowRight, Sparkles } from 'lucide-react';
@@ -17,16 +19,15 @@ const getInitials = (name: string | null) => {
 };
 
 export function ProjectActivityFeed({ projectId, projectKey, onTaskClick }: ProjectActivityFeedProps) {
-  const { data: events = [], isLoading } = useProjectActivity(projectId);
+  const { data: eventsData, isLoading, isError, error, refetch, isFetching } = useProjectActivity(projectId);
+  const events = eventsData ?? [];
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="py-10 flex justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="py-4"><ListSkeleton rows={5} /></CardContent></Card>;
+  }
+
+  if (isError && eventsData === undefined) {
+    return <ErrorState message="No se pudo cargar la actividad del proyecto." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   }
 
   if (events.length === 0) {

@@ -1,18 +1,16 @@
 // Paleta centralizada para insignias de estado/prioridad en toda la app.
 // Cada dominio (prioridad de tareas, prioridad de solicitudes de marketing, estados de
-// entregas, etc.) conserva su propio enum y etiqueta — solo el color real se comparte,
-// para que todas las insignias se vean consistentes en vez de cada feature inventando
-// su propio tono de rojo/ámbar/verde.
+// entregas, etc.) conserva su propio enum y etiqueta: solo el color real se comparte.
+// Fondo = tinte del token semantico; texto = variante "-strong" (>= 4.5:1, ver index.css).
 export const BADGE_TONES = {
-  neutral:   'bg-slate-100 text-slate-600',
-  info:      'bg-blue-100 text-blue-700',
-  success:   'bg-green-100 text-green-700',
-  warning:   'bg-amber-100 text-amber-700',
-  // Paso intermedio entre warning y danger — usado por prioridad "alta" (que en varias
-  // pantallas debe distinguirse visualmente tanto de "media" como de "urgente"/"crítica").
-  escalated: 'bg-orange-100 text-orange-700',
-  danger:    'bg-red-100 text-red-700',
-  special:   'bg-teal-100 text-teal-800',
+  neutral:   'bg-muted text-muted-foreground',
+  info:      'bg-info/10 text-info-strong',
+  success:   'bg-success/10 text-success-strong',
+  warning:   'bg-warning/15 text-warning-strong',
+  // Paso intermedio entre warning y danger: prioridad "alta", distinguible de "media" y de "urgente".
+  escalated: 'bg-coral/10 text-coral-strong',
+  danger:    'bg-destructive/10 text-destructive-strong',
+  special:   'bg-primary/10 text-primary-deep',
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONES;

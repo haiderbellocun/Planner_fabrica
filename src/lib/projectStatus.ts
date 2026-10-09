@@ -6,14 +6,14 @@ import { CheckCircle2, PauseCircle } from 'lucide-react';
 export const PROJECT_STATUS_BADGES = {
   paused: {
     label: 'Pausado',
-    className: 'bg-amber-100 text-amber-800 border-amber-200',
-    textClassName: 'text-amber-700',
+    className: 'bg-warning/15 text-warning-strong border-warning/30',
+    textClassName: 'text-warning-strong',
     icon: PauseCircle,
   },
   completed: {
     label: 'Finalizado',
-    className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    textClassName: 'text-emerald-700',
+    className: 'bg-success/10 text-success-strong border-success/30',
+    textClassName: 'text-success-strong',
     icon: CheckCircle2,
   },
 } as const;

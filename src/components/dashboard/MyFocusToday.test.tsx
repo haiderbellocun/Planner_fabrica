@@ -19,9 +19,10 @@ const team = [
     assignee: { full_name: 'Luis Gómez', email: 'l@cun.edu.co', cargo: 'Diseñador' }, project },
 ];
 
+const data = { mine: mine as unknown[], team: team as unknown[], loading: false, error: false };
 vi.mock('@/hooks/useTasks', () => ({
-  useMyTasks: () => ({ tasks: mine, data: mine, isLoading: false, isError: false, error: null }),
-  useLeadersFocus: () => ({ data: team, isLoading: false, error: null }),
+  useMyTasks: () => ({ tasks: data.mine, data: data.mine, isLoading: data.loading, isError: data.error, error: data.error ? new Error('fallo de red') : null }),
+  useLeadersFocus: () => ({ data: data.team, isLoading: false, error: null }),
   useTask: () => ({ data: undefined }),
 }));
 vi.mock('@/hooks/useCapacity', () => ({ useMyCapacity: () => ({ data: undefined, isLoading: false }) }));
@@ -39,6 +40,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-09T17:00:00Z')); // viernes 12:00 en Bogotá
   auth.isAdmin = false; auth.isProjectLeader = false;
+  data.mine = mine; data.team = team; data.loading = false; data.error = false;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -72,4 +74,109 @@ describe('MyFocusToday', () => {
       expect(screen.getByText('Mi tarea vencida')).toBeInTheDocument();
     });
   }
+
+  const tiles = () => Object.fromEntries(
+    Array.from(document.querySelectorAll<HTMLElement>('.stat-tile')).map((el) => {
+      const label = el.querySelector('.stat-tile-label')?.textContent ?? '';
+      const value = el.querySelector('.stat-tile-value')?.textContent ?? '';
+      return [label, value];
+    }),
+  );
+
+  const roles: ['colaborador' | 'líder' | 'admin', () => void][] = [
+    ['colaborador', () => {}],
+    ['líder', () => { auth.isProjectLeader = true; }],
+    ['admin', () => { auth.isAdmin = true; }],
+  ];
+
+  for (const [name, setup] of roles) {
+    it(`${name}: «Mi foco» calcula las 4 cifras solo con SUS tareas (1 hoy, 1 vencida, 4 en curso, 1 esta semana)`, () => {
+      setup();
+      render(ui());
+      expect(tiles()).toMatchObject({ 'Vencen hoy': '1', Vencidas: '1', 'En curso': '4', 'Esta semana': '1' });
+    });
+  }
+
+  for (const [name, setup] of roles.slice(1)) {
+    it(`${name}: «Foco del equipo» muestra cifras del equipo, rotuladas como tal, y no las propias`, () => {
+      setup();
+      render(ui());
+      fireEvent.click(screen.getByText('Foco del equipo'));
+      expect(tiles()).toMatchObject({
+        'Vencen hoy (equipo)': '0', 'Vencidas (equipo)': '1', 'Pendientes de revisión': '0', 'Esta semana (equipo)': '0',
+      });
+      fireEvent.click(screen.getByText('Mi foco'));
+      expect(tiles()).toMatchObject({ 'Vencen hoy': '1', Vencidas: '1' });
+    });
+  }
+
+  it('las cifras personales no cambian aunque el equipo tenga muchas más tareas vencidas', () => {
+    data.team = Array.from({ length: 12 }, (_, i) => ({ ...team[0], id: `t${i}` }));
+    auth.isProjectLeader = true;
+    render(ui());
+    expect(tiles().Vencidas).toBe('1');
+    fireEvent.click(screen.getByText('Foco del equipo'));
+    expect(tiles()['Vencidas (equipo)']).toBe('12');
+  });
+
+  it('sin tareas propias: mensaje vacío y cifras en 0 (el equipo no se filtra a la vista personal)', () => {
+    data.mine = [];
+    auth.isProjectLeader = true;
+    render(ui());
+    expect(screen.getByText('No tienes tareas asignadas.')).toBeInTheDocument();
+    expect(tiles()).toMatchObject({ 'Vencen hoy': '0', Vencidas: '0', 'En curso': '0', 'Esta semana': '0' });
+  });
+
+  it('sin tareas del equipo: mensaje vacío en el equipo y la vista personal intacta', () => {
+    data.team = [];
+    auth.isAdmin = true;
+    render(ui());
+    expect(tiles().Vencidas).toBe('1');
+    fireEvent.click(screen.getByText('Foco del equipo'));
+    expect(screen.getByText('Sin tareas del equipo por vencer.')).toBeInTheDocument();
+  });
+
+  it('datos incompletos (sin fecha, sin estado, fecha inválida) no rompen ninguna vista', () => {
+    data.mine = [
+      { id: 'x1', title: 'Sin nada', due_date: null, status: null, project },
+      { id: 'x2', title: 'Fecha rara', due_date: 'no-es-fecha', status: status('En proceso'), project },
+    ];
+    data.team = [{ id: 'y1', title: 'Equipo incompleto', due_date: undefined, status: null, assignee: { full_name: null, email: null, cargo: null }, project }];
+    auth.isProjectLeader = true;
+    expect(() => render(ui())).not.toThrow();
+    expect(tiles()['En curso']).toBe('2');
+    expect(() => fireEvent.click(screen.getByText('Foco del equipo'))).not.toThrow();
+  });
+
+  it('carga, error y vacío son estados distintos de «Mi foco»', () => {
+    data.loading = true; data.mine = [];
+    const a = render(ui());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('No tienes tareas asignadas.')).not.toBeInTheDocument();
+    a.unmount();
+
+    data.loading = false; data.error = true;
+    const b = render(ui());
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No tienes tareas asignadas.')).not.toBeInTheDocument();
+    b.unmount();
+
+    data.error = false; data.mine = [];
+    render(ui());
+    expect(screen.getByText('No tienes tareas asignadas.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('el selector expone roles de pestañas y aria-selected, y solo existe para líder/admin', () => {
+    const a = render(ui());
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    a.unmount();
+    auth.isProjectLeader = true;
+    render(ui());
+    expect(screen.getByRole('tablist', { name: 'Vista del foco' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Mi foco' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Foco del equipo' }));
+    expect(screen.getByRole('tab', { name: 'Foco del equipo' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Mi foco' })).toHaveAttribute('aria-selected', 'false');
+  });
 });

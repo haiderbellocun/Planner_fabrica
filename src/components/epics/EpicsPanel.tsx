@@ -1,3 +1,7 @@
+import { ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { priorityConfig } from '@/lib/priority';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,12 +15,6 @@ import { TaskWithDetails } from '@/hooks/useTasks';
 import { cn } from '@/lib/utils';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
-const priorityConfig = {
-  low: { label: 'Baja', className: BADGE_TONES.neutral },
-  medium: { label: 'Media', className: BADGE_TONES.warning },
-  high: { label: 'Alta', className: BADGE_TONES.escalated },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
-};
 
 interface EpicsPanelProps {
   projectId: string;
@@ -33,7 +31,9 @@ const STATUS_META: Record<Epic['status'], { label: string; className: string }> 
 };
 
 export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: EpicsPanelProps) {
-  const { data: epics = [], isLoading } = useEpics(projectId);
+  const { confirmAction, confirmDialog } = useConfirmDialog();
+  const { data: epicsData, isLoading, isError, error, refetch, isFetching } = useEpics(projectId);
+  const epics = epicsData ?? [];
   const deleteEpic = useDeleteEpic(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
@@ -59,8 +59,13 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
   };
 
   const handleDelete = (epic: Epic) => {
-    if (!confirm(`¿Eliminar la épica "${epic.title}"? Las tareas quedarán sin épica.`)) return;
-    deleteEpic.mutate(epic.id);
+    confirmAction({
+      title: `¿Eliminar la épica "${epic.title}"?`,
+      description: 'Las tareas quedarán sin épica. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteEpic.mutateAsync(epic.id),
+    });
   };
 
   const parseDate = (val: string) => new Date(val.slice(0, 10) + 'T00:00:00');
@@ -85,10 +90,11 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
         </div>
       )}
 
+      {isError && epicsData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
       {isLoading ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">Cargando épicas...</CardContent>
-        </Card>
+        <ListSkeleton rows={3} />
+      ) : isError && epicsData === undefined ? (
+        <ErrorState message="No se pudieron cargar las épicas del proyecto." error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : sortedEpics.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
@@ -241,6 +247,7 @@ export function EpicsPanel({ projectId, canManage, tasks = [], onTaskClick }: Ep
           if (!open) setSelectedEpic(null);
         }}
       />
+      {confirmDialog}
     </div>
   );
 }

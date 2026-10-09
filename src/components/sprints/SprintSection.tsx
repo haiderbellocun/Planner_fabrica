@@ -1,3 +1,4 @@
+import { priorityConfig } from '@/lib/priority';
 import { useState } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +18,6 @@ const STATUS_META: Record<Sprint['status'], { label: string; className: string }
   completed: { label: 'Completado', className: 'bg-muted text-muted-foreground border-border' },
 };
 
-const priorityConfig = {
-  low: { label: 'Baja', className: BADGE_TONES.neutral },
-  medium: { label: 'Media', className: BADGE_TONES.warning },
-  high: { label: 'Alta', className: BADGE_TONES.escalated },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger },
-};
 
 const parseDate = (val: string) => new Date(val.slice(0, 10) + 'T00:00:00');
 const formatRange = (start: string | null, end: string | null) => {
@@ -137,10 +132,10 @@ export function SprintSection({
               )}
               {sprint.status !== 'completed' && (
                 <>
-                  <Button type="button" size="icon" variant="ghost" onClick={() => onEdit?.(sprint)} title="Editar sprint">
+                  <Button aria-label="Editar sprint" type="button" size="icon" variant="ghost" onClick={() => onEdit?.(sprint)} title="Editar sprint">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
+                  <Button aria-label="Eliminar sprint"
                     type="button"
                     size="icon"
                     variant="ghost"

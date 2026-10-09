@@ -1,3 +1,4 @@
+import { getPriority } from '@/lib/priority';
 import { TaskWithDetails } from '@/hooks/useTasks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -20,15 +21,9 @@ interface TaskCardProps {
   isDragging?: boolean;
 }
 
-const priorityConfig = {
-  low: { label: 'Baja', className: 'priority-low' },
-  medium: { label: 'Media', className: 'priority-medium' },
-  high: { label: 'Alta', className: 'priority-high' },
-  urgent: { label: 'Urgente', className: 'priority-urgent' },
-};
 
 export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProps) {
-  const priorityInfo = priorityConfig[task.priority];
+  const priorityInfo = { label: getPriority(task.priority).label, className: getPriority(task.priority).textClass };
   const dueBucket = getDueBucket(task.due_date, !!task.status?.is_completed, getBusinessTodayStr());
 
   const getInitials = (name: string | null) => {
@@ -65,7 +60,18 @@ export function TaskCard({ task, projectKey, onClick, isDragging }: TaskCardProp
         </div>
       )}
 
-      <h4 className="font-medium text-sm mb-2 line-clamp-2">{task.title}</h4>
+      <h4 className="font-medium text-sm mb-2">
+        {/* Botón real dentro del asa de arrastre: la librería ignora los elementos interactivos, así que
+            Enter/clic abren la tarea y Espacio sobre el asa sigue levantando la tarjeta. */}
+        <button
+          type="button"
+          aria-label={`Abrir tarea ${projectKey}-${task.task_number}: ${task.title}`}
+          onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+          className="line-clamp-2 w-full rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {task.title}
+        </button>
+      </h4>
 
       {task.description && (
         <p className="text-xs text-muted-foreground mb-3 line-clamp-2">

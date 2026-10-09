@@ -13,6 +13,7 @@ import { format, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
+import { computeFocusStats, prioritize } from '@/lib/focusStats';
 import { useMyCapacity } from '@/hooks/useCapacity';
 import { useReportTeamCapacity } from '@/hooks/useReports';
 
@@ -52,11 +53,13 @@ function FocusTabSwitcher({ value, onChange }: { value: FocusTab; onChange: (tab
     { id: 'team', label: 'Foco del equipo' },
   ];
   return (
-    <div className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
+    <div role="tablist" aria-label="Vista del foco" className="flex rounded-lg border border-black/5 p-0.5 bg-black/5 w-fit">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
+          role="tab"
+          aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
           className={cn(
             'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
@@ -113,51 +116,14 @@ export function MyFocusToday() {
     ? teamTasks.filter((t): t is LeadersFocusTask => t != null && typeof t === 'object')
     : [];
 
-  const pending = tasks.filter((t) => !t.status?.is_completed);
-
-  const pendingForCards = showTeamTab && !teamLoading ? teamList : pending;
-  const vencenHoy = pendingForCards.filter((t) => {
-    const due = 'due_date' in t ? t.due_date : null;
-    if (!due || typeof due !== 'string') return false;
-    return getDueBucket(due, false, todayStr) === 'due_today';
-  });
-  const vencidas = pendingForCards.filter((t) => {
-    const due = 'due_date' in t ? t.due_date : null;
-    if (!due || typeof due !== 'string') return false;
-    return getDueBucket(due, false, todayStr) === 'overdue';
-  });
-  const enCurso = pendingForCards;
-  const estaSemana = pendingForCards.filter((t) => {
-    const due = 'due_date' in t ? t.due_date : null;
-    if (!due || typeof due !== 'string') return false;
-    const dStr = due.slice(0, 10);
-    return dStr >= todayStr && dStr <= endOfWeekStr;
-  });
-  // No existe una columna semántica tipo "is_review" en task_statuses (solo "is_completed"),
-  // así que "pendiente de revisión" se aproxima por nombre de estado -- limitación conocida,
-  // documentada aquí en vez de aparentar que es un criterio robusto.
-  const enRevision = pendingForCards.filter((t) => {
-    const name = 'status' in t ? t.status?.name : undefined;
-    return typeof name === 'string' && /revis/i.test(name);
-  });
-
-  // "Tareas prioritarias" son SIEMPRE las del usuario (MyTask): vencidas, luego las que vencen
-  // hoy y luego el resto por fecha. Las cifras de arriba pueden venir del equipo (líderes).
-  const myOverdue = pending.filter((t) => getDueBucket(t.due_date, false, todayStr) === 'overdue');
-  const myDueToday = pending.filter((t) => getDueBucket(t.due_date, false, todayStr) === 'due_today');
-  const priorityList: MyTask[] = [
-    ...myOverdue,
-    ...myDueToday,
-    ...pending
-      .filter((t) => !myOverdue.some((v) => v.id === t.id) && !myDueToday.some((v) => v.id === t.id))
-      .sort((a, b) => {
-        const da = parseDue(a.due_date)?.getTime() ?? Infinity;
-        const db = parseDue(b.due_date)?.getTime() ?? Infinity;
-        return da - db;
-      }),
-  ].slice(0, 5);
-
-  const hasOverdue = vencidas.length > 0;
+  // Dos contextos separados, cada uno con SU conjunto de tareas:
+  //  - «Mi foco»: solo las tareas del usuario autenticado (cifras, prioritarias y carga).
+  //  - «Foco del equipo» (líderes/admin): solo las tareas del equipo.
+  const myStats = computeFocusStats(tasks, todayStr, endOfWeekStr);
+  const teamStats = computeFocusStats(teamList, todayStr, endOfWeekStr);
+  const pending = myStats.pending;
+  const priorityList: MyTask[] = prioritize(myStats, 5);
+  const hasOverdue = myStats.vencidas.length > 0;
 
   if (isLoading && focusTab === 'mine') {
     return (
@@ -274,14 +240,14 @@ export function MyFocusToday() {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatTile label="Vencen hoy (equipo)" value={vencenHoy.length} />
+              <StatTile label="Vencen hoy (equipo)" value={teamStats.vencenHoy.length} />
               <StatTile
                 label="Vencidas (equipo)"
-                value={vencidas.length}
-                pill={hasOverdue ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
+                value={teamStats.vencidas.length}
+                pill={teamStats.vencidas.length > 0 ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
               />
-              <StatTile label="Pendientes de revisión" value={enRevision.length} />
-              <StatTile label="Esta semana (equipo)" value={estaSemana.length} />
+              <StatTile label="Pendientes de revisión" value={teamStats.enRevision.length} />
+              <StatTile label="Esta semana (equipo)" value={teamStats.estaSemana.length} />
             </div>
 
             {showTeamTab && teamCapacityMembers.length > 0 && (
@@ -507,14 +473,14 @@ export function MyFocusToday() {
       <h2 className="text-lg font-semibold text-foreground">👋 Tu foco hoy</h2>
       {showTeamTab && <FocusTabSwitcher value={focusTab} onChange={setFocusTab} />}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatTile label="Vencen hoy" value={vencenHoy.length} />
+        <StatTile label="Vencen hoy" value={myStats.vencenHoy.length} />
         <StatTile
           label="Vencidas"
-          value={vencidas.length}
+          value={myStats.vencidas.length}
           pill={hasOverdue ? { tone: 'critical', label: 'Atención' } : { tone: 'good', label: 'Al día' }}
         />
-        <StatTile label="En curso" value={enCurso.length} />
-        <StatTile label="Esta semana" value={estaSemana.length} />
+        <StatTile label="En curso" value={pending.length} />
+        <StatTile label="Esta semana" value={myStats.estaSemana.length} />
       </div>
 
       <Card className="rounded-2xl border border-black/5 shadow-card">

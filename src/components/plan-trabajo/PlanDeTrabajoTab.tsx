@@ -1,3 +1,5 @@
+import { ChartContainer } from './charts/ChartContainer';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { WorkPlanFilters } from '@/types/workPlan.types';
 import {
@@ -100,6 +102,18 @@ export function PlanDeTrabajoTab() {
 
   const setAssignee = (id: string) => setFilterState((s) => ({ ...s, assigneeId: id }));
 
+  // Un bloque con error y sin datos muestra el motivo y «Reintentar» en lugar de «Sin datos para este filtro».
+  const guard = (
+    q: { isError: boolean; data: unknown; error: unknown; refetch: () => unknown; isFetching: boolean },
+    title: string,
+    node: ReactNode,
+  ) =>
+    q.isError && q.data === undefined ? (
+      <ChartContainer title={title} error errorDetail={q.error} onRetry={() => { void q.refetch(); }} retrying={q.isFetching} minHeight={160}>
+        {null}
+      </ChartContainer>
+    ) : node;
+
   return (
     <div className="space-y-8">
       <WorkPlanFiltersBar value={filterState} onChange={setFilterState} />
@@ -111,24 +125,24 @@ export function PlanDeTrabajoTab() {
 
       <section>
         <SectionHeader title="KPI principales" />
-        <WorkPlanKpis summary={summary.data} loading={summary.isLoading} />
+        {guard(summary, 'Indicadores del plan', <WorkPlanKpis summary={summary.data} loading={summary.isLoading} />)}
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WorkloadChart data={workload.data} loading={workload.isLoading} onSelectCollaborator={setAssignee} />
-        <WorkStatusChart data={statusDist.data} loading={statusDist.isLoading} />
+        {guard(workload, 'Carga de trabajo por colaborador', <WorkloadChart data={workload.data} loading={workload.isLoading} onSelectCollaborator={setAssignee} />)}
+        {guard(statusDist, 'Distribución por estado', <WorkStatusChart data={statusDist.data} loading={statusDist.isLoading} />)}
       </section>
 
       <section>
-        <WorkEvolutionChart data={evolution.data} loading={evolution.isLoading} />
+        {guard(evolution, 'Evolución del trabajo', <WorkEvolutionChart data={evolution.data} loading={evolution.isLoading} />)}
       </section>
 
       <section>
-        <PlannedVsCompletedChart data={plannedVsCompleted.data} loading={plannedVsCompleted.isLoading} />
+        {guard(plannedVsCompleted, 'Planificado vs completado', <PlannedVsCompletedChart data={plannedVsCompleted.data} loading={plannedVsCompleted.isLoading} />)}
       </section>
 
       <section>
-        <CollaboratorStatusChart data={statusByCollaborator.data} loading={statusByCollaborator.isLoading} />
+        {guard(statusByCollaborator, 'Estado por colaborador', <CollaboratorStatusChart data={statusByCollaborator.data} loading={statusByCollaborator.isLoading} />)}
       </section>
 
       <section>
@@ -136,7 +150,7 @@ export function PlanDeTrabajoTab() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ProductionProgress data={production.data} loading={production.isLoading} />
+        {guard(production, 'Avance de producción', <ProductionProgress data={production.data} loading={production.isLoading} />)}
         <ProductionVelocityChart />
       </section>
 
@@ -146,12 +160,12 @@ export function PlanDeTrabajoTab() {
 
       <section>
         <SectionHeader title="Plan de trabajo por persona" />
-        <CollaboratorWorkPlanRows data={collaboratorRows.data} loading={collaboratorRows.isLoading} onOpen={setOpenCollaboratorId} />
+        {guard(collaboratorRows, 'Plan de trabajo por persona', <CollaboratorWorkPlanRows data={collaboratorRows.data} loading={collaboratorRows.isLoading} onOpen={setOpenCollaboratorId} />)}
       </section>
 
       <section>
         <SectionHeader title="Requieren atención" />
-        <WorkPlanAlerts data={alerts.data} loading={alerts.isLoading} />
+        {guard(alerts, 'Requieren atención', <WorkPlanAlerts data={alerts.data} loading={alerts.isLoading} />)}
       </section>
 
       <section>

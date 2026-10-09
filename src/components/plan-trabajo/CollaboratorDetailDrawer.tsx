@@ -1,3 +1,5 @@
+import { ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState } from '@/components/shared/StoryUI';
 import { chartSurface } from '@/components/charts/chartTheme';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
@@ -20,14 +22,16 @@ export function CollaboratorDetailDrawer({
   collaboratorId: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data, isLoading } = useWorkPlanCollaboratorDetail(collaboratorId);
+  const { data, isLoading, isError, error, refetch, isFetching } = useWorkPlanCollaboratorDetail(collaboratorId);
 
   return (
     <Sheet open={!!collaboratorId} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-        {isLoading || !data ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {isError && !data ? (
+          <ErrorState message="No se pudo cargar el detalle del colaborador." error={error} onRetry={() => refetch()} retrying={isFetching} />
+        ) : isLoading || !data ? (
+          <div className="py-6" role="status" aria-busy="true" aria-label="Cargando colaborador">
+            <ListSkeleton rows={5} />
           </div>
         ) : (
           <div className="space-y-5">

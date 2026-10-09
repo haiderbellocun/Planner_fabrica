@@ -1,3 +1,5 @@
+import { ListSkeleton, StatTilesSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
@@ -28,7 +30,7 @@ export default function EquipoPlanPage() {
   const weekStart = format(anchorDate, 'yyyy-MM-dd');
   const weekEndDate = addDays(anchorDate, 6);
 
-  const { data: plan, isLoading, isError, error } = useEquipoPlan(equipoId, weekStart);
+  const { data: plan, isLoading, isError, error, refetch, isFetching } = useEquipoPlan(equipoId, weekStart);
   const addItem = useAddEquipoPlanItem(equipoId || '');
   const removeItem = useRemoveEquipoPlanItem(equipoId || '');
 
@@ -53,13 +55,13 @@ export default function EquipoPlanPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setAnchorDate((d) => subWeeks(d, 1))}>
+          <Button aria-label="Anterior" variant="outline" size="icon" onClick={() => setAnchorDate((d) => subWeeks(d, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium tabular-nums whitespace-nowrap">
             {format(anchorDate, 'd MMM', { locale: es })} – {format(weekEndDate, 'd MMM yyyy', { locale: es })}
           </span>
-          <Button variant="outline" size="icon" onClick={() => setAnchorDate((d) => addWeeks(d, 1))}>
+          <Button aria-label="Siguiente" variant="outline" size="icon" onClick={() => setAnchorDate((d) => addWeeks(d, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAnchorDate(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
@@ -69,17 +71,15 @@ export default function EquipoPlanPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6">
+          <StatTilesSkeleton count={3} className="sm:grid-cols-3" />
+          <div className="surface p-card"><ListSkeleton rows={5} /></div>
         </div>
-      ) : isError ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <AlertTriangle className="h-10 w-10 mb-3 text-coral" />
-          <p className="text-sm">No se pudo cargar el plan semanal.</p>
-          <p className="text-xs mt-1">{(error as Error)?.message || 'Error de conexión.'}</p>
-        </div>
+      ) : isError && !plan ? (
+        <ErrorState message="No se pudo cargar el plan semanal." error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <div className="space-y-6">
+          {isError && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <StatTile label="Tareas planificadas" value={allItems.length} />
             <StatTile label="Completadas esta semana" value={`${completedCount}/${allItems.length}`} />
@@ -154,7 +154,7 @@ export default function EquipoPlanPage() {
                                   </div>
                                 </div>
                                 {isProjectLeader && (
-                                  <Button
+                                  <Button aria-label="Quitar del plan"
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"

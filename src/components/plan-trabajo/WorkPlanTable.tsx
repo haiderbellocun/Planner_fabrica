@@ -1,9 +1,12 @@
+import { ErrorState } from '@/components/shared/StoryUI';
+import { activatableRow } from '@/lib/a11y';
 import { useState } from 'react';
 import type { WorkPlanFilters } from '@/types/workPlan.types';
 import { useWorkPlanTable } from '@/hooks/useWorkPlan';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { formatRelativeDate } from '@/lib/workPlanFormat';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const COLUMNS = [
@@ -24,7 +27,7 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const { data, isLoading } = useWorkPlanTable(filters, search, page, pageSize);
+  const { data, isLoading, isError, error, refetch, isFetching, isPlaceholderData } = useWorkPlanTable(filters, search, page, pageSize);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
   return (
@@ -40,7 +43,8 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
       </div>
 
       <div className="rounded-xl border bg-card overflow-auto max-h-[520px]">
-        <table className="w-full text-2xs">
+        <table className={isPlaceholderData ? 'w-full text-2xs opacity-60 transition-opacity duration-ui' : 'w-full text-2xs'} aria-busy={isLoading || isPlaceholderData}>
+          <caption className="sr-only">Plan de trabajo por colaborador</caption>
           <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
             <tr>
               {COLUMNS.map((c) => (
@@ -50,12 +54,18 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={COLUMNS.length} className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              Array.from({ length: 6 }, (_, r) => (
+                <tr key={r} aria-hidden="true">
+                  {COLUMNS.map((_c, i) => <td key={i} className="px-3 py-3"><Skeleton className="h-4 w-3/4" /></td>)}
+                </tr>
+              ))
+            ) : isError && !data ? (
+              <tr><td colSpan={COLUMNS.length}><ErrorState message="No se pudo cargar la tabla operativa." error={error} onRetry={() => refetch()} retrying={isFetching} className="py-8" /></td></tr>
             ) : data && data.rows.length > 0 ? data.rows.map((r) => (
               <tr
                 key={r.collaborator_id}
-                className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
-                onClick={() => onOpenCollaborator(r.collaborator_id)}
+                className="border-b hover:bg-muted/30 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                {...activatableRow(() => onOpenCollaborator(r.collaborator_id))}
               >
                 <td className="px-3 py-2 font-medium whitespace-nowrap">{r.full_name}</td>
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{r.cargo ?? '—'}</td>
@@ -78,11 +88,11 @@ export function WorkPlanTable({ filters, onOpenCollaborator }: { filters: WorkPl
 
       {data && data.total > pageSize && (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button aria-label="Anterior" variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
           <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
-          <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+          <Button aria-label="Siguiente" variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>

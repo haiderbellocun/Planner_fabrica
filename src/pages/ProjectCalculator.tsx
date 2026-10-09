@@ -1,3 +1,6 @@
+import { ErrorState } from '@/components/shared/StoryUI';
+import { FormSkeleton, PageHeaderSkeleton } from '@/components/shared/Skeletons';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,8 +83,10 @@ function formatDate(date: Date): string {
 export default function ProjectCalculator() {
   const { isAdmin, isProjectLeader } = useAuth();
 
-  const { data: materialTypes = [], isLoading: loadingMT } = useMaterialTypes();
-  const { data: tiempos = [], isLoading: loadingTiempos } = useTiemposEstimados();
+  const { data: materialTypesData, isLoading: loadingMT, isError: errorMT, error: errMT, refetch: refetchMT, isFetching: fetchingMT } = useMaterialTypes();
+  const materialTypes = materialTypesData ?? [];
+  const { data: tiemposData, isLoading: loadingTiempos, isError: errorTiempos, error: errTiempos, refetch: refetchTiempos, isFetching: fetchingTiempos } = useTiemposEstimados();
+  const tiempos = tiemposData ?? [];
 
   const [numSubjects, setNumSubjects] = useState(5);
   const [teamSize, setTeamSize] = useState(3);
@@ -156,24 +161,34 @@ export default function ProjectCalculator() {
   if (loadingMT || loadingTiempos) {
     return (
       <div className="page-container">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageHeaderSkeleton />
+        <FormSkeleton cards={2} />
+      </div>
+    );
+  }
+
+  // Sin catálogos no hay cálculo posible: se explica y se puede reintentar (los datos son de solo lectura).
+  if ((errorMT && materialTypesData === undefined) || (errorTiempos && tiemposData === undefined)) {
+    return (
+      <div className="page-container">
+        <PageHeader icon={Calculator} title="Calculadora de Proyectos" />
+        <ErrorState
+          message="No se pudieron cargar los tipos de material y los tiempos estimados necesarios para calcular."
+          error={errMT ?? errTiempos}
+          onRetry={() => { if (errorMT) refetchMT(); if (errorTiempos) refetchTiempos(); }}
+          retrying={fetchingMT || fetchingTiempos}
+        />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Calculator className="h-6 w-6" />
-          Calculadora de Proyectos
-        </h1>
-        <p className="page-description">
-          Estima la duración de un proyecto según las asignaturas, materiales y equipo disponible
-        </p>
-      </div>
+      <PageHeader
+        icon={Calculator}
+        title="Calculadora de Proyectos"
+        description="Estima la duración de un proyecto según las asignaturas, materiales y equipo disponible"
+      />
 
       <div className="space-y-6">
         {/* Configuration */}

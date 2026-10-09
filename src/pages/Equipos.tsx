@@ -1,3 +1,6 @@
+import { CardGridSkeleton, StatTilesSkeleton } from '@/components/shared/Skeletons';
+import { EmptyState, ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Pencil, CalendarDays } from 'lucide-react';
@@ -14,8 +17,12 @@ import type { Equipo } from '@/types/database';
 export default function Equipos() {
   const navigate = useNavigate();
   const { isProjectLeader } = useAuth();
-  const { data: equipos = [], isLoading } = useEquipos();
-  const { data: profiles = [] } = useProfiles();
+  const { data: equiposData, isLoading, isError, error, refetch, isFetching } = useEquipos();
+  const equipos = equiposData ?? [];
+  const { data: profilesData, isError: profilesError } = useProfiles();
+  const profiles = profilesData ?? [];
+  // Si no se pudo leer la lista de personas, «sin equipo» no se puede calcular: no se muestra un 0 engañoso.
+  const unassignedUnknown = profilesError && profilesData === undefined;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null);
 
@@ -30,21 +37,27 @@ export default function Equipos() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Users className="h-6 w-6 text-primary" />
-          Equipos
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gestiona los 5 equipos de trabajo: nombre, color y miembros.
-        </p>
-      </div>
+    <div className="page-container space-y-6">
+      <PageHeader
+        icon={Users}
+        title="Equipos"
+        description="Gestiona los 5 equipos de trabajo: nombre, color y miembros."
+        className="mb-0 md:mb-0"
+      />
 
+      {isError && equiposData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
       {isLoading ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">Cargando equipos...</CardContent>
-        </Card>
+        <div className="space-y-6">
+          <StatTilesSkeleton count={4} />
+          <CardGridSkeleton count={3} />
+        </div>
+      ) : isError && equiposData === undefined ? (
+        <ErrorState message="No se pudieron cargar los equipos." error={error} onRetry={() => refetch()} retrying={isFetching} />
+      ) : equipos.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          message="Aún no hay equipos creados."
+        />
       ) : (
         <>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -57,8 +70,8 @@ export default function Equipos() {
           />
           <StatTile
             label="Personas sin equipo"
-            value={unassignedProfiles.length}
-            pill={unassignedProfiles.length > 0 ? { tone: 'warning', label: 'Pendiente' } : { tone: 'good', label: 'Completo' }}
+            value={unassignedUnknown ? '—' : unassignedProfiles.length}
+            pill={unassignedUnknown ? undefined : unassignedProfiles.length > 0 ? { tone: 'warning', label: 'Pendiente' } : { tone: 'good', label: 'Completo' }}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -69,7 +82,7 @@ export default function Equipos() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium truncate">{equipo.name}</h3>
                     <div className="flex items-center shrink-0">
-                      <Button
+                      <Button aria-label="Ver plan semanal"
                         type="button"
                         size="icon"
                         variant="ghost"
@@ -79,7 +92,7 @@ export default function Equipos() {
                         <CalendarDays className="h-4 w-4" />
                       </Button>
                       {isProjectLeader && (
-                        <Button
+                        <Button aria-label="Editar equipo"
                           type="button"
                           size="icon"
                           variant="ghost"

@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
-import { Loader2, Inbox, AlertTriangle } from 'lucide-react';
+import { Loader2, Inbox, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { describeError, getErrorStatus } from '@/lib/apiError';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +12,11 @@ interface ChartContainerProps {
   loading?: boolean;
   empty?: boolean;
   error?: boolean;
+  /** Error original de la consulta: permite explicar el motivo (permisos, red, servidor). */
+  errorDetail?: unknown;
+  /** Si se pasa, el error ofrece «Reintentar» (salvo 403). */
+  onRetry?: () => void;
+  retrying?: boolean;
   emptyMessage?: string;
   errorMessage?: string;
   actions?: ReactNode;
@@ -28,6 +36,9 @@ export function ChartContainer({
   loading,
   empty,
   error,
+  errorDetail,
+  onRetry,
+  retrying,
   emptyMessage = 'Sin datos para este filtro',
   errorMessage = 'No se pudo cargar esta información',
   actions,
@@ -47,13 +58,19 @@ export function ChartContainer({
       <CardContent>
         <div style={{ minHeight }} className="relative w-full">
           {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="absolute inset-0" role="status" aria-busy="true" aria-label={`Cargando ${title}`}>
+              <Skeleton className="h-full w-full rounded-lg" />
             </div>
           ) : error ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <AlertTriangle className="h-6 w-6" />
-              <p className="text-xs">{errorMessage}</p>
+            <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-muted-foreground">
+              {getErrorStatus(errorDetail) === 403 || getErrorStatus(errorDetail) === 401 ? <ShieldAlert className="h-6 w-6" aria-hidden="true" /> : <AlertTriangle className="h-6 w-6" aria-hidden="true" />}
+              <p className="text-xs">{errorDetail === undefined ? errorMessage : describeError(errorDetail, errorMessage).message}</p>
+              {onRetry && getErrorStatus(errorDetail) !== 403 && (
+                <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={retrying}>
+                  {retrying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  Reintentar
+                </Button>
+              )}
             </div>
           ) : empty ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">

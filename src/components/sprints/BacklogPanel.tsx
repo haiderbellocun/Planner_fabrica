@@ -1,3 +1,6 @@
+import { ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
@@ -42,7 +45,9 @@ interface BacklogPanelProps {
 }
 
 export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskClick }: BacklogPanelProps) {
-  const { data: sprints = [], isLoading } = useSprints(projectId);
+  const { confirmAction, confirmDialog } = useConfirmDialog();
+  const { data: sprintsData, isLoading, isError, error, refetch, isFetching } = useSprints(projectId);
+  const sprints = sprintsData ?? [];
   const deleteSprint = useDeleteSprint(projectId);
   const startSprint = useStartSprint(projectId);
   const completeSprint = useCompleteSprint(projectId);
@@ -115,8 +120,13 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
   };
 
   const handleDelete = (sprint: Sprint) => {
-    if (!confirm(`¿Eliminar el sprint "${sprint.name}"? Sus tareas volverán al backlog.`)) return;
-    deleteSprint.mutate(sprint.id);
+    confirmAction({
+      title: `¿Eliminar el sprint "${sprint.name}"?`,
+      description: 'Sus tareas volverán al backlog. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => deleteSprint.mutateAsync(sprint.id),
+    });
   };
 
   const handleComplete = (sprint: Sprint) => {
@@ -163,11 +173,11 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-muted-foreground">Cargando backlog...</CardContent>
-      </Card>
-    );
+    return <ListSkeleton rows={4} />;
+  }
+
+  if (isError && sprintsData === undefined) {
+    return <ErrorState message="No se pudo cargar el backlog del proyecto." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   }
 
   return (
@@ -340,6 +350,7 @@ export function BacklogPanel({ projectId, projectKey, canManage, tasks, onTaskCl
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

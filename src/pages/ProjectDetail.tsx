@@ -1,3 +1,10 @@
+import { Suspense, lazy } from 'react';
+import { getErrorStatus } from '@/lib/apiError';
+import { DetailPageSkeleton, ListSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { useDocumentTitle } from '@/hooks/usePageTitle';
+import { useConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { NameDialog } from '@/components/shared/NameDialog';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,10 +21,7 @@ import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { ProgramaCardComplete } from '@/components/programas/ProgramaCardComplete';
 import { CreateEditProgramaDialog } from '@/components/programas/CreateEditProgramaDialog';
 import { CreateVideoDialog } from '@/components/programas/CreateVideoDialog';
-import { EpicsPanel } from '@/components/epics/EpicsPanel';
 import { CreateEpicDialog } from '@/components/epics/CreateEpicDialog';
-import { TeamsPanel } from '@/components/teams/TeamsPanel';
-import { BacklogPanel } from '@/components/sprints/BacklogPanel';
 import { useSprints } from '@/hooks/useSprints';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
 import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
@@ -27,8 +31,6 @@ import {
   type SavedTaskView,
 } from '@/lib/taskFilters';
 import { getStoredJSON, setStoredJSON } from '@/lib/viewPreferences';
-import { ChecklistTab } from '@/components/checklist/ChecklistTab';
-import { ProjectActivityFeed } from '@/components/projects/ProjectActivityFeed';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -52,13 +54,23 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
+// Paneles de pestaña con carga diferida (solo se descargan al abrir la pestaña; BacklogPanel arrastra recharts).
+const EpicsPanel = lazy(() => import('@/components/epics/EpicsPanel').then((m) => ({ default: m.EpicsPanel })));
+const TeamsPanel = lazy(() => import('@/components/teams/TeamsPanel').then((m) => ({ default: m.TeamsPanel })));
+const BacklogPanel = lazy(() => import('@/components/sprints/BacklogPanel').then((m) => ({ default: m.BacklogPanel })));
+const ChecklistTab = lazy(() => import('@/components/checklist/ChecklistTab').then((m) => ({ default: m.ChecklistTab })));
+const ProjectActivityFeed = lazy(() => import('@/components/projects/ProjectActivityFeed').then((m) => ({ default: m.ProjectActivityFeed })));
+
 export default function ProjectDetailPage() {
+  const { confirmAction, confirmDialog } = useConfirmDialog();
+  const [nameDialog, setNameDialog] = useState<{ mode: 'create' | 'rename'; id?: string; initial: string } | null>(null);
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const userId = user?.profileId;
-  const { data: project, isLoading: projectLoading } = useProject(projectId);
+  const { data: project, isLoading: projectLoading, isError: projectError, error: projectErr, refetch: refetchProject, isFetching: projectFetching } = useProject(projectId);
+  useDocumentTitle(project?.name ?? 'Proyecto');
   const { data: taskStatuses = [] } = useTaskStatuses();
 
   // Filtros: la URL manda si trae alguno (enlace compartible); si no, se recupera la última
@@ -68,8 +80,10 @@ export default function ProjectDetailPage() {
     if (Object.keys(fromUrl).length > 0) return fromUrl;
     return getStoredJSON<TaskFilters>(userId, projectId, 'filters') ?? EMPTY_TASK_FILTERS;
   });
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId, taskFilters);
-  const { data: programas = [], isLoading: programasLoading } = useProgramas(projectId);
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError, error: tasksErr, refetch: refetchTasks, isFetching: tasksFetching, isPlaceholderData: tasksPlaceholder } = useTasks(projectId, taskFilters);
+  const tasks = tasksData ?? [];
+  const { data: programasData, isLoading: programasLoading, isError: programasError, error: programasErr, refetch: refetchProgramas, isFetching: programasFetching } = useProgramas(projectId);
+  const programas = programasData ?? [];
   const { data: epics = [] } = useEpics(projectId);
   const { data: sprints = [] } = useSprints(projectId);
 
@@ -159,23 +173,32 @@ export default function ProjectDetailPage() {
     setView(sv.view);
   };
 
-  const saveCurrentAsView = () => {
-    const name = window.prompt('Nombre de la vista:');
-    if (!name || !name.trim()) return;
-    setSavedViews((prev) => [...prev, { id: crypto.randomUUID(), name: name.trim(), filters: taskFilters, view }]);
-  };
+  const saveCurrentAsView = () => setNameDialog({ mode: 'create', initial: '' });
 
   const renameSavedView = (id: string) => {
     const current = savedViews.find((v) => v.id === id);
     if (!current) return;
-    const name = window.prompt('Nuevo nombre de la vista:', current.name);
-    if (!name || !name.trim()) return;
-    setSavedViews((prev) => prev.map((v) => (v.id === id ? { ...v, name: name.trim() } : v)));
+    setNameDialog({ mode: 'rename', id, initial: current.name });
+  };
+
+  // El formulario ya entrega el nombre recortado y no vacío (antes lo validaba el prompt).
+  const submitViewName = (name: string) => {
+    if (nameDialog?.mode === 'rename' && nameDialog.id) {
+      const id = nameDialog.id;
+      setSavedViews((prev) => prev.map((v) => (v.id === id ? { ...v, name } : v)));
+    } else {
+      setSavedViews((prev) => [...prev, { id: crypto.randomUUID(), name, filters: taskFilters, view }]);
+    }
   };
 
   const deleteSavedView = (id: string) => {
-    if (!confirm('¿Eliminar esta vista guardada?')) return;
-    setSavedViews((prev) => prev.filter((v) => v.id !== id));
+    confirmAction({
+      title: '¿Eliminar esta vista guardada?',
+      description: 'Se eliminará la vista con sus filtros. Las tareas no se ven afectadas.',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+      onConfirm: () => setSavedViews((prev) => prev.filter((v) => v.id !== id)),
+    });
   };
 
   // Abrir una tarea siempre pasa por la URL (`?task=<id>`) — el efecto de más abajo hace el
@@ -252,13 +275,13 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeletePrograma = (programa: Programa) => {
-    if (
-      confirm(
-        `¿Estás seguro de eliminar el programa "${programa.name}"? Esto también eliminará todas sus asignaturas, temas y materiales.`
-      )
-    ) {
-      deletePrograma.mutate(programa.id);
-    }
+    confirmAction({
+      title: `¿Estás seguro de eliminar el programa "${programa.name}"?`,
+      description: 'Esto también eliminará todas sus asignaturas, temas y materiales. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar programa',
+      destructive: true,
+      onConfirm: () => deletePrograma.mutateAsync(programa.id),
+    });
   };
 
   const handleCreatePrograma = (suggestedName?: string) => {
@@ -288,8 +311,20 @@ export default function ProjectDetailPage() {
 
   if (projectLoading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-container">
+        <DetailPageSkeleton />
+      </div>
+    );
+  }
+
+  // Un fallo de red, de servidor o de permisos NO es «proyecto no encontrado»: solo un 404 lo es.
+  if (!project && projectError && getErrorStatus(projectErr) !== 404) {
+    return (
+      <div className="page-container">
+        <ErrorState message="No se pudo cargar el proyecto." error={projectErr} onRetry={() => refetchProject()} retrying={projectFetching} />
+        <div className="flex justify-center">
+          <Button asChild variant="outline"><Link to="/projects">Volver a Proyectos</Link></Button>
+        </div>
       </div>
     );
   }
@@ -302,9 +337,9 @@ export default function ProjectDetailPage() {
           <p className="text-muted-foreground mb-4">
             El proyecto que buscas no existe o no tienes acceso
           </p>
-          <Link to="/projects">
-            <Button>Volver a Proyectos</Button>
-          </Link>
+          <Button asChild>
+            <Link to="/projects">Volver a Proyectos</Link>
+          </Button>
         </div>
       </div>
     );
@@ -384,7 +419,7 @@ export default function ProjectDetailPage() {
                         className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium">
                         <Plus className="h-3 w-3" /> Agregar enlace
                       </button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-success-strong"
+                      <Button aria-label="Confirmar" size="icon" variant="ghost" className="h-6 w-6 text-success-strong"
                         onClick={() => {
                           const valid = editLinks.filter(l => l.url.trim());
                           const serialized = valid.length === 0 ? null : JSON.stringify(valid);
@@ -393,7 +428,7 @@ export default function ProjectDetailPage() {
                         }}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6"
+                      <Button aria-label="Cancelar" size="icon" variant="ghost" className="h-6 w-6"
                         onClick={() => setEditingLink(false)}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
@@ -412,7 +447,7 @@ export default function ProjectDetailPage() {
                       </div>
                     ))}
                     {canManageAsignaturas && (
-                      <Button size="icon" variant="ghost" className="h-6 w-6"
+                      <Button aria-label="Editar" size="icon" variant="ghost" className="h-6 w-6"
                         onClick={() => { setEditLinks(parsedLinks.length > 0 ? parsedLinks : [{ label: '', url: '' }]); setEditingLink(true); }}>
                         <Pencil className="h-3 w-3" />
                       </Button>
@@ -440,7 +475,7 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {projectId && (
             <Button
               variant="outline"
@@ -455,17 +490,21 @@ export default function ProjectDetailPage() {
             </Button>
           )}
           {user?.role === 'admin' && projectId && (
-            <Button
+            <Button aria-label="Eliminar proyecto"
               variant="outline"
               size="icon"
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
               disabled={deleteProject.isPending}
-              onClick={() => {
-                if (!confirm(`¿Eliminar el proyecto "${project.name}"? Se eliminarán todas sus tareas, épicas y programas. Esta acción no se puede deshacer.`)) return;
-                deleteProject.mutate(projectId, {
-                  onSuccess: () => navigate('/projects'),
-                });
-              }}
+              onClick={() => confirmAction({
+                title: `¿Eliminar el proyecto "${project.name}"?`,
+                description: 'Se eliminarán todas sus tareas, épicas y programas. Esta acción no se puede deshacer.',
+                confirmLabel: 'Eliminar proyecto',
+                destructive: true,
+                onConfirm: async () => {
+                  await deleteProject.mutateAsync(projectId);
+                  navigate('/projects');
+                },
+              })}
               title="Eliminar proyecto"
             >
               <Trash2 className="h-4 w-4" />
@@ -482,16 +521,12 @@ export default function ProjectDetailPage() {
               variant="outline"
               onClick={() => {
                 const pausing = project.status !== 'paused';
-                if (
-                  !confirm(
-                    pausing
-                      ? '¿Pausar este proyecto? No se podrán crear tareas nuevas hasta reanudarlo.'
-                      : '¿Reanudar este proyecto?'
-                  )
-                ) {
-                  return;
-                }
-                updateProject.mutate({ id: projectId, status: pausing ? 'paused' : 'active' });
+                confirmAction({
+                  title: pausing ? '¿Pausar este proyecto?' : '¿Reanudar este proyecto?',
+                  description: pausing ? 'No se podrán crear tareas nuevas hasta reanudarlo.' : undefined,
+                  confirmLabel: pausing ? 'Pausar proyecto' : 'Reanudar proyecto',
+                  onConfirm: () => updateProject.mutateAsync({ id: projectId, status: pausing ? 'paused' : 'active' }),
+                });
               }}
               disabled={updateProject.isPending}
             >
@@ -501,16 +536,12 @@ export default function ProjectDetailPage() {
           {canCompleteProject && project.status !== 'completed' && projectId && (
             <Button
               variant="outline"
-              onClick={() => {
-                if (
-                  !confirm(
-                    '¿Estás seguro de finalizar este proyecto? Todas las tareas deben estar completadas.'
-                  )
-                ) {
-                  return;
-                }
-                completeProject.mutate(projectId);
-              }}
+              onClick={() => confirmAction({
+                title: '¿Estás seguro de finalizar este proyecto?',
+                description: 'Todas las tareas deben estar completadas.',
+                confirmLabel: 'Finalizar proyecto',
+                onConfirm: () => completeProject.mutateAsync(projectId),
+              })}
               disabled={completeProject.isPending}
             >
               {completeProject.isPending ? (
@@ -629,6 +660,13 @@ export default function ProjectDetailPage() {
           />
 
           {/* Content */}
+          {tasksError && tasksData !== undefined && (
+            <RefetchError error={tasksErr} onRetry={() => refetchTasks()} retrying={tasksFetching} />
+          )}
+          {tasksError && tasksData === undefined ? (
+            <ErrorState message="No se pudieron cargar las tareas del proyecto." error={tasksErr} onRetry={() => refetchTasks()} retrying={tasksFetching} />
+          ) : (
+          <div aria-busy={tasksPlaceholder || undefined} className={tasksPlaceholder ? 'opacity-60 transition-opacity duration-ui' : undefined}>
           {view === 'board' ? (
             <KanbanBoard
               tasks={tasks}
@@ -647,16 +685,19 @@ export default function ProjectDetailPage() {
               isAdminOrLeader={!!isLeader}
               isLoading={tasksLoading}
               hasActiveFilters={hasActiveFilters(taskFilters)}
+              onClearFilters={() => setTaskFilters({})}
               filtersKey={taskFiltersToQuery(taskFilters)}
             />
+          )}
+          </div>
           )}
         </TabsContent>
 
         <TabsContent value="programas" className="space-y-4">
           {programasLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <ListSkeleton rows={4} />
+          ) : programasError && programasData === undefined ? (
+            <ErrorState message="No se pudieron cargar los programas del proyecto." error={programasErr} onRetry={() => refetchProgramas()} retrying={programasFetching} />
           ) : programas.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
@@ -725,10 +766,13 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="checklist">
+          <Suspense fallback={<ListSkeleton rows={4} />}>
           <ChecklistTab projectId={projectId!} />
+        </Suspense>
         </TabsContent>
 
         <TabsContent value="activity">
+          <Suspense fallback={<ListSkeleton rows={4} />}>
           <ProjectActivityFeed
             projectId={projectId!}
             projectKey={project.key}
@@ -737,21 +781,25 @@ export default function ProjectDetailPage() {
               setDetailOpen(true);
             }}
           />
+        </Suspense>
         </TabsContent>
 
         {isDesarrolloProject && (
           <TabsContent value="epics" className="space-y-4">
+          <Suspense fallback={<ListSkeleton rows={4} />}>
             <EpicsPanel
               projectId={projectId!}
               canManage={canManageEpics ?? false}
               tasks={tasks}
               onTaskClick={handleTaskClick}
             />
-          </TabsContent>
+          </Suspense>
+        </TabsContent>
         )}
 
         {isDesarrolloProject && (
           <TabsContent value="teams" className="space-y-4">
+          <Suspense fallback={<ListSkeleton rows={4} />}>
             <TeamsPanel
               projectId={projectId!}
               canManage={canManageTeams ?? false}
@@ -759,11 +807,13 @@ export default function ProjectDetailPage() {
               tasks={tasks}
               onTaskClick={handleTaskClick}
             />
-          </TabsContent>
+          </Suspense>
+        </TabsContent>
         )}
 
         {isDesarrolloProject && (
           <TabsContent value="backlog" className="space-y-4">
+          <Suspense fallback={<ListSkeleton rows={4} />}>
             <BacklogPanel
               projectId={projectId!}
               projectKey={project.key}
@@ -771,7 +821,8 @@ export default function ProjectDetailPage() {
               tasks={tasks}
               onTaskClick={handleTaskClick}
             />
-          </TabsContent>
+          </Suspense>
+        </TabsContent>
         )}
       </Tabs>
 
@@ -818,6 +869,16 @@ export default function ProjectDetailPage() {
           setEpicDialogOpen(open);
           if (!open) setSelectedEpic(null);
         }}
+      />
+      {confirmDialog}
+      <NameDialog
+        open={nameDialog !== null}
+        onOpenChange={(open) => { if (!open) setNameDialog(null); }}
+        title={nameDialog?.mode === 'rename' ? 'Renombrar vista' : 'Guardar vista'}
+        label={nameDialog?.mode === 'rename' ? 'Nuevo nombre de la vista' : 'Nombre de la vista'}
+        initialValue={nameDialog?.initial ?? ''}
+        submitLabel={nameDialog?.mode === 'rename' ? 'Renombrar' : 'Guardar vista'}
+        onSubmit={submitViewName}
       />
     </div>
   );

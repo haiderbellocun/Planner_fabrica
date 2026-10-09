@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { HeroBanner, StatTile } from '@/components/shared/StoryUI';
+import { HeroBanner, StatTile, ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { DashboardSkeleton } from '@/components/shared/Skeletons';
 import {
   FolderKanban,
   Bell,
@@ -20,7 +21,8 @@ import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { profile } = useAuth();
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: projectsData, isLoading: projectsLoading, isError: projectsError, error: projectsErr, refetch: refetchProjects, isFetching: projectsFetching } = useProjects();
+  const projects = projectsData ?? [];
   const { data: notifications = [] } = useNotifications();
 
   // Calculate stats
@@ -53,11 +55,14 @@ export default function DashboardPage() {
 
   if (projectsLoading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="page-container">
+        <DashboardSkeleton />
       </div>
     );
   }
+
+  // Si la API falló no se muestran ceros ni «no tienes proyectos»: se indica el error.
+  const projectsFailed = projectsError && projectsData === undefined;
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Usuario';
   const activeProjectsCount = projects.filter((p) => p.status !== 'completed').length;
@@ -65,10 +70,10 @@ export default function DashboardPage() {
   return (
     <div className="page-container relative">
       {/* Ocean decorations */}
-      <img src="./deco_medusa.webp" alt="" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
-      <img src="./deco_manta.webp" alt="" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
-      <img src="./deco_cangrejo.webp" alt="" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
-      <img src="./deco_estrella.webp" alt="" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="./deco_medusa.webp" alt="" loading="lazy" decoding="async" className="absolute top-4 right-8 h-28 w-auto object-contain opacity-20 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(10deg)' }} />
+      <img src="./deco_manta.webp" alt="" loading="lazy" decoding="async" className="absolute top-32 right-4 h-20 w-auto object-contain opacity-15 pointer-events-none select-none hidden lg:block" style={{ transform: 'rotate(-5deg)' }} />
+      <img src="./deco_cangrejo.webp" alt="" loading="lazy" decoding="async" className="absolute bottom-24 left-6 h-16 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
+      <img src="./deco_estrella.webp" alt="" loading="lazy" decoding="async" className="absolute bottom-8 right-12 h-14 w-auto object-contain opacity-20 pointer-events-none select-none hidden xl:block" />
 
       <HeroBanner
         eyebrow={greeting()}
@@ -83,26 +88,29 @@ export default function DashboardPage() {
           </>
         }
         stats={[
-          { value: totalProjects, label: 'Proyectos totales' },
+          { value: projectsFailed ? '—' : totalProjects, label: 'Proyectos totales' },
           { value: unreadNotifications.length, label: 'Notificaciones nuevas' },
         ]}
       />
 
       <div className="space-y-8 mt-8">
+      {projectsError && projectsData !== undefined && (
+        <RefetchError error={projectsErr} onRetry={() => refetchProjects()} retrying={projectsFetching} />
+      )}
       <MyFocusToday />
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <StatTile
           label="Proyectos"
-          value={totalProjects}
-          sub={`${activeProjectsCount} activos`}
+          value={projectsFailed ? '—' : totalProjects}
+          sub={projectsFailed ? 'No disponible' : `${activeProjectsCount} activos`}
           decorationImage="./deco_foca.webp"
-          accentImage="./deco_alga2.png"
+          accentImage="./deco_alga2.webp"
         />
         <StatTile
           label="Tareas totales"
-          value={totalTasks}
-          sub={`${pendingTasksCount} activas`}
+          value={projectsFailed ? '—' : totalTasks}
+          sub={projectsFailed ? 'No disponible' : `${pendingTasksCount} activas`}
           decorationImage="./deco_cangrejo.webp"
         />
         <StatTile
@@ -123,23 +131,25 @@ export default function DashboardPage() {
                 <CardTitle className="text-base">Proyectos Recientes</CardTitle>
                 <CardDescription className="text-sm mt-0.5">Tus proyectos activos</CardDescription>
               </div>
-              <Link to="/projects" className="text-primary-deep hover:text-primary no-underline hover:underline">
-                <Button variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
+              <Button asChild variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
+                <Link to="/projects">
                   Ver todos
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </Link>
+                  <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
-              {projects.length === 0 ? (
+              {projectsFailed ? (
+                <ErrorState message="No se pudieron cargar tus proyectos." error={projectsErr} onRetry={() => refetchProjects()} retrying={projectsFetching} />
+              ) : projects.length === 0 ? (
                 <div className="text-center py-10">
                   <div className="stat-icon-circle h-14 w-14 mx-auto mb-4">
                     <FolderKanban className="h-7 w-7" />
                   </div>
                   <p className="text-muted-foreground mb-4">No tienes proyectos aún</p>
-                  <Link to="/projects">
-                    <Button className="rounded-lg">Crear Proyecto</Button>
-                  </Link>
+                  <Button asChild className="rounded-lg">
+                    <Link to="/projects">Crear Proyecto</Link>
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -189,12 +199,12 @@ export default function DashboardPage() {
                 <CardTitle className="text-base">Notificaciones</CardTitle>
                 <CardDescription className="text-sm mt-0.5">Actividad reciente</CardDescription>
               </div>
-              <Link to="/notifications" className="text-primary-deep hover:text-primary no-underline hover:underline">
-                <Button variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
+              <Button asChild variant="ghost" size="sm" className="text-primary-deep hover:text-primary font-medium p-0 h-auto">
+                <Link to="/notifications">
                   Ver todas
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </Link>
+                  <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {notifications.length === 0 ? (

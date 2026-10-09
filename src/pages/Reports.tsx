@@ -1,3 +1,5 @@
+import { Suspense, lazy } from 'react';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { firstName, getInitials, shortName } from '@/lib/names';
 import { rollingDateRange, toLocalISODate } from '@/lib/dates';
 import { Component, ReactNode, useState } from 'react';
@@ -59,14 +61,18 @@ import {
   AXIS_STYLE, GRID_STYLE,
 } from '@/components/reports/ReportCharts';
 import { axisTick, gridColor, chartColors, chartSoft } from '@/components/charts/chartTheme';
-import { PlanDeTrabajoTab } from '@/components/plan-trabajo/PlanDeTrabajoTab';
-import { CapacidadFabricaTab } from '@/components/reports/CapacidadFabricaTab';
-import { CapacidadOperativaTab } from '@/components/reports/CapacidadOperativaTab';
-import { CoberturaFabricaTab } from '@/components/reports/CoberturaFabricaTab';
 import { CustomTooltip } from '@/components/charts/CustomTooltip';
 import { PersonSparkline } from '@/components/reports/PersonSparkline';
 import PolarAreaChart from '@/components/reports/PolarAreaChart';
-import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState } from '@/components/shared/StoryUI';
+import { HeroBanner, StatTile, SpotlightCard, AttentionItem, LoadingState, EmptyState, ErrorState, NoResultsState } from '@/components/shared/StoryUI';
+import { ReportTabSkeleton } from '@/components/shared/Skeletons';
+
+// Pestañas pesadas con carga diferida: Radix solo monta la pestaña activa, así que su código
+// (y el de nivo/recharts que usa) se descarga al abrirla.
+const PlanDeTrabajoTab = lazy(() => import('@/components/plan-trabajo/PlanDeTrabajoTab').then((m) => ({ default: m.PlanDeTrabajoTab })));
+const CapacidadFabricaTab = lazy(() => import('@/components/reports/CapacidadFabricaTab').then((m) => ({ default: m.CapacidadFabricaTab })));
+const CapacidadOperativaTab = lazy(() => import('@/components/reports/CapacidadOperativaTab').then((m) => ({ default: m.CapacidadOperativaTab })));
+const CoberturaFabricaTab = lazy(() => import('@/components/reports/CoberturaFabricaTab').then((m) => ({ default: m.CoberturaFabricaTab })));
 
 // Snapshot Operativo style
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card transition-[box-shadow] duration-ui';
@@ -203,7 +209,7 @@ class ReportsErrorBoundary extends Component<{ children: ReactNode }, { hasError
 
 // ---------- Tab: Resumen ----------
 function TabResumen() {
-  const { data: overview, isLoading, isError, error } = useReportOverview();
+  const { data: overview, isLoading, isError, error, refetch, isFetching } = useReportOverview();
   const { data: projectsProgress = [] } = useReportProjectsProgress();
   const { data: categories = [] } = useReportProjectCategories();
   const { data: weeklyTrend = [] } = useReportTasksWeeklyTrend();
@@ -212,15 +218,16 @@ function TabResumen() {
   const { data: teamByCargo = [] } = useReportTeamByCargo();
 
   if (isLoading) {
-    return <LoadingState />;
+    return <ReportTabSkeleton />;
   }
 
-  if (isError) {
+  if (isError && !overview) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <AlertTriangle className="h-10 w-10 mb-3" />
-        <p className="text-sm">No se pudo cargar el resumen. {(error as Error)?.message || 'Error de conexión.'}</p>
-      </div>
+      <ErrorState
+        message={`No se pudo cargar el resumen. ${(error as Error)?.message || 'Error de conexión.'}`}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
     );
   }
 
@@ -585,10 +592,12 @@ function TabResumen() {
 
 // ---------- Tab: Proyectos ----------
 function TabProyectos() {
-  const { data: projects = [], isLoading } = useReportProjectsProgress();
+  const { data: projectsData, isLoading, isError, error: projectsErr, refetch, isFetching } = useReportProjectsProgress();
+  const projects = projectsData ?? [];
   const { data: timeline = [] } = useReportProjectsTimeline();
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading) return <ReportTabSkeleton />;
+  if (isError && projectsData === undefined) return <ErrorState message="No se pudo cargar el avance por proyecto." error={projectsErr} onRetry={() => refetch()} retrying={isFetching} />;
 
   if (projects.length === 0) return <EmptyState message="No hay proyectos registrados" />;
 
@@ -1080,8 +1089,8 @@ function TabProyectos() {
 
 // ---------- Tab: Equipo ----------
 function TabEquipo() {
-  const { data: personMetrics, isLoading: loadingPeople } = useReportPersonMetrics();
-  const { data: capacity, isLoading: loadingCapacity } = useReportCapacityForecast({ weeks: 4 });
+  const { data: personMetrics, isLoading: loadingPeople, isError: errorPeople, refetch: refetchPeople, isFetching: fetchingPeople } = useReportPersonMetrics();
+  const { data: capacity, isLoading: loadingCapacity, isError: errorCapacity, refetch: refetchCapacity, isFetching: fetchingCapacity } = useReportCapacityForecast({ weeks: 4 });
   const { data: workload = [] } = useReportWorkloadByCargo();
   const { data: throughput = [] } = useReportThroughput({ bucket: 'week', group_by: 'person' });
 
@@ -1090,7 +1099,16 @@ function TabEquipo() {
   const [cargoFilter, setCargoFilter] = useState<string>('all');
   const { data: userReport, isLoading: loadingUserReport } = useUserMiniReport(selectedUserId);
 
-  if (loadingPeople || loadingCapacity) return <LoadingState />;
+  if (loadingPeople || loadingCapacity) return <ReportTabSkeleton />;
+  if ((errorPeople && !personMetrics) || (errorCapacity && !capacity)) {
+    return (
+      <ErrorState
+        message="No se pudieron cargar los datos del equipo."
+        onRetry={() => { if (errorPeople) refetchPeople(); if (errorCapacity) refetchCapacity(); }}
+        retrying={fetchingPeople || fetchingCapacity}
+      />
+    );
+  }
 
   const people = personMetrics?.people ?? [];
   if (people.length === 0) return <EmptyState message="No hay datos de equipo" />;
@@ -1924,7 +1942,7 @@ function IndividualPerformanceTab() {
     ...resolveRange(rangeKey),
   };
 
-  const { data: personMetrics, isLoading } = useReportPersonMetrics(filters);
+  const { data: personMetrics, isLoading, isError: errorMetrics, error: metricsErr, refetch: refetchMetrics, isFetching: fetchingMetrics } = useReportPersonMetrics(filters);
   const { data: capacity } = useReportCapacityForecast({ ...filters, weeks: 4 });
 
   const members: PersonMetric[] = personMetrics?.people ?? [];
@@ -1966,7 +1984,10 @@ function IndividualPerformanceTab() {
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <ReportTabSkeleton />;
+  }
+  if (errorMetrics && !personMetrics) {
+    return <ErrorState message="No se pudo cargar el rendimiento." error={metricsErr} onRetry={() => refetchMetrics()} retrying={fetchingMetrics} />;
   }
 
   const rendimientoTone = overall?.puntualidad_pct == null ? 'info' : overall.puntualidad_pct >= 90 ? 'good' : overall.puntualidad_pct >= 80 ? 'warning' : 'critical';
@@ -2062,7 +2083,7 @@ function IndividualPerformanceTab() {
         </CardHeader>
         <CardContent className="p-0">
           {activeMembers.length === 0 ? (
-            <EmptyState message="No hay datos para los filtros seleccionados" icon={Users} />
+            <NoResultsState message="No hay datos para los filtros seleccionados." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2178,12 +2199,7 @@ export default function ReportsPage() {
   return (
     <ReportsErrorBoundary>
       <div className="page-container">
-        <div className="page-header">
-          <h1 className="page-title">Reportes</h1>
-          <p className="page-description">
-            Monitoreo y analítica de la Fábrica de Contenidos
-          </p>
-        </div>
+        <PageHeader title="Reportes" description="Monitoreo y analítica de la Fábrica de Contenidos" />
 
         <Tabs defaultValue="resumen" className="space-y-8">
           <TabsList className="flex h-auto max-w-5xl flex-wrap justify-start gap-1 rounded-3xl py-1.5">
@@ -2202,7 +2218,7 @@ export default function ReportsPage() {
           </TabsContent>
 
           <TabsContent value="cobertura">
-            <CoberturaFabricaTab />
+            <Suspense fallback={<ReportTabSkeleton />}><CoberturaFabricaTab /></Suspense>
           </TabsContent>
 
           <TabsContent value="proyectos">
@@ -2218,15 +2234,15 @@ export default function ReportsPage() {
           </TabsContent>
 
           <TabsContent value="capacidad">
-            <CapacidadFabricaTab />
+            <Suspense fallback={<ReportTabSkeleton />}><CapacidadFabricaTab /></Suspense>
           </TabsContent>
 
           <TabsContent value="capacidad-operativa">
-            <CapacidadOperativaTab />
+            <Suspense fallback={<ReportTabSkeleton />}><CapacidadOperativaTab /></Suspense>
           </TabsContent>
 
           <TabsContent value="plan-trabajo">
-            <PlanDeTrabajoTab />
+            <Suspense fallback={<ReportTabSkeleton />}><PlanDeTrabajoTab /></Suspense>
           </TabsContent>
         </Tabs>
       </div>

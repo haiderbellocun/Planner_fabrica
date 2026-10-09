@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
   WorkPlanFilters,
@@ -148,6 +148,8 @@ export function useWorkPlanAlerts(filters: WorkPlanFilters) {
 export function useWorkPlanTable(filters: WorkPlanFilters, search: string, page: number, pageSize: number) {
   return useQuery({
     queryKey: ['work-plan', 'table', filters, search, page, pageSize],
+    // Al paginar o buscar se mantiene la página anterior (atenuada) en vez de volver al esqueleto en cada pulsación.
+    placeholderData: keepPreviousData,
     queryFn: () => api.get<ExecutiveTableResponse>(
       `/api/reports/work-plan/table${toQueryString(filters, { search, page, page_size: pageSize })}`
     ),

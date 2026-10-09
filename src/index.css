@@ -237,6 +237,17 @@
   #root {
     height: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Sin retardo de clic por doble toque en controles */
+  button, a, [role="button"], [role="tab"], summary {
+    touch-action: manipulation;
   }
 
   body {
@@ -275,6 +286,18 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/30;
   }
+}
+
+/* Movimiento reducido: sin animaciones ni transiciones de desplazamiento/escala; los cambios de
+   color y opacidad siguen siendo instantáneos para conservar el feedback. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .active\:scale-\[0\.97\]:active { transform: none !important; }
 }
 
 @layer components {

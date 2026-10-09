@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,15 +19,7 @@ export default function Flows() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <GitBranch className="h-6 w-6" />
-          Flujo
-        </h1>
-        <p className="page-description">
-          Visualiza el flujo de la aplicación o de la base de datos.
-        </p>
-      </div>
+      <PageHeader icon={GitBranch} title="Flujo" description="Visualiza el flujo de la aplicación o de la base de datos." />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -52,7 +45,7 @@ export default function Flows() {
             </div>
             <div className="flex items-center gap-1 ml-auto text-xs text-muted-foreground">
               <span className="mr-1">Zoom:</span>
-              <Button
+              <Button aria-label="Alejar"
                 type="button"
                 variant="outline"
                 size="icon"
@@ -63,7 +56,7 @@ export default function Flows() {
               <span className="w-10 text-center font-medium">
                 {Math.round(zoom * 100)}%
               </span>
-              <Button
+              <Button aria-label="Acercar"
                 type="button"
                 variant="outline"
                 size="icon"
@@ -95,13 +88,13 @@ export default function Flows() {
                 <img
                   src={appFlowImg}
                   alt="Flujo de la aplicación"
-                  className="max-h-[85vh] w-auto h-auto object-contain"
+                  className="max-h-[85vh] w-auto h-auto object-contain" decoding="async"
                 />
               ) : (
                 <img
                   src={dbFlowImg}
                   alt="Flujo de la base de datos"
-                  className="max-h-[85vh] w-auto h-auto object-contain"
+                  className="max-h-[85vh] w-auto h-auto object-contain" decoding="async"
                 />
               )}
             </div>

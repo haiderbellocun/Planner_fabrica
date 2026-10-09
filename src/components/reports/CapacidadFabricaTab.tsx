@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CHART_COLORS, formatHours } from '@/components/reports/ReportCharts';
 import { chartColors } from '@/components/charts/chartTheme';
-import { SectionHeader, LoadingState, EmptyState } from '@/components/shared/StoryUI';
+import { SectionHeader, LoadingState, EmptyState, ErrorState } from '@/components/shared/StoryUI';
+import { ReportTabSkeleton } from '@/components/shared/Skeletons';
 import { cn } from '@/lib/utils';
 import {
   useReportProjectUtilization,
@@ -262,9 +263,9 @@ function AvatarStack({ people, max = 5 }: { people: { id: string; full_name: str
 }
 
 export function CapacidadFabricaTab() {
-  const { data, isLoading } = useReportProjectUtilization();
-  const { data: production, isLoading: loadingProduction } = useReportProductionCapacity();
-  const { data: workload, isLoading: loadingWorkload } = useReportPeopleWorkload();
+  const { data, isLoading, isError, error, refetch, isFetching } = useReportProjectUtilization();
+  const { data: production, isLoading: loadingProduction, isError: errorProduction, error: errProduction, refetch: refetchProduction, isFetching: fetchingProduction } = useReportProductionCapacity();
+  const { data: workload, isLoading: loadingWorkload, isError: errorWorkload, error: errWorkload, refetch: refetchWorkload, isFetching: fetchingWorkload } = useReportPeopleWorkload();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: detail, isLoading: loadingDetail } = useReportProjectUtilizationDetail(selectedProjectId);
@@ -314,11 +315,23 @@ export function CapacidadFabricaTab() {
   }, [data, search, teamByProject]);
 
   if (isLoading || loadingProduction || loadingWorkload) {
-    return <LoadingState label="Cargando cumplimiento de fábrica..." />;
+    return <ReportTabSkeleton />;
+  }
+
+  // Cualquiera de las tres consultas fallidas sin datos deja la pestaña sin base de cálculo: se explica y se reintenta.
+  if ((isError && !data) || (errorProduction && !production) || (errorWorkload && !workload)) {
+    return (
+      <ErrorState
+        message="No se pudo cargar la capacidad de fábrica."
+        error={error ?? errProduction ?? errWorkload}
+        onRetry={() => { if (isError) refetch(); if (errorProduction) refetchProduction(); if (errorWorkload) refetchWorkload(); }}
+        retrying={isFetching || fetchingProduction || fetchingWorkload}
+      />
+    );
   }
 
   if (!data) {
-    return <EmptyState message="No se pudo cargar la información de capacidad." />;
+    return <EmptyState message="No hay información de capacidad para mostrar." />;
   }
 
   const { summary } = data;

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { KanbanSkeleton } from '@/components/shared/Skeletons';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { TaskWithDetails, useTaskStatuses, useUpdateTaskStatus, useUpdateTaskRank } from '@/hooks/useTasks';
@@ -7,6 +8,9 @@ import { TaskCard } from './TaskCard';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+// Referencia estable para columnas sin tareas: un `[]` nuevo en cada render anularía la memoización.
+const NO_TASKS: TaskWithDetails[] = [];
 
 interface KanbanBoardProps {
   tasks: TaskWithDetails[];
@@ -25,6 +29,11 @@ export function KanbanBoard({ tasks, projectKey, projectId, onTaskClick, isLoadi
   const topScrollContentRef = useRef<HTMLDivElement | null>(null);
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const syncingScroll = useRef(false);
+  // La función que llega por props cambia en cada render del padre; las columnas reciben una versión
+  // estable que siempre llama a la última, para que React.memo pueda omitir columnas sin cambios.
+  const onTaskClickRef = useRef(onTaskClick);
+  onTaskClickRef.current = onTaskClick;
+  const stableOnTaskClick = useCallback((task: TaskWithDetails) => onTaskClickRef.current(task), []);
 
   const tasksByStatus = useMemo(() => {
     const map = new Map<string, TaskWithDetails[]>();
@@ -138,11 +147,7 @@ export function KanbanBoard({ tasks, projectKey, projectId, onTaskClick, isLoadi
   }, [statuses.length]);
 
   if (statusesLoading || isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <KanbanSkeleton />;
   }
 
   return (
@@ -164,9 +169,9 @@ export function KanbanBoard({ tasks, projectKey, projectId, onTaskClick, isLoadi
             <KanbanColumn
               key={status.id}
               status={status}
-              tasks={tasksByStatus.get(status.id) ?? []}
+              tasks={tasksByStatus.get(status.id) ?? NO_TASKS}
               projectKey={projectKey}
-              onTaskClick={onTaskClick}
+              onTaskClick={stableOnTaskClick}
               userRole={user?.role}
             />
           ))}
@@ -184,7 +189,9 @@ interface KanbanColumnProps {
   userRole?: string;
 }
 
-function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: KanbanColumnProps) {
+// Memoizada: al cambiar el estado del padre (selección de tarea, filtros de URL…) las columnas cuyas
+// tareas no cambiaron no se vuelven a renderizar.
+const KanbanColumn = memo(function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: KanbanColumnProps) {
   return (
     <div className="kanban-column flex-shrink-0 w-72 flex flex-col">
       <div className="kanban-column-header">
@@ -253,4 +260,4 @@ function KanbanColumn({ status, tasks, projectKey, onTaskClick, userRole }: Kanb
       </Droppable>
     </div>
   );
-}
+});

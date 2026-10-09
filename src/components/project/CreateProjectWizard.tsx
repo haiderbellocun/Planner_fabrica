@@ -496,7 +496,7 @@ export function CreateProjectWizard({ open, onOpenChange, initialData, onSuccess
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
               <TabsTrigger value="basic">
                 <FileText className="h-4 w-4 mr-1" />
                 Básico

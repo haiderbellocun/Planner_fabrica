@@ -1,3 +1,4 @@
+import { PRIORITY_LABELS } from '@/lib/priority';
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,12 +17,7 @@ import { TaskFilters, EMPTY_TASK_FILTERS, hasActiveFilters, countActiveFilters }
 
 const ALL = '__all__';
 
-const priorityLabels: Record<string, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  urgent: 'Urgente',
-};
+const priorityLabels = PRIORITY_LABELS;
 
 interface TaskFilterBarProps {
   projectId: string;

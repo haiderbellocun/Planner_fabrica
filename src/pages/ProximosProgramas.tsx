@@ -1,3 +1,6 @@
+import { CalendarSkeleton, TableSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useState, useMemo, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { MiniCalendar, type CalendarEvent } from '@/components/ui/MiniCalendar';
@@ -225,7 +228,10 @@ export default function ProximosProgramasPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const { data: programas = [], isLoading } = useProximosProgramas();
+  const { data: programasData, isLoading, isError, error, refetch, isFetching } = useProximosProgramas();
+  const programas = programasData ?? [];
+  const programasUnknown = isError && programasData === undefined;
+  const retryBlock = <ErrorState message="No se pudieron cargar los próximos proyectos." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   const createMutation = useCreateProximoPrograma();
   const updateMutation = useUpdateProximoPrograma();
   const deleteMutation = useDeleteProximoPrograma();
@@ -362,23 +368,17 @@ export default function ProximosProgramasPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header flex items-start justify-between">
-        <div>
-          <h1 className="page-title flex items-center gap-2">
-            <CalendarClock className="h-6 w-6 text-primary" />
-            Próximos Proyectos
-          </h1>
-          <p className="page-description">
-            Pipeline de proyectos que ingresan a la Fábrica de Contenido, ordenados por fecha y prioridad.
-          </p>
-        </div>
-        {canEdit && (
+      <PageHeader
+        icon={CalendarClock}
+        title="Próximos Proyectos"
+        description="Pipeline de proyectos que ingresan a la Fábrica de Contenido, ordenados por fecha y prioridad."
+        actions={canEdit && (
           <Button onClick={openCreate} className="flex items-center gap-2 shrink-0">
             <Plus className="h-4 w-4" />
             Agregar programa
           </Button>
         )}
-      </div>
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -461,7 +461,8 @@ export default function ProximosProgramasPage() {
       </div>
 
       {/* Calendar view */}
-      {view === 'calendar' && (() => {
+      {view === 'calendar' && (isLoading || programasUnknown) && (isLoading ? <CalendarSkeleton /> : retryBlock)}
+      {view === 'calendar' && !isLoading && !programasUnknown && (() => {
         const PRIORIDAD_COLORS: Record<string, string> = {
           alta:  'bg-destructive',
           media: 'bg-warning',
@@ -493,12 +494,14 @@ export default function ProximosProgramasPage() {
         );
       })()}
 
+      {isError && programasData !== undefined && <RefetchError error={error} onRetry={() => refetch()} retrying={isFetching} />}
+
       {/* Table */}
       {view === 'table' && <div className="rounded-xl border bg-card shadow-card overflow-x-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
+          <TableSkeleton rows={8} columns={6} className="border-0 shadow-none" />
+        ) : programasUnknown ? (
+          retryBlock
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <CalendarClock className="h-12 w-12 text-muted-foreground/40 mb-3" />
@@ -639,7 +642,7 @@ export default function ProximosProgramasPage() {
                   {canEdit && (
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <Button
+                        <Button aria-label="Editar"
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
@@ -647,7 +650,7 @@ export default function ProximosProgramasPage() {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
+                        <Button aria-label="Eliminar"
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive hover:text-destructive"

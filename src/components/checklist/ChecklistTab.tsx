@@ -1,3 +1,5 @@
+import { TableSkeleton } from '@/components/shared/Skeletons';
+import { ErrorState, RefetchError } from '@/components/shared/StoryUI';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Loader2, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -321,7 +323,8 @@ function CheckboxLegend({ isAdmin }: { isAdmin: boolean }) {
 
 export function ChecklistTab({ projectId }: { projectId: string }) {
   const { isAdmin, isProjectLeader } = useAuth();
-  const { data: rows = [], isLoading } = useChecklist(projectId);
+  const { data: rowsData, isLoading, isError, error, refetch, isFetching } = useChecklist(projectId);
+  const rows = rowsData ?? [];
   const { mutate: updateChecklist, isPending: updatingChecklist, variables: updateVars } = useUpdateChecklist(projectId);
   const { mutate: assignMaestro, isPending: assigningMaestro, variables: assignVars } = useAssignMaestro(projectId);
   const { data: users = [] } = useAdminUsers(isAdmin || isProjectLeader);
@@ -357,11 +360,11 @@ export function ChecklistTab({ projectId }: { projectId: string }) {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    return <TableSkeleton rows={8} columns={7} />;
+  }
+
+  if (isError && rowsData === undefined) {
+    return <ErrorState message="No se pudo cargar el checklist." error={error} onRetry={() => refetch()} retrying={isFetching} />;
   }
 
   if (rows.length === 0) {

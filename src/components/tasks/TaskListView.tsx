@@ -1,3 +1,7 @@
+import { NoResultsState } from '@/components/shared/StoryUI';
+import { activatable, activatableRow } from '@/lib/a11y';
+import { PriorityBadge, TaskStatusBadge } from '@/components/shared/StatusBadge';
+import { priorityConfig } from '@/lib/priority';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Table,
@@ -12,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/shared/Skeletons';
 import { Loader2, ArrowUp, ArrowDown, ChevronsUpDown, ListTodo } from 'lucide-react';
 import { EmptyState } from '@/components/shared/StoryUI';
 import { format } from 'date-fns';
@@ -23,12 +28,6 @@ import { getBusinessTodayStr, getDueBucket } from '@/lib/dueDate';
 import { parseDateOnly } from '@/lib/dates';
 import { BADGE_TONES } from '@/lib/badgeColors';
 
-const priorityConfig = {
-  low: { label: 'Baja', className: BADGE_TONES.neutral, rank: 0 },
-  medium: { label: 'Media', className: BADGE_TONES.warning, rank: 1 },
-  high: { label: 'Alta', className: BADGE_TONES.escalated, rank: 2 },
-  urgent: { label: 'Urgente', className: BADGE_TONES.danger, rank: 3 },
-};
 
 type SortKey = 'task_number' | 'title' | 'status' | 'priority' | 'assignee' | 'due_date' | 'epic' | 'team' | 'sprint';
 
@@ -53,6 +52,8 @@ interface TaskListViewProps {
   isDesarrollo?: boolean;
   isAdminOrLeader?: boolean;
   isLoading?: boolean;
+  /** Restablece los filtros del proyecto (acción «Limpiar filtros» cuando no hay resultados). */
+  onClearFilters?: () => void;
   hasActiveFilters?: boolean;
   filtersKey?: string;
 }
@@ -65,6 +66,7 @@ export function TaskListView({
   isDesarrollo,
   isAdminOrLeader,
   isLoading,
+  onClearFilters,
   hasActiveFilters,
   filtersKey,
 }: TaskListViewProps) {
@@ -161,23 +163,22 @@ export function TaskListView({
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   };
 
+  const sortAria = (key: SortKey): 'ascending' | 'descending' | 'none' =>
+    sort.key === key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+
   const SortButton = ({ sortKey, label }: { sortKey: SortKey; label: string }) => (
     <Button variant="ghost" size="sm" className="-ml-3 h-8 gap-1" onClick={() => toggleSort(sortKey)}>
       {label}
       {sort.key === sortKey ? (
-        sort.dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+        sort.dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
       ) : (
-        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
       )}
     </Button>
   );
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <TableSkeleton rows={8} columns={7} />;
   }
 
   const columnCount = 7 + (isDesarrollo ? 3 : 0);
@@ -203,30 +204,31 @@ export function TaskListView({
                   title={totalPages > 1 ? `Selecciona las ${pageIds.length} de esta página (hay ${totalPages} páginas en total)` : undefined}
                 />
               </TableHead>
-              <TableHead className="w-[100px]"><SortButton sortKey="task_number" label="Clave" /></TableHead>
-              <TableHead><SortButton sortKey="title" label="Título" /></TableHead>
-              <TableHead className="w-[130px]"><SortButton sortKey="status" label="Estado" /></TableHead>
-              <TableHead className="w-[110px]"><SortButton sortKey="priority" label="Prioridad" /></TableHead>
-              <TableHead className="w-[160px]"><SortButton sortKey="assignee" label="Responsable" /></TableHead>
-              <TableHead className="w-[120px]"><SortButton sortKey="due_date" label="Fecha límite" /></TableHead>
-              {isDesarrollo && <TableHead className="w-[130px]"><SortButton sortKey="epic" label="Épica" /></TableHead>}
-              {isDesarrollo && <TableHead className="w-[130px]"><SortButton sortKey="team" label="Equipo" /></TableHead>}
-              {isDesarrollo && <TableHead className="w-[130px]"><SortButton sortKey="sprint" label="Sprint" /></TableHead>}
+              <TableHead className="w-[100px]" aria-sort={sortAria("task_number")}><SortButton sortKey="task_number" label="Clave" /></TableHead>
+              <TableHead aria-sort={sortAria("title")}><SortButton sortKey="title" label="Título" /></TableHead>
+              <TableHead className="w-[130px]" aria-sort={sortAria("status")}><SortButton sortKey="status" label="Estado" /></TableHead>
+              <TableHead className="w-[110px]" aria-sort={sortAria("priority")}><SortButton sortKey="priority" label="Prioridad" /></TableHead>
+              <TableHead className="w-[160px]" aria-sort={sortAria("assignee")}><SortButton sortKey="assignee" label="Responsable" /></TableHead>
+              <TableHead className="w-[120px]" aria-sort={sortAria("due_date")}><SortButton sortKey="due_date" label="Fecha límite" /></TableHead>
+              {isDesarrollo && <TableHead className="w-[130px]" aria-sort={sortAria("epic")}><SortButton sortKey="epic" label="Épica" /></TableHead>}
+              {isDesarrollo && <TableHead className="w-[130px]" aria-sort={sortAria("team")}><SortButton sortKey="team" label="Equipo" /></TableHead>}
+              {isDesarrollo && <TableHead className="w-[130px]" aria-sort={sortAria("sprint")}><SortButton sortKey="sprint" label="Sprint" /></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paged.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={columnCount} className="py-0">
-                  <EmptyState
-                    icon={ListTodo}
-                    message={hasActiveFilters ? 'Ningún resultado con los filtros actuales' : 'No hay tareas en este proyecto'}
-                  />
+                  {hasActiveFilters ? (
+                    <NoResultsState message="Ninguna tarea coincide con los filtros actuales." onClear={onClearFilters} />
+                  ) : (
+                    <EmptyState icon={ListTodo} message="No hay tareas en este proyecto" />
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
               paged.map((task) => (
-                <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onTaskClick(task)}>
+                <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" {...activatableRow(() => onTaskClick(task))}>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selected.has(task.id)}
@@ -238,21 +240,10 @@ export function TaskListView({
                   </TableCell>
                   <TableCell className="font-medium">{task.title}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      style={{
-                        backgroundColor: `${task.status?.color}15`,
-                        color: task.status?.color,
-                        borderColor: task.status?.color,
-                      }}
-                    >
-                      {task.status?.name}
-                    </Badge>
+                    <TaskStatusBadge name={task.status?.name} color={task.status?.color} />
                   </TableCell>
                   <TableCell>
-                    <Badge className={cn('text-xs', priorityConfig[task.priority].className)}>
-                      {priorityConfig[task.priority].label}
-                    </Badge>
+                    <PriorityBadge priority={task.priority} />
                   </TableCell>
                   <TableCell>
                     {task.assignee ? (

@@ -2,6 +2,7 @@
 // backlog acumulado, que es lo que ya resuelve CapacidadFabricaTab). Reutiliza por
 // completo capacity-forecast (semana actual + próximas semanas + backlog por persona)
 // y people-workload (distribución por proyecto); no agrega endpoints nuevos.
+import { activatable, activatableRow } from '@/lib/a11y';
 import { toLocalISODate } from '@/lib/dates';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Search, Users, HelpCircle, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, FileWarning, PieChart, CheckCircle2 } from 'lucide-react';
@@ -18,7 +19,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { CHART_COLORS, formatHours, AXIS_STYLE, GRID_STYLE, BAR_RADIUS, GradientDef } from '@/components/reports/ReportCharts';
 import { axisTick, chartColors, chartSurface } from '@/components/charts/chartTheme';
-import { StatTile, SectionHeader, LoadingState, EmptyState, StatusPill } from '@/components/shared/StoryUI';
+import { StatTile, SectionHeader, LoadingState, EmptyState, ErrorState, RefetchError, StatusPill } from '@/components/shared/StoryUI';
+import { CapacitySkeleton } from '@/components/shared/Skeletons';
 import { cn } from '@/lib/utils';
 import {
   useReportCapacityForecast,
@@ -246,20 +248,24 @@ function SortableTh({
   const active = sortCol === col;
   return (
     <th
-      className={cn(
-        'px-3 py-2.5 font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors',
-        align === 'left' ? 'text-left' : 'text-center',
-      )}
-      onClick={() => onSort(col)}
+      aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={cn('px-3 py-2.5 font-semibold text-muted-foreground', align === 'left' ? 'text-left' : 'text-center')}
     >
-      <span className={cn('inline-flex items-center gap-1', align === 'center' && 'justify-center w-full')}>
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={cn(
+          'inline-flex items-center gap-1 rounded select-none hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          align === 'center' && 'justify-center w-full',
+        )}
+      >
         {label}
         {active ? (
-          sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+          sortDir === 'asc' ? <ArrowUp className="h-3 w-3" aria-hidden="true" /> : <ArrowDown className="h-3 w-3" aria-hidden="true" />
         ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-30" />
+          <ArrowUpDown className="h-3 w-3 opacity-30" aria-hidden="true" />
         )}
-      </span>
+      </button>
     </th>
   );
 }
@@ -456,12 +462,12 @@ export function CapacidadOperativaTab() {
   const [sortCol, setSortCol] = useState<SortCol | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const { data: forecast, isLoading: loadingForecast } = useReportCapacityForecast({
+  const { data: forecast, isLoading: loadingForecast, isError: errorForecast, error: forecastErr, refetch: refetchForecast, isFetching: fetchingForecast, isPlaceholderData: forecastStale } = useReportCapacityForecast({
     ...(cargoFilter !== 'all' ? { cargo: cargoFilter } : {}),
     ...(projectFilter !== 'all' ? { project_id: projectFilter } : {}),
     weeks: 4,
   });
-  const { data: workload, isLoading: loadingWorkload } = useReportPeopleWorkload();
+  const { data: workload, isLoading: loadingWorkload, isError: errorWorkload, error: workloadErr, refetch: refetchWorkload, isFetching: fetchingWorkload } = useReportPeopleWorkload();
   const { data: cargoRows = [] } = useReportWorkloadByCargo();
   const { data: projects = [] } = useProjects();
   const { data: userMini, isLoading: loadingUserMini } = useUserMiniReport(selectedId);
@@ -767,18 +773,33 @@ export function CapacidadOperativaTab() {
   };
 
   if (loadingForecast || loadingWorkload) {
-    return <LoadingState label="Cargando capacidad operativa..." />;
+    return <CapacitySkeleton />;
   }
 
-  if (!forecast) {
-    return <EmptyState message="No se pudo cargar la capacidad operativa." />;
+  // Un fallo de la API no se presenta como «sin datos»: se ofrece reintentar.
+  if ((errorForecast && !forecast) || (errorWorkload && !workload) || !forecast) {
+    return (
+      <ErrorState
+        message="No se pudo cargar la capacidad operativa."
+        error={forecastErr ?? workloadErr}
+        onRetry={() => { refetchForecast(); refetchWorkload(); }}
+        retrying={fetchingForecast || fetchingWorkload}
+      />
+    );
   }
 
   const heatmapWeeks = tableRows[0]?.weeks ?? scopedRows[0]?.weeks ?? [];
   const today = toLocalISODate(new Date());
 
   return (
-    <div className="space-y-7">
+    <div className={cn('space-y-7 transition-opacity duration-ui', forecastStale && 'opacity-60')} aria-busy={forecastStale || undefined}>
+      {(errorForecast || errorWorkload) && (
+        <RefetchError
+          error={errorForecast ? forecastErr : workloadErr}
+          onRetry={() => { if (errorForecast) refetchForecast(); if (errorWorkload) refetchWorkload(); }}
+          retrying={fetchingForecast || fetchingWorkload}
+        />
+      )}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="space-y-1 max-w-xl">
           <div className="flex items-center gap-2">
@@ -787,6 +808,7 @@ export function CapacidadOperativaTab() {
           </div>
           <p className="text-sm text-muted-foreground">
             Visión de la carga real del equipo, disponibilidad, compromisos y capacidad futura.
+            Mide la carga del período elegido frente a su capacidad; el cumplimiento de fábrica está en la pestaña Capacidad.
           </p>
         </div>
         <FilterBar
@@ -798,6 +820,9 @@ export function CapacidadOperativaTab() {
         />
       </div>
 
+      <p className="text-xs text-muted-foreground -mb-4" data-testid="kpi-scope-note">
+        Indicadores de {periodLabel?.toLowerCase()}: carga asignada frente a la capacidad de esas semanas. El backlog total se mide aparte, en «¿Nuevo proyecto?».
+      </p>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatTile label="Capacidad del período" value={formatHours(kpis.capacidad)} sub={periodLabel} />
         <StatTile label="Carga del período" value={formatHours(kpis.comprometidas)} sub="Horas asignadas en el período" />
@@ -897,7 +922,8 @@ export function CapacidadOperativaTab() {
         <section>
           <SectionHeader tag="Visual" title="Ocupación proyectada" />
           <p className="text-xs text-muted-foreground -mt-3 mb-4">
-            Porcentaje de capacidad comprometida durante las próximas semanas.
+            Porcentaje de capacidad comprometida durante las próximas semanas. La semana actual se mide contra la capacidad
+            que le queda (días hábiles restantes; en fin de semana, la semana completa) y las siguientes contra la capacidad semanal completa.
           </p>
           {trendData.length === 0 ? (
             <EmptyState message="No hay semanas proyectadas para los filtros seleccionados." />
@@ -1048,7 +1074,7 @@ export function CapacidadOperativaTab() {
                         const band = operativeBand(snap.pct);
                         const semanasBacklog = Math.round((r.backlog.dias_para_vaciar / 5) * 10) / 10;
                         return (
-                          <tr key={r.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => openPerson(r.id)}>
+                          <tr key={r.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" {...activatableRow(() => openPerson(r.id))}>
                             <td className="px-3 py-2.5"><PersonIdentity row={r} /></td>
                             <td className="px-3 py-2.5"><FragmentationTag count={r.projects.length} /></td>
                             <td className="px-3 py-2.5 text-center tabular-nums">{r.tareasActivas}</td>
@@ -1075,7 +1101,7 @@ export function CapacidadOperativaTab() {
                 const band = operativeBand(snap.pct);
                 const semanasBacklog = Math.round((r.backlog.dias_para_vaciar / 5) * 10) / 10;
                 return (
-                  <Card key={r.id} className={CARD_CLASS} onClick={() => openPerson(r.id)}>
+                  <Card key={r.id} className={cn(CARD_CLASS, 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')} {...activatable(() => openPerson(r.id))}>
                     <CardContent className="p-3.5 space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
                         <PersonIdentity row={r} />

@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -16,7 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, Search, Bell, FolderKanban, Settings, LogOut } from 'lucide-react';
+import { Loader2, Search, Bell, FolderKanban, Settings, LogOut, User as UserIcon } from 'lucide-react';
+import { roleLabel, titleForPath } from './navConfig';
+import { useDocumentTitle } from '@/hooks/usePageTitle';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { LuminaWidget } from '@/components/chat/LuminaWidget';
 
@@ -30,7 +32,11 @@ interface SearchResult {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading, signOut, isAdmin, isProjectLeader } = useAuth();
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  // Título de pestaña por ruta (las páginas con título propio, como el detalle de proyecto, lo fijan ellas).
+  useDocumentTitle(titleForPath(location.pathname));
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const navigate = useNavigate();
 
@@ -130,9 +136,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 overflow-auto">
-          <header className="h-14 flex items-center gap-4 border-b border-border bg-card px-4 shadow-card">
+          <button
+            type="button"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-floating focus:ring-2 focus:ring-ring"
+            onClick={() => mainRef.current?.focus()}
+          >
+            Saltar al contenido
+          </button>
+          <header className="min-h-14 flex items-center gap-2 sm:gap-4 border-b border-border bg-card px-3 sm:px-4 shadow-card">
             <SidebarTrigger className="-ml-1 rounded-lg" />
-            <div className="flex-1 flex items-center justify-center max-w-md mx-4" ref={searchRef}>
+            <div className="flex-1 min-w-0 flex items-center justify-center max-w-md mx-1 sm:mx-4" ref={searchRef}>
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 {isFetching && debouncedQuery.length >= 2 && (
@@ -219,24 +232,27 @@ export function AppLayout({ children }: AppLayoutProps) {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Link to="/notifications">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
-                  <Bell className="h-4 w-4" />
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="relative h-11 w-11 md:h-9 md:w-9 rounded-lg"
+              >
+                <Link
+                  to="/notifications"
+                  aria-label={unreadCount > 0 ? `Notificaciones (${unreadCount} sin leer)` : 'Notificaciones'}
+                >
+                  <Bell className="h-4 w-4" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-coral" />
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-coral-strong" aria-hidden="true" />
                   )}
-                </Button>
-              </Link>
-              <Link to="/projects">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
-                  <FolderKanban className="h-4 w-4" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="rounded-full p-0 h-9 w-9">
+                  <Button variant="ghost" aria-label="Menú de cuenta" className="rounded-full p-0 h-11 w-11 md:h-9 md:w-9">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarImage src={user.avatar_url || undefined} alt="" />
                       <AvatarFallback className="bg-primary/10 text-primary text-xs">
                         {getInitials(user.full_name)}
                       </AvatarFallback>
@@ -245,10 +261,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-floating">
                   <DropdownMenuLabel className="font-normal">
-                    <p className="font-medium">{user.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="font-medium truncate">{user.full_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">{roleLabel(!!isAdmin, !!isProjectLeader)}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <UserIcon className="h-4 w-4" aria-hidden="true" />
+                      Perfil
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
                       <Settings className="h-4 w-4" />
@@ -256,7 +279,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive cursor-pointer">
+                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive-strong focus:text-destructive-strong cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2" />
                     Cerrar sesión
                   </DropdownMenuItem>
@@ -265,7 +288,10 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </header>
           <main
-            className="flex-1 relative bg-background"
+            id="main-content"
+            ref={mainRef}
+            tabIndex={-1}
+            className="flex-1 relative bg-background focus:outline-none"
             style={{
               backgroundImage: 'linear-gradient(180deg, hsl(var(--background) / 0.94), hsl(var(--background) / 0.94)), url(./bg_app.webp)',
               backgroundSize: 'auto, cover',
