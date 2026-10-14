@@ -1,3 +1,8 @@
+import {
+  weeklyOccupancy, occupancyBand, occupancyBandByLevel, occupancyCounts, occupancyPct, formatOccupancyPct,
+  memberWeeklyPctExact, type OccupancyLevel,
+} from '@/lib/capacityMetrics';
+import { OCCUPANCY_BADGE_CLASSES, OCCUPANCY_HEX } from '@/components/reports/occupancyStyles';
 import { Suspense, lazy } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { firstName, getInitials, shortName } from '@/lib/names';
@@ -96,13 +101,6 @@ function efficiencyBandColor(pct: number | null): string {
   return 'text-destructive-strong';
 }
 
-const RISK_BADGE_CLASSES: Record<string, string> = {
-  available: 'bg-info/10 text-info-strong border-info/30',
-  ok: 'bg-success/10 text-success-strong border-success/30',
-  warning: 'bg-warning/10 text-warning-strong border-warning/30',
-  over: 'bg-destructive/10 text-destructive-strong border-destructive/30',
-};
-
 // Shared date-range control — used by any tab needing a completion-time window.
 // Labels are honest about what they actually select (rolling N days, not calendar
 // "this week/month" as the previous copy implied).
@@ -153,27 +151,25 @@ function ReportScopeFilterBar({
 }
 
 // Compact forward-looking capacity strip: one bar per upcoming week, risk-colored.
-function CapacityWeekStrip({ weeks }: { weeks: { week_start: string; horas: number; utilizacion_pct: number; risk_color: string; risk_label: string }[] }) {
+function CapacityWeekStrip({ weeks, capacity }: { weeks: { week_start: string; horas: number }[]; capacity: number }) {
   if (!weeks || weeks.length === 0) return null;
   return (
     <div className="flex items-center gap-1">
       {weeks.map((w) => {
-        const barColor =
-          w.risk_color === 'red' ? CHART_COLORS.coral
-          : w.risk_color === 'amber' ? CHART_COLORS.yellow
-          : w.risk_color === 'sky' ? chartColors.info
-          : CHART_COLORS.green;
-        const heightPct = Math.max(8, Math.min(100, w.utilizacion_pct));
+        // Estado de cada semana con la escala única de ocupación, a partir del % real de esa semana.
+        const { exact } = occupancyPct(w.horas, capacity);
+        const band = occupancyBand(exact);
+        const heightPct = Math.max(8, Math.min(100, exact));
         const d = new Date(w.week_start + 'T12:00:00');
         const label = d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
         return (
           <div
             key={w.week_start}
             className="flex flex-col items-center gap-0.5"
-            title={`Sem. ${label} · ${formatHours(w.horas)} (${w.utilizacion_pct}% · ${w.risk_label})`}
+            title={`Sem. ${label} · ${formatHours(w.horas)} (${formatOccupancyPct(exact)} · ${band.label})`}
           >
             <div className="h-8 w-3 bg-muted rounded-sm overflow-hidden flex items-end">
-              <div className="w-full rounded-sm" style={{ height: `${heightPct}%`, backgroundColor: barColor }} />
+              <div className="w-full rounded-sm" style={{ height: `${heightPct}%`, backgroundColor: OCCUPANCY_HEX[band.level] }} />
             </div>
             <span className="text-2xs text-muted-foreground">{label}</span>
           </div>
@@ -1130,19 +1126,17 @@ function TabEquipo() {
   const capacityMembers = capacity?.members ?? [];
   const overall = capacity?.overall;
 
-  // When most/all active work this week has no hour estimate, the "exact"
-  // number is near-meaningless (it's measuring almost nothing) — lead with
-  // the approximated figure instead, and only fall back to the exact one
-  // when there's no estimation gap at all.
-  const hasEstimationGap = !!overall && overall.unidades_semana_actual_sin_estimacion > 0;
-  const headlineUtilizacionPct = overall ? (hasEstimationGap ? overall.utilizacion_aprox_pct : overall.utilizacion_pct) : 0;
-  const headlineCarga = overall ? (hasEstimationGap ? overall.carga_semana_actual_aprox : overall.carga_semana_actual) : 0;
-  const headlineHolgura = overall ? (hasEstimationGap ? overall.holgura_aprox_horas : overall.holgura_horas) : 0;
-
+  // Ocupación semanal OFICIAL: misma función que Capacidad y Capacidad Operativa (lib/capacityMetrics.ts),
+  // solo con horas realmente estimadas. Las tareas sin horas no suman: se avisan aparte y la estimación
+  // con promedio (si existe) se muestra identificada como referencia, nunca como indicador principal.
+  const occ = weeklyOccupancy(capacityMembers);
+  // Conteos por estado desde el % real de cada colaborador (no desde risk_counts del backend, que usa otros límites).
+  const occCounts = occupancyCounts(capacityMembers);
+  const hasEstimationGap = occ.tareasSinEstimar > 0;
   const overallHolguraDisplay = overall
-    ? headlineHolgura >= 0
-      ? `Holgura ${formatHours(headlineHolgura)}`
-      : `Exceso ${formatHours(Math.abs(headlineHolgura))}`
+    ? occ.holgura >= 0
+      ? `Holgura ${formatHours(occ.holgura)}`
+      : `Exceso ${formatHours(Math.abs(occ.holgura))}`
     : '0h';
 
   // Weekly throughput (hours), stacked by top-5 people + "Otros" — replaces the old
@@ -1198,52 +1192,40 @@ function TabEquipo() {
           {overall && (
             <>
               <HeroBanner
-                eyebrow="Equipo · compromiso semana actual"
+                eyebrow="Equipo · ocupación semanal"
                 story={
                   <>
-                    El equipo está {hasEstimationGap ? 'aproximadamente ' : ''}al <b className="text-white">{headlineUtilizacionPct}% de utilización</b> esta semana —{' '}
-                    <b className="text-white">{hasEstimationGap ? `~${formatHours(headlineCarga)}` : formatHours(headlineCarga)}</b> comprometidas de{' '}
-                    <b className="text-white">{formatHours(overall.capacidad_total)}</b> disponibles.{' '}
-                    {overall.risk_counts.over > 0
-                      ? <><b className="text-white">{overall.risk_counts.over} {overall.risk_counts.over === 1 ? 'persona está sobrecargada' : 'personas están sobrecargadas'}</b>.</>
+                    El equipo está al <b className="text-white">{formatOccupancyPct(occ.pctExact)} de ocupación semanal</b> —{' '}
+                    <b className="text-white">{formatHours(occ.horas)}</b> comprometidas de{' '}
+                    <b className="text-white">{formatHours(occ.capacidad)}</b> disponibles.{' '}
+                    {occCounts.over > 0
+                      ? <><b className="text-white">{occCounts.over} {occCounts.over === 1 ? 'persona está sobrecargada' : 'personas están sobrecargadas'}</b>.</>
                       : 'Nadie está sobrecargado en este momento.'}{' '}
                     {hasEstimationGap && (
                       <>
-                        Ojo: <b className="text-white">{overall.unidades_semana_actual_sin_estimacion} {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tarea activa' : 'tareas activas'} de esta semana no {overall.unidades_semana_actual_sin_estimacion === 1 ? 'tiene' : 'tienen'} horas estimadas</b> — este {headlineUtilizacionPct}% es una aproximación, asumiendo <b className="text-white">{overall.avg_horas_asumidas}h</b> por cada una de esas tareas (el promedio de las que sí tienen horas puestas). Entre más gente registre sus horas reales, más preciso será este número.
+                        Ojo: <b className="text-white">{occ.tareasSinEstimar} {occ.tareasSinEstimar === 1 ? 'tarea activa' : 'tareas activas'} de esta semana no {occ.tareasSinEstimar === 1 ? 'tiene' : 'tienen'} horas estimadas</b> y no se cuentan, así que la ocupación real podría ser mayor.
+                        {occ.estimacion && (
+                          <> Como referencia, asumiendo <b className="text-white">{overall.avg_horas_asumidas}h</b> por cada una (el promedio de las que sí tienen horas), sería de ~{occ.estimacion.pct}%. Esta cifra es solo una estimación.</>
+                        )}
                       </>
                     )}
                   </>
                 }
                 stats={[
-                  {
-                    value: hasEstimationGap ? `~${headlineUtilizacionPct}%` : `${headlineUtilizacionPct}%`,
-                    label: hasEstimationGap ? 'Utilización aproximada' : 'Utilización semana actual',
-                  },
+                  { value: formatOccupancyPct(occ.pctExact), label: hasEstimationGap ? 'Ocupación semanal (solo horas estimadas)' : 'Ocupación semanal' },
                   { value: overallHolguraDisplay, label: 'Holgura / exceso' },
-                  { value: overall.risk_counts.available, label: 'Con espacio disponible' },
+                  { value: occCounts.low, label: 'Con baja carga' },
                 ]}
               />
               <div className="flex flex-wrap gap-2">
-                {overall.risk_counts.available > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.available}`}>
-                    Disponible · {overall.risk_counts.available}
+                <Badge variant="outline" data-testid="ocupacion-estado" className={`px-2 py-0.5 text-2xs font-semibold ${OCCUPANCY_BADGE_CLASSES[occ.band.level]}`}>
+                  Equipo: {occ.band.label}
+                </Badge>
+                {(['low', 'available', 'high', 'over'] as OccupancyLevel[]).map((level) => occCounts[level] > 0 && (
+                  <Badge key={level} variant="outline" data-testid={`conteo-${level}`} className={`px-2 py-0.5 text-2xs ${OCCUPANCY_BADGE_CLASSES[level]}`}>
+                    {occupancyBandByLevel(level).label} · {occCounts[level]}
                   </Badge>
-                )}
-                {overall.risk_counts.ok > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.ok}`}>
-                    OK · {overall.risk_counts.ok}
-                  </Badge>
-                )}
-                {overall.risk_counts.warning > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.warning}`}>
-                    Riesgo · {overall.risk_counts.warning}
-                  </Badge>
-                )}
-                {overall.risk_counts.over > 0 && (
-                  <Badge variant="outline" className={`px-2 py-0.5 text-2xs ${RISK_BADGE_CLASSES.over}`}>
-                    Sobrecargado · {overall.risk_counts.over}
-                  </Badge>
-                )}
+                ))}
                 {overall.unidades_semana_actual_sin_estimacion > 0 && (
                   <Badge variant="outline" className="px-2 py-0.5 text-2xs bg-warning/10 text-warning-strong border-warning/30">
                     Sin horas estimadas · {overall.unidades_semana_actual_sin_estimacion}
@@ -1274,8 +1256,8 @@ function TabEquipo() {
           {/* Attention panel: overloaded people, most severe first */}
           {(() => {
             const overloaded = [...capacityMembers]
-              .filter(m => m.current.risk_level === 'over')
-              .sort((a, b) => b.current.utilizacion_pct - a.current.utilizacion_pct)
+              .filter(m => m.weekly_hours_capacity > 0 && occupancyBand(memberWeeklyPctExact(m)).level === 'over')
+              .sort((a, b) => memberWeeklyPctExact(b) - memberWeeklyPctExact(a))
               .slice(0, 5);
             if (overloaded.length === 0) return null;
             return (
@@ -1285,7 +1267,7 @@ function TabEquipo() {
                     key={m.id}
                     severity="critical"
                     title={m.full_name || 'Sin nombre'}
-                    description={`${m.current.utilizacion_pct}% de utilización esta semana · ${formatHours(Math.abs(m.current.holgura_horas))} de exceso`}
+                    description={`${formatOccupancyPct(memberWeeklyPctExact(m))} de ocupación semanal · ${formatHours(Math.abs(m.current.holgura_horas))} de exceso`}
                     cta="Ver detalle"
                     onClick={() => { setSelectedUserId(String(m.id)); setDrawerOpen(true); }}
                   />
@@ -1338,9 +1320,11 @@ function TabEquipo() {
               cargoFilter === 'all' || (m.cargo || 'Sin cargo') === cargoFilter
             ).map(member => {
               const pm = peopleById.get(member.id);
-              const isOverloaded = member.current.utilizacion_pct > 100;
-              const barPct = Math.min(member.current.utilizacion_pct, 200) / 2; // Scale: 200% = full bar
-              const riskBadgeClass = RISK_BADGE_CLASSES[member.current.risk_level] ?? RISK_BADGE_CLASSES.ok;
+              const pctExact = memberWeeklyPctExact(member);
+              const band = occupancyBand(pctExact);
+              const isOverloaded = band.level === 'over';
+              const barPct = Math.min(pctExact, 200) / 2; // Scale: 200% = full bar
+              const riskBadgeClass = OCCUPANCY_BADGE_CLASSES[band.level];
 
               const holgura = member.current.holgura_horas;
               const gapText = holgura !== 0
@@ -1373,7 +1357,7 @@ function TabEquipo() {
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm truncate">{member.full_name || 'Sin nombre'}</p>
                           <Badge variant="outline" className={`text-2xs px-1.5 py-0.5 border ${riskBadgeClass}`}>
-                            {member.current.risk_label}
+                            {band.label}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">{member.cargo || 'Sin cargo'}</p>
@@ -1407,13 +1391,9 @@ function TabEquipo() {
                       <div className="flex justify-between text-2xs">
                         <span className="text-muted-foreground">Compromiso semana actual</span>
                         <span className={`font-semibold ${isOverloaded ? 'text-destructive-strong' : ''}`}>
-                          {member.current.unidades_semana_actual_sin_estimacion > 0 ? (
-                            <>
-                              ~{member.current.utilizacion_aprox_pct}%
-                              <span className="text-muted-foreground font-normal"> ({member.current.utilizacion_pct}% con horas puestas)</span>
-                            </>
-                          ) : (
-                            `${member.current.utilizacion_pct}%`
+                          {formatOccupancyPct(pctExact)}
+                          {member.current.unidades_semana_actual_sin_estimacion > 0 && (
+                            <span className="text-muted-foreground font-normal"> (solo horas estimadas · ~{member.current.utilizacion_aprox_pct}% si se asume un promedio para las {member.current.unidades_semana_actual_sin_estimacion} sin horas)</span>
                           )}
                         </span>
                       </div>
@@ -1441,7 +1421,7 @@ function TabEquipo() {
                     {/* Proyección próximas semanas */}
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-2xs text-muted-foreground">Próximas semanas</span>
-                      <CapacityWeekStrip weeks={member.weeks} />
+                      <CapacityWeekStrip weeks={member.weeks} capacity={member.weekly_hours_capacity} />
                     </div>
 
                     {/* Footer: backlog drain estimate + warnings */}
@@ -2123,10 +2103,10 @@ function IndividualPerformanceTab() {
                           {m.puntualidad_pct !== null ? `${m.puntualidad_pct}%` : '—'}
                         </td>
                         <td className="px-4 py-3 text-center text-xs">
-                          {cap ? `${cap.current.utilizacion_pct}%` : '—'}
+                          {cap ? formatOccupancyPct(memberWeeklyPctExact(cap)) : '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {cap ? <CapacityWeekStrip weeks={cap.weeks} /> : '—'}
+                          {cap ? <CapacityWeekStrip weeks={cap.weeks} capacity={cap.weekly_hours_capacity} /> : '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-semibold text-primary">{m.unidades_completadas}</span>

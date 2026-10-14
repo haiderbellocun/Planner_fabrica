@@ -33,9 +33,13 @@ import {
 } from '@/hooks/useReports';
 import { useProjects, type ProjectWithDetails } from '@/hooks/useProjects';
 import {
-  aggregatePeriodKpis, backlogHeadroom, currentWeekCapacityForTrend, forecastWeekLabel,
-  operativeBand, periodSnapshot, weeklyTeamCapacity, type PeriodKey, type Tone,
+  aggregatePeriodKpis, backlogHeadroom, currentWeekCapacityForTrend, forecastWeekLabel, unestimatedTasksForPeriod,
+  occupancyBand, occupancyBandByLevel, occupancyLevel, occupancyPct, formatOccupancyPct, OCCUPANCY_LEVELS,
+  periodSnapshot, weeklyTeamCapacity, type PeriodKey, type Tone, type OccupancyLevel,
 } from '@/lib/capacityMetrics';
+import { OCCUPANCY_HEX } from '@/components/reports/occupancyStyles';
+import { TotalOccupancyCard } from '@/components/reports/TotalOccupancyCard';
+import { useFactoryOccupancy } from '@/hooks/useFactoryOccupancy';
 
 const CARD_CLASS = 'rounded-2xl border border-border bg-card shadow-card';
 
@@ -45,12 +49,10 @@ const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
   { value: 'next4', label: 'Próximas 4 semanas' },
 ];
 
-const STATUS_OPTIONS: { value: 'all' | Tone; label: string }[] = [
+// Filtro por estado: mismas bandas (y mismas etiquetas) que las píldoras, tarjetas y barras.
+const STATUS_OPTIONS: { value: 'all' | OccupancyLevel; label: string }[] = [
   { value: 'all', label: 'Todos los estados' },
-  { value: 'available', label: 'Disponible' },
-  { value: 'good', label: 'Saludable' },
-  { value: 'warning', label: 'Alta ocupación' },
-  { value: 'critical', label: 'Sobrecarga' },
+  ...OCCUPANCY_LEVELS.map((level) => ({ value: level, label: occupancyBandByLevel(level).label })),
 ];
 
 const TONE_CLASSES: Record<Tone, string> = {
@@ -60,14 +62,7 @@ const TONE_CLASSES: Record<Tone, string> = {
   critical: 'bg-destructive/10 text-destructive',
 };
 
-const STATUS_PRIORITY: Record<Tone, number> = { critical: 0, warning: 1, good: 2, available: 3 };
-
-const TONE_HEX: Record<Tone, string> = {
-  available: chartColors.info,
-  good: CHART_COLORS.green,
-  warning: CHART_COLORS.yellow,
-  critical: CHART_COLORS.coral,
-};
+const STATUS_PRIORITY: Record<OccupancyLevel, number> = { over: 0, high: 1, available: 2, low: 3 };
 
 function fragmentation(projectCount: number): { label: string; tone: Tone } {
   if (projectCount >= 5) return { label: 'Alta', tone: 'critical' };
@@ -151,18 +146,18 @@ function WeekAxisTick({ x, y, payload, index }: { x?: number; y?: number; payloa
   );
 }
 
-function HeatCell({ pct }: { pct: number }) {
-  if (pct === 0) {
+function HeatCell({ pctExact }: { pctExact: number }) {
+  if (pctExact === 0) {
     return (
       <div className="rounded-lg px-2 py-1.5 text-center text-xs font-medium tabular-nums min-w-[56px] bg-muted/40 text-muted-foreground/70">
         0%
       </div>
     );
   }
-  const { tone } = operativeBand(pct);
+  const { tone } = occupancyBand(pctExact);
   return (
     <div className={cn('rounded-lg px-2 py-1.5 text-center text-xs font-bold tabular-nums min-w-[56px]', TONE_CLASSES[tone])}>
-      {pct}%
+      {formatOccupancyPct(pctExact)}
     </div>
   );
 }
@@ -289,7 +284,9 @@ interface PersonBarDatum {
   comprometido: number;
   capacidad: number;
   pct: number;
+  pctLabel: string;
   libres: number;
+  level: OccupancyLevel;
 }
 
 function PersonBarTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: PersonBarDatum }> }) {
@@ -301,7 +298,7 @@ function PersonBarTooltip({ active, payload }: { active?: boolean; payload?: Arr
       <p className="text-muted-foreground mb-1.5">{d.cargo || 'Sin cargo'}</p>
       <TooltipRow label="Comprometido" value={formatHours(d.comprometido)} />
       <TooltipRow label="Capacidad" value={formatHours(d.capacidad)} />
-      <TooltipRow label="Ocupación" value={`${d.pct}%`} />
+      <TooltipRow label="Ocupación" value={d.pctLabel} />
       <TooltipRow label="Horas libres" value={formatSignedHours(d.libres)} />
     </div>
   );
@@ -315,6 +312,7 @@ interface WeekTrendDatum {
   carga: number;
   disponible: number;
   pct: number;
+  pctExact: number;
 }
 
 function WeekTrendTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: WeekTrendDatum }> }) {
@@ -331,14 +329,14 @@ function WeekTrendTooltip({ active, payload }: { active?: boolean; payload?: Arr
           <TooltipRow label="Capacidad restante" value={formatHours(d.capacidadRestante ?? 0)} />
           <TooltipRow label="Horas comprometidas restantes" value={formatHours(d.carga)} />
           <TooltipRow label="Capacidad disponible" value={formatSignedHours(d.disponible)} />
-          <TooltipRow label="Ocupación restante" value={`${d.pct}%`} />
+          <TooltipRow label="Ocupación restante" value={formatOccupancyPct(d.pctExact)} />
         </>
       ) : (
         <>
           <TooltipRow label="Capacidad" value={formatHours(d.capacidad)} />
           <TooltipRow label="Comprometidas" value={formatHours(d.carga)} />
           <TooltipRow label="Capacidad disponible" value={formatSignedHours(d.disponible)} />
-          <TooltipRow label="Ocupación" value={`${d.pct}%`} />
+          <TooltipRow label="Ocupación" value={formatOccupancyPct(d.pctExact)} />
         </>
       )}
     </div>
@@ -411,7 +409,7 @@ function FilterBar({
   period: PeriodKey; onPeriod: (v: PeriodKey) => void;
   cargo: string; onCargo: (v: string) => void; cargoOptions: string[];
   project: string; onProject: (v: string) => void; projectOptions: ProjectWithDetails[];
-  status: 'all' | Tone; onStatus: (v: 'all' | Tone) => void;
+  status: 'all' | OccupancyLevel; onStatus: (v: 'all' | OccupancyLevel) => void;
   search: string; onSearch: (v: string) => void;
 }) {
   return (
@@ -436,7 +434,7 @@ function FilterBar({
           {projectOptions.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
         </SelectContent>
       </Select>
-      <Select value={status} onValueChange={(v) => onStatus(v as 'all' | Tone)}>
+      <Select value={status} onValueChange={(v) => onStatus(v as 'all' | OccupancyLevel)}>
         <SelectTrigger className="w-[170px] h-9 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>
           {STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -454,7 +452,7 @@ export function CapacidadOperativaTab() {
   const [periodKey, setPeriodKey] = useState<PeriodKey>('current');
   const [cargoFilter, setCargoFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | Tone>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | OccupancyLevel>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -467,6 +465,7 @@ export function CapacidadOperativaTab() {
     ...(projectFilter !== 'all' ? { project_id: projectFilter } : {}),
     weeks: 4,
   });
+  const { total: factoryTotal } = useFactoryOccupancy();
   const { data: workload, isLoading: loadingWorkload, isError: errorWorkload, error: workloadErr, refetch: refetchWorkload, isFetching: fetchingWorkload } = useReportPeopleWorkload();
   const { data: cargoRows = [] } = useReportWorkloadByCargo();
   const { data: projects = [] } = useProjects();
@@ -490,12 +489,14 @@ export function CapacidadOperativaTab() {
   const tableRows = useMemo(() => {
     const rows = statusFilter === 'all'
       ? searchedRows
-      : searchedRows.filter((r) => operativeBand(periodSnapshot(r, periodKey).pct).tone === statusFilter);
-    return [...rows].sort((a, b) => periodSnapshot(b, periodKey).pct - periodSnapshot(a, periodKey).pct);
+      : searchedRows.filter((r) => occupancyLevel(periodSnapshot(r, periodKey).pctExact) === statusFilter);
+    return [...rows].sort((a, b) => periodSnapshot(b, periodKey).pctExact - periodSnapshot(a, periodKey).pctExact);
   }, [searchedRows, statusFilter, periodKey]);
 
   const kpis = useMemo(() => aggregatePeriodKpis(tableRows, periodKey), [tableRows, periodKey]);
   const periodLabel = PERIOD_OPTIONS.find((p) => p.value === periodKey)?.label;
+  // Tareas pendientes sin horas: no suman a la ocupación oficial y podrían aumentarla.
+  const sinEstimar = useMemo(() => unestimatedTasksForPeriod(tableRows, periodKey), [tableRows, periodKey]);
 
   const barChartData = useMemo(() => {
     return tableRows.slice(0, 10).map((r) => {
@@ -508,8 +509,9 @@ export function CapacidadOperativaTab() {
         comprometido: Math.round(snap.horas * 100) / 100,
         capacidad: Math.round(snap.capacidad * 100) / 100,
         pct: snap.pct,
+        pctLabel: formatOccupancyPct(snap.pctExact),
         libres: Math.round(snap.holgura * 100) / 100,
-        over: snap.pct > 100,
+        level: occupancyLevel(snap.pctExact),
       };
     });
   }, [tableRows, periodKey]);
@@ -530,7 +532,7 @@ export function CapacidadOperativaTab() {
       ) / 100;
       const capacidad = isCurrent ? capacidadRestanteTotal : capacidadTotal;
       const disponible = Math.round((capacidad - carga) * 100) / 100;
-      const pct = capacidad > 0 ? Math.round((carga / capacidad) * 100) : 0;
+      const { exact: pctExact, pct } = occupancyPct(carga, capacidad);
       return {
         week_start: w.week_start,
         label: weekRangeLabel(w.week_start),
@@ -540,6 +542,7 @@ export function CapacidadOperativaTab() {
         carga,
         disponible,
         pct,
+        pctExact,
       };
     });
   }, [tableRows]);
@@ -599,7 +602,7 @@ export function CapacidadOperativaTab() {
     return Array.from(map.values())
       .map((e) => {
         const disponibles = Math.round((e.capacidad - e.asignadas) * 100) / 100;
-        const ocupacionPct = e.capacidad > 0 ? Math.round((e.asignadas / e.capacidad) * 100) : 0;
+        const { pct: ocupacionPct } = occupancyPct(e.asignadas, e.capacidad);
         return { ...e, disponibles, ocupacionPct };
       })
       .sort((a, b) => b.ocupacionPct - a.ocupacionPct);
@@ -620,8 +623,8 @@ export function CapacidadOperativaTab() {
 
     tableRows
       .map((r) => ({ r, snap: periodSnapshot(r, periodKey) }))
-      .filter((x) => x.snap.pct > 100)
-      .sort((a, b) => b.snap.pct - a.snap.pct)
+      .filter((x) => occupancyLevel(x.snap.pctExact) === 'over')
+      .sort((a, b) => b.snap.pctExact - a.snap.pctExact)
       .slice(0, 3)
       .forEach(({ r, snap }) => {
         items.push({
@@ -734,10 +737,10 @@ export function CapacidadOperativaTab() {
         case 'tasks': return r.tareasActivas;
         case 'week': return snap.horas;
         case 'capacity': return r.weekly_hours_capacity;
-        case 'occ': return snap.pct;
+        case 'occ': return snap.pctExact;
         case 'free': return snap.holgura;
         case 'backlog': return r.backlog.dias_para_vaciar;
-        case 'status': return STATUS_PRIORITY[operativeBand(snap.pct).tone];
+        case 'status': return STATUS_PRIORITY[occupancyLevel(snap.pctExact)];
         default: return 0;
       }
     };
@@ -823,6 +826,10 @@ export function CapacidadOperativaTab() {
       <p className="text-xs text-muted-foreground -mb-4" data-testid="kpi-scope-note">
         Indicadores de {periodLabel?.toLowerCase()}: carga asignada frente a la capacidad de esas semanas. El backlog total se mide aparte, en «¿Nuevo proyecto?».
       </p>
+      {/* Indicador principal: ocupación TOTAL de la fábrica (la misma tarjeta y los mismos datos que en Capacidad).
+          No depende del período ni de los filtros de esta pestaña; los indicadores de abajo sí. */}
+      {factoryTotal && <TotalOccupancyCard total={factoryTotal} />}
+      <p className="text-xs font-semibold text-muted-foreground -mb-1">Indicadores del período · {periodLabel}</p>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatTile label="Capacidad del período" value={formatHours(kpis.capacidad)} sub={periodLabel} />
         <StatTile label="Carga del período" value={formatHours(kpis.comprometidas)} sub="Horas asignadas en el período" />
@@ -832,10 +839,19 @@ export function CapacidadOperativaTab() {
           sub="Capacidad − carga del período"
         />
         <StatTile
-          label="Ocupación"
-          value={`${kpis.ocupacion}%`}
-          sub={`${formatHours(kpis.comprometidas)} de ${formatHours(kpis.capacidad)}`}
-          pill={{ tone: operativeBand(kpis.ocupacion).tone, label: operativeBand(kpis.ocupacion).label }}
+          label={periodKey === 'next4' ? 'Ocupación proyectada' : 'Ocupación semanal'}
+          value={formatOccupancyPct(kpis.ocupacionExact)}
+          sub={
+            <>
+              {formatHours(kpis.comprometidas)} de {formatHours(kpis.capacidad)}
+              {sinEstimar > 0 && (
+                <span className="block text-warning-strong" data-testid="ocupacion-sin-estimar">
+                  {sinEstimar} {sinEstimar === 1 ? 'tarea sin horas estimadas no cuenta' : 'tareas sin horas estimadas no cuentan'}: podría ser mayor
+                </span>
+              )}
+            </>
+          }
+          pill={{ tone: occupancyBand(kpis.ocupacionExact).tone, label: occupancyBand(kpis.ocupacionExact).label }}
         />
         <StatTile
           label="Sobrecarga del equipo"
@@ -909,7 +925,7 @@ export function CapacidadOperativaTab() {
                     <Bar dataKey="capacidad" fill={chartColors.slate} fillOpacity={0.35} radius={[0, BAR_RADIUS, BAR_RADIUS, 0]} />
                     <Bar dataKey="comprometido" radius={[0, BAR_RADIUS, BAR_RADIUS, 0]}>
                       {barChartData.map((d) => (
-                        <Cell key={d.id} fill={d.over ? CHART_COLORS.coral : CHART_COLORS.teal} />
+                        <Cell key={d.id} fill={OCCUPANCY_HEX[d.level]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -948,14 +964,14 @@ export function CapacidadOperativaTab() {
                       strokeWidth={2.5}
                       fill="url(#ocupacionProyectadaGradient)"
                       dot={(props: { cx?: number; cy?: number; payload?: WeekTrendDatum; index?: number }) => {
-                        const tone = operativeBand(props.payload?.pct ?? 0).tone;
+                        const level = occupancyLevel(props.payload?.pctExact ?? 0);
                         return (
                           <circle
                             key={`week-dot-${props.index}`}
                             cx={props.cx ?? 0}
                             cy={props.cy ?? 0}
-                            r={tone === 'critical' ? 5 : 3.5}
-                            fill={TONE_HEX[tone]}
+                            r={level === 'over' ? 5 : 3.5}
+                            fill={OCCUPANCY_HEX[level]}
                             stroke={chartSurface.card}
                             strokeWidth={1}
                           />
@@ -1032,7 +1048,7 @@ export function CapacidadOperativaTab() {
                         </td>
                         {r.weeks.map((w) => (
                           <td key={w.week_start} className={cn('px-1', w.es_semana_actual && 'bg-primary/5 rounded-md')}>
-                            <HeatCell pct={w.utilizacion_pct} />
+                            <HeatCell pctExact={occupancyPct(w.horas, r.weekly_hours_capacity).exact} />
                           </td>
                         ))}
                       </tr>
@@ -1071,7 +1087,7 @@ export function CapacidadOperativaTab() {
                     <tbody>
                       {displayRows.map((r) => {
                         const snap = periodSnapshot(r, periodKey);
-                        const band = operativeBand(snap.pct);
+                        const band = occupancyBand(snap.pctExact);
                         const semanasBacklog = Math.round((r.backlog.dias_para_vaciar / 5) * 10) / 10;
                         return (
                           <tr key={r.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" {...activatableRow(() => openPerson(r.id))}>
@@ -1080,7 +1096,7 @@ export function CapacidadOperativaTab() {
                             <td className="px-3 py-2.5 text-center tabular-nums">{r.tareasActivas}</td>
                             <td className="px-3 py-2.5 text-center tabular-nums">{formatHours(snap.horas)}</td>
                             <td className="px-3 py-2.5 text-center tabular-nums text-muted-foreground">{formatHours(r.weekly_hours_capacity)}</td>
-                            <td className="px-3 py-2.5 text-center font-semibold tabular-nums">{snap.pct}%</td>
+                            <td className="px-3 py-2.5 text-center font-semibold tabular-nums">{formatOccupancyPct(snap.pctExact)}</td>
                             <td className={cn('px-3 py-2.5 text-center tabular-nums font-medium', snap.holgura < 0 && 'text-destructive')}>
                               {formatSignedHours(snap.holgura)}
                             </td>
@@ -1098,7 +1114,7 @@ export function CapacidadOperativaTab() {
             <div className="md:hidden space-y-2.5">
               {displayRows.map((r) => {
                 const snap = periodSnapshot(r, periodKey);
-                const band = operativeBand(snap.pct);
+                const band = occupancyBand(snap.pctExact);
                 const semanasBacklog = Math.round((r.backlog.dias_para_vaciar / 5) * 10) / 10;
                 return (
                   <Card key={r.id} className={cn(CARD_CLASS, 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')} {...activatable(() => openPerson(r.id))}>
@@ -1112,7 +1128,7 @@ export function CapacidadOperativaTab() {
                         <div><p className="text-muted-foreground">Tareas</p><p className="font-semibold tabular-nums">{r.tareasActivas}</p></div>
                         <div><p className="text-muted-foreground">Semana</p><p className="font-semibold tabular-nums">{formatHours(snap.horas)}</p></div>
                         <div><p className="text-muted-foreground">Capacidad</p><p className="font-semibold tabular-nums">{formatHours(r.weekly_hours_capacity)}</p></div>
-                        <div><p className="text-muted-foreground">Ocupación</p><p className="font-semibold tabular-nums">{snap.pct}%</p></div>
+                        <div><p className="text-muted-foreground">Ocupación</p><p className="font-semibold tabular-nums">{formatOccupancyPct(snap.pctExact)}</p></div>
                         <div><p className="text-muted-foreground">Libre</p><p className={cn('font-semibold tabular-nums', snap.holgura < 0 && 'text-destructive')}>{formatSignedHours(snap.holgura)}</p></div>
                         <div><p className="text-muted-foreground">Backlog</p><p className="font-semibold tabular-nums">{semanasBacklog} sem</p></div>
                       </div>
@@ -1378,7 +1394,7 @@ export function CapacidadOperativaTab() {
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
                     <p className="text-2xs text-muted-foreground">Ocupación</p>
-                    <p className="text-sm font-bold tabular-nums">{selectedSnapshot.pct}%</p>
+                    <p className="text-sm font-bold tabular-nums">{formatOccupancyPct(selectedSnapshot.pctExact)}</p>
                   </div>
                   <div className="rounded-xl border border-border p-2.5 text-center">
                     <p className="text-2xs text-muted-foreground">Backlog</p>
@@ -1441,20 +1457,20 @@ export function CapacidadOperativaTab() {
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground mb-2">Capacidad futura</h4>
                   <div className="space-y-2">
-                    {[{ label: 'Esta semana', pct: selectedRow.current.utilizacion_pct }, ...selectedRow.weeks.flatMap((w, i) => (
-                      w.es_semana_actual ? [] : [{ label: forecastWeekLabel(w, i), pct: w.utilizacion_pct }]
+                    {[{ label: 'Esta semana', pct: occupancyPct(selectedRow.current.carga_semana_actual, selectedRow.weekly_hours_capacity).exact }, ...selectedRow.weeks.flatMap((w, i) => (
+                      w.es_semana_actual ? [] : [{ label: forecastWeekLabel(w, i), pct: occupancyPct(w.horas, selectedRow.weekly_hours_capacity).exact }]
                     ))].map((w) => {
-                      const band = operativeBand(w.pct);
+                      const band = occupancyBand(w.pct);
                       return (
                         <div key={w.label} className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-muted-foreground">{w.label}</span>
-                            <span className="font-semibold tabular-nums">{w.pct}%</span>
+                            <span className="font-semibold tabular-nums">{formatOccupancyPct(w.pct)}</span>
                           </div>
                           <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
                             <div
                               className="h-full rounded-full"
-                              style={{ width: `${Math.min(100, Math.max(4, w.pct))}%`, backgroundColor: TONE_HEX[band.tone] }}
+                              style={{ width: `${Math.min(100, Math.max(4, w.pct))}%`, backgroundColor: OCCUPANCY_HEX[band.level] }}
                             />
                           </div>
                         </div>

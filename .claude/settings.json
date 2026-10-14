@@ -139,5 +139,8 @@
       "C:\\app_planner\\src\\components\\reports",
       "\\tmp"
     ]
+  },
+  "enabledPlugins": {
+    "impeccable@impeccable": true
   }
 }

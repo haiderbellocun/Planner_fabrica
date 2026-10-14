@@ -13,11 +13,15 @@ import { chartColors } from '@/components/charts/chartTheme';
 import { SectionHeader, LoadingState, EmptyState, ErrorState } from '@/components/shared/StoryUI';
 import { ReportTabSkeleton } from '@/components/shared/Skeletons';
 import { cn } from '@/lib/utils';
+import { totalOccupancy } from '@/lib/capacityMetrics';
+import { TotalOccupancyCard } from '@/components/reports/TotalOccupancyCard';
+import { useFactoryOccupancy } from '@/hooks/useFactoryOccupancy';
 import {
   useReportProjectUtilization,
   useReportProjectUtilizationDetail,
   useReportProductionCapacity,
   useReportPeopleWorkload,
+  useReportCapacityForecast,
   type RiskLevel,
 } from '@/hooks/useReports';
 
@@ -61,27 +65,20 @@ function levelColor(level: RiskLevel): string {
   }
 }
 
-function bandFor(pct: number): RiskLevel {
-  if (pct >= 100) return 'over';
-  if (pct >= 90) return 'warning';
-  if (pct < 50) return 'available';
-  return 'ok';
-}
-
 function formatLoad(hours: number): string {
   if (hours <= 0) return '0h';
   return formatHours(hours);
 }
 
 function CapacityGauge({ pct }: { pct: number }) {
-  const level = bandFor(pct);
-  const color = riskColorHex(levelColor(level));
+  // Carga acumulada: indicador independiente, sin bandas de ocupación semanal (color neutro).
+  const color = CHART_COLORS.teal;
   const radius = 44;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(Math.max(pct, 0), 100);
 
   return (
-    <div className="relative h-32 w-32 shrink-0" role="img" aria-label={`${pct}% de ocupación de la fábrica`}>
+    <div className="relative h-32 w-32 shrink-0" role="img" aria-label={`${pct}% de ocupación total de la fábrica`}>
       <svg viewBox="0 0 112 112" className="h-full w-full -rotate-90" aria-hidden>
         <circle cx="56" cy="56" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
         <circle
@@ -98,7 +95,7 @@ function CapacityGauge({ pct }: { pct: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold tabular-nums">{pct}%</span>
-        <span className="text-2xs font-medium text-muted-foreground">ocupación</span>
+        <span className="text-2xs font-medium text-muted-foreground">ocupación total</span>
       </div>
     </div>
   );
@@ -108,10 +105,12 @@ function CapacityExplanation({
   pendingHours,
   weekHours,
   pct,
+  weeks,
 }: {
   pendingHours: number;
   weekHours: number;
   pct: number;
+  weeks: number;
 }) {
   const levels = [
     { icon: UserRound, title: 'Persona', description: 'Sus horas pendientes ÷ su capacidad semanal' },
@@ -146,15 +145,16 @@ function CapacityExplanation({
               <p className="text-lg font-bold tabular-nums">{formatLoad(weekHours)}</p>
             </div>
             <span className="text-xl font-semibold text-muted-foreground">× 100 =</span>
-            <div className="rounded-xl bg-primary px-4 py-2.5 text-primary-foreground shadow-card">
-              <p className="text-2xs opacity-75">Ocupación</p>
-              <p className="text-lg font-bold tabular-nums">{pct}%</p>
+            <div className="rounded-xl bg-primary px-4 py-2.5 text-primary-foreground shadow-card" data-testid="ocupacion-total-formula">
+              <p className="text-2xs opacity-75">Ocupación total</p>
+              <p className="text-lg font-bold tabular-nums">{pct}% <span className="text-xs font-medium">≈ {weeks} {weeks === 1 ? 'semana' : 'semanas'}</span></p>
             </div>
           </div>
 
           <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning-strong">
-            <span className="font-semibold">Importante:</span> aquí “pendiente” incluye todo el backlog sin completar,
-            aunque venza después. Por eso 200% significa aproximadamente dos semanas de trabajo acumulado.
+            <span className="font-semibold">Importante:</span> la ocupación total incluye todo el backlog sin completar,
+            aunque venza después, frente a la capacidad de una semana. Por eso 200% significa aproximadamente dos semanas de
+            trabajo acumulado. No es la ocupación de esta semana y no se clasifica con las bandas de ocupación semanal.
           </div>
         </div>
 
@@ -208,11 +208,14 @@ function LoadMeter({
   pendingHours,
   weekHours,
   level,
+  note,
 }: {
   pct: number | null;
   pendingHours: number;
   weekHours: number;
-  level: RiskLevel;
+  /** `neutral` = carga acumulada de la fábrica: sin banda de estado, solo su equivalencia en semanas (`note`). */
+  level: RiskLevel | 'neutral';
+  note?: string;
 }) {
   const known = pct != null && weekHours > 0;
   const fill = known ? Math.min(pct, 100) : 0;
@@ -230,11 +233,11 @@ function LoadMeter({
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden" aria-hidden>
         <div
           className="h-full rounded-full"
-          style={{ width: `${fill}%`, backgroundColor: riskColorHex(levelColor(level)) }}
+          style={{ width: `${fill}%`, backgroundColor: level === 'neutral' ? CHART_COLORS.teal : riskColorHex(levelColor(level)) }}
         />
       </div>
       <p className="text-2xs font-medium">
-        {known ? LOAD_COPY[level] : 'No hay horas de equipo para comparar'}
+        {known ? (level === 'neutral' ? note : LOAD_COPY[level]) : 'No hay horas de equipo para comparar'}
         {overflow > 0 ? ` · sobran ${formatLoad(overflow)} para otra semana` : ''}
       </p>
     </div>
@@ -264,6 +267,9 @@ function AvatarStack({ people, max = 5 }: { people: { id: string; full_name: str
 
 export function CapacidadFabricaTab() {
   const { data, isLoading, isError, error, refetch, isFetching } = useReportProjectUtilization();
+  const factory = useFactoryOccupancy();
+  // Mismo endpoint y misma clave de caché que Reportes › Equipo y Capacidad Operativa (sin filtros).
+  const { data: forecast, isLoading: loadingForecast, isError: errorForecast, error: errForecast, refetch: refetchForecast, isFetching: fetchingForecast } = useReportCapacityForecast({ weeks: 4 });
   const { data: production, isLoading: loadingProduction, isError: errorProduction, error: errProduction, refetch: refetchProduction, isFetching: fetchingProduction } = useReportProductionCapacity();
   const { data: workload, isLoading: loadingWorkload, isError: errorWorkload, error: errWorkload, refetch: refetchWorkload, isFetching: fetchingWorkload } = useReportPeopleWorkload();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -314,39 +320,45 @@ export function CapacidadFabricaTab() {
       .sort((a, b) => (b.utilization_pct ?? -1) - (a.utilization_pct ?? -1));
   }, [data, search, teamByProject]);
 
-  if (isLoading || loadingProduction || loadingWorkload) {
+  if (isLoading || loadingProduction || loadingWorkload || loadingForecast) {
     return <ReportTabSkeleton />;
   }
 
   // Cualquiera de las tres consultas fallidas sin datos deja la pestaña sin base de cálculo: se explica y se reintenta.
-  if ((isError && !data) || (errorProduction && !production) || (errorWorkload && !workload)) {
+  if ((isError && !data) || (errorProduction && !production) || (errorWorkload && !workload) || (errorForecast && !forecast)) {
     return (
       <ErrorState
         message="No se pudo cargar la capacidad de fábrica."
-        error={error ?? errProduction ?? errWorkload}
-        onRetry={() => { if (isError) refetch(); if (errorProduction) refetchProduction(); if (errorWorkload) refetchWorkload(); }}
-        retrying={isFetching || fetchingProduction || fetchingWorkload}
+        error={error ?? errProduction ?? errWorkload ?? errForecast}
+        onRetry={() => { if (isError) refetch(); if (errorProduction) refetchProduction(); if (errorWorkload) refetchWorkload(); if (errorForecast) refetchForecast(); }}
+        retrying={isFetching || fetchingProduction || fetchingWorkload || fetchingForecast}
       />
     );
   }
 
-  if (!data) {
+  if (!data || !forecast) {
     return <EmptyState message="No hay información de capacidad para mostrar." />;
   }
 
   const { summary } = data;
   const direct = production?.direct;
   const indirect = production?.indirect;
-  const factoryLevel = bandFor(summary.utilizacion_pct_fabrica);
+  // Población común (personas activas con cargo) para la ocupación total; lo pendiente de
+  // personas inactivas, sin cargo o sin responsable se conserva aparte en `fueraDeCapacidad`.
+  // Misma fuente que Capacidad Operativa (hook compartido); el respaldo solo cubre el instante previo a tener datos.
+  const acc = factory.total ?? totalOccupancy([]);
   const busyPeople = filteredPeople.filter(p => p.projects.length > 0);
   const freePeople = filteredPeople.filter(p => p.projects.length === 0);
 
   return (
     <div className="space-y-8">
+      <TotalOccupancyCard total={acc} />
+
       <CapacityExplanation
-        pendingHours={summary.horas_pendientes_fabrica}
-        weekHours={summary.capacidad_semanal_fabrica}
-        pct={summary.utilizacion_pct_fabrica}
+        pendingHours={acc.horasActivas}
+        weekHours={acc.capacidadSemanal}
+        pct={acc.pct}
+        weeks={acc.semanas}
       />
 
       <div className="relative w-full sm:w-80">
@@ -450,16 +462,16 @@ export function CapacidadFabricaTab() {
       <section id="cumplimiento-fabrica" className="scroll-mt-4">
         <SectionHeader tag="3 · Macro" title="Todos los proyectos son la fábrica" />
         <p className="text-xs text-muted-foreground -mt-3 mb-4">
-          La misma cuenta, sumada. {summary.personas_con_pendientes} de {summary.n_personas_fabrica} personas tienen trabajo pendiente
-          y ese grupo está al {summary.utilizacion_pct_equipo_ocupado}% de su semana.
+          La misma cuenta, sumada: ocupación total ({acc.pct}% ≈ {acc.semanas} {acc.semanas === 1 ? 'semana' : 'semanas'} de trabajo). {summary.personas_con_pendientes} de {summary.n_personas_fabrica} personas tienen trabajo pendiente.
         </p>
         <Card className={CARD_CLASS}>
           <CardContent className="py-4 px-4 space-y-4">
             <LoadMeter
-              pct={summary.utilizacion_pct_fabrica}
-              pendingHours={summary.horas_pendientes_fabrica}
-              weekHours={summary.capacidad_semanal_fabrica}
-              level={factoryLevel}
+              pct={acc.pct}
+              pendingHours={acc.horasActivas}
+              weekHours={acc.capacidadSemanal}
+              level="neutral"
+              note={`≈ ${acc.semanas} ${acc.semanas === 1 ? 'semana' : 'semanas'} de trabajo acumulado frente a la capacidad de una semana`}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-border p-3 space-y-2">

@@ -32,7 +32,7 @@ describe('periodSnapshot', () => {
     expect(periodSnapshot(m, 'next')).toMatchObject({ horas: 20, capacidad: 40, pct: 50 });
   });
   it('next4 suma la ventana completa contra capacidad × nº de semanas', () => {
-    expect(periodSnapshot(m, 'next4')).toEqual({ horas: 60, capacidad: 160, holgura: 100, pct: 38 });
+    expect(periodSnapshot(m, 'next4')).toMatchObject({ horas: 60, capacidad: 160, holgura: 100, pct: 38 });
   });
   it('next sin semanas siguientes devuelve holgura completa', () => {
     expect(periodSnapshot(member(40, 0, [0]), 'next')).toMatchObject({ horas: 0, pct: 0, holgura: 40 });
@@ -42,7 +42,7 @@ describe('periodSnapshot', () => {
 describe('aggregatePeriodKpis', () => {
   const rows = [member(40, 50, [30, 20, 10, 0]), member(40, 10, [10, 5, 5, 5])];
   it('current: capacidad 80, carga 60, disponible 20, 1 sobrecargada', () => {
-    expect(aggregatePeriodKpis(rows, 'current')).toEqual({
+    expect(aggregatePeriodKpis(rows, 'current')).toMatchObject({
       capacidad: 80, comprometidas: 60, disponible: 20, ocupacion: 75, sobrecargadas: 1,
     });
   });

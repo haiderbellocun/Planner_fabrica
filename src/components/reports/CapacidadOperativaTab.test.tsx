@@ -34,6 +34,7 @@ vi.mock('@/hooks/useReports', () => ({
     data: flags.error && !flags.keepData ? undefined : { members }, isLoading: flags.loading, isError: flags.error, error: flags.error ? new Error('sin red') : null, isFetching: false, refetch: flags.refetch,
   }),
   useReportPeopleWorkload: () => ({ data: flags.workloadError ? undefined : { people: [] }, isLoading: flags.loading, isError: flags.workloadError, error: flags.workloadError ? new Error('workload caído') : null, isFetching: false, refetch: flags.refetch }),
+  useReportProjectUtilization: () => ({ data: { summary: { horas_pendientes_fabrica: 120 } }, isLoading: false, isError: false }),
   useReportWorkloadByCargo: () => ({ data: [] }),
   useUserMiniReport: () => ({ data: undefined, isLoading: false }),
 }));
